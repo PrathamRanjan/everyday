@@ -12,6 +12,8 @@ import { traceRoutes } from "./web/trace.js";
 import { passportRoutes } from "./web/passport.js";
 import { mcpRoutes } from "./web/mcp.js";
 import { installChannelHandlers } from "./channels/handlers.js";
+import { apiRoutes } from "./web/api.js";
+import { serveApp, uiBridge } from "./web/spa.js";
 
 let handlersInstalled = false;
 
@@ -28,6 +30,7 @@ export function createApp() {
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: false, limit: "200kb" }));
   app.use(cookieParser());
+  uiBridge(app);
   app.use((_req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -43,6 +46,8 @@ export function createApp() {
       res.status(500).json({ ok: false, error: (e as Error).message });
     }
   });
+  const shell = serveApp(app, root);
+  app.use(apiRoutes());
   app.use(mcpRoutes());
   app.use(opsRoutes());
   app.use(guardRoutes());
@@ -50,6 +55,8 @@ export function createApp() {
   app.use(passportRoutes());
   app.use(safetyRoutes());
   app.use(shopperRoutes());
+  // Any other page a browser asks for is the app's own "not found" screen.
+  app.use((req, res, next) => (shell && req.method === "GET" && req.accepts(["html", "json"]) === "html" ? (res.status(404), shell(req, res)) : next()));
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof GtError) return res.status(err.status).type("text").send(err.message);
     console.error("[everyday]", req.method, req.path, err);

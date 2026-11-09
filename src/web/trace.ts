@@ -62,6 +62,15 @@ async function mayView(who: Who, run: any): Promise<boolean> {
 
 const addressOf = (who: Who) => (who.kind === "shopper" ? `shopper:${who.id}` : who.kind === "merchant" ? `merchant:${MERCHANT}` : "");
 
+export const BEATS = [
+    { title: "A clip becomes a plan", body: "Maya shares a Short on Telegram; Everyday names the objects (authored for the demo clip, read by the vision model for a screenshot) and asks which she means. The planner excludes the monitor she owns, explains the hub without video, and asks one question about her laptop's port.", href: "/discover" },
+    { title: "The quote is exact and the mandate is hers", body: "A 15-minute quote with a hash. Her mandate (plain words on Guard) caps the purchase, names the merchants, and decides whether an outside assistant may plan or start checkout. The gate checks the order against it before PayPal is asked for an approval link.", href: "/guard" },
+    { title: "PayPal approves, Everyday reads back", body: "She approves on PayPal; the capture is read back and recorded once, even when the return is dropped. Open the trace: who acted, what the gate said, which PayPal request id.", href: "/traces" },
+    { title: "After the sale", body: "A backorder swap refunds the difference; a scuffed lamp becomes a case with options; price protection pays the drop under the policy version she bought under. Each refund runs under the merchant's mandate and is verified with PayPal before the case closes.", href: "/merchant" },
+    { title: "Repeat buys on a saved PayPal", body: "On the passport she saves PayPal once (Vault). A repeat buy under her threshold runs on its own; at or above it waits for a tap, above the countersign line for a passkey. Try it from the passport and watch the approval appear on Guard and on the channel.", href: "/passport" },
+    { title: "Try to break it", body: "Flip the kill switch and watch a repeat buy get refused before PayPal. Ask the MCP agent to spend $9,000. Open the evidence console for the capture eval, the TechJam-style eval, the adversarial harness and the PayPal negative tests.", href: "/console/evidence" },
+  ];
+
 export function traceRoutes() {
   const r = Router();
   const guard = (fn: (req: Request, res: Response, who: Who) => Promise<unknown>) => async (req: Request, res: Response, next: (e?: unknown) => void) => {
@@ -111,14 +120,7 @@ ${t.run.entity === "order" ? html`<p class="small"><a href="${who.kind === "merc
   }));
 
   // ---- Judge mode (roadmap B.9) ----
-  const BEATS = [
-    { title: "A clip becomes a plan", body: "Maya shares a Short on Telegram; Everyday names the objects (authored for the demo clip, read by the vision model for a screenshot) and asks which she means. The planner excludes the monitor she owns, explains the hub without video, and asks one question about her laptop's port.", href: "/discover" },
-    { title: "The quote is exact and the mandate is hers", body: "A 15-minute quote with a hash. Her mandate (plain words on Guard) caps the purchase, names the merchants, and decides whether an outside assistant may plan or start checkout. The gate checks the order against it before PayPal is asked for an approval link.", href: "/guard" },
-    { title: "PayPal approves, Everyday reads back", body: "She approves on PayPal; the capture is read back and recorded once, even when the return is dropped. Open the trace: who acted, what the gate said, which PayPal request id.", href: "/traces" },
-    { title: "After the sale", body: "A backorder swap refunds the difference; a scuffed lamp becomes a case with options; price protection pays the drop under the policy version she bought under. Each refund runs under the merchant's mandate and is verified with PayPal before the case closes.", href: "/merchant" },
-    { title: "Repeat buys on a saved PayPal", body: "On the passport she saves PayPal once (Vault). A repeat buy under her threshold runs on its own; at or above it waits for a tap, above the countersign line for a passkey. Try it from the passport and watch the approval appear on Guard and on the channel.", href: "/passport" },
-    { title: "Try to break it", body: "Flip the kill switch and watch a repeat buy get refused before PayPal. Ask the MCP agent to spend $9,000. Open the evidence console for the capture eval, the TechJam-style eval, the adversarial harness and the PayPal negative tests.", href: "/console/evidence" },
-  ];
+
   r.get("/judge", async (req, res, next) => {
     try {
       const db = await getDb();
@@ -159,9 +161,10 @@ ${who.kind !== "console" ? html`<section class="card" id="phone"><h2>On your pho
 <div class="chat">${(msgs as any[]).slice().reverse().map((m) => html`<div class="msg ${m.direction}"><div class="meta small muted">${m.channel} · ${m.direction === "in" ? "received" : "sent"} · ${fmtDate(m.created_at)} · ${m.status}</div>${m.direction === "in" ? messageFlag(String(m.body), "Everyday only acts on its own buttons and commands; a message can't change where money goes.") : ""}<div class="body">${String(m.body)}</div>${m.buttons && m.direction === "out" ? html`<div class="row">${(typeof m.buttons === "string" ? JSON.parse(m.buttons) : m.buttons).map((b: any) => html`<form method="post" action="/channels/reply" class="inline"><input type="hidden" name="address" value="${String(m.address)}"><input type="hidden" name="replyTo" value="${m.id}"><input type="hidden" name="buttonId" value="${String(b.id)}"><button class="btn small">${String(b.label)}</button></form>`)}</div>` : ""}</div>`)}${msgs.length ? "" : html`<p class="muted small">No messages for this address yet.</p>`}</div>
 ${addr ? html`<form method="post" action="/channels/reply" class="row"><input type="hidden" name="address" value="${addr}"><label class="sr" for="rp">Reply</label><input id="rp" type="text" name="text" placeholder="Reply as this party (try: pending, orders, watch, stop, cases, disputes)" required maxlength="500"><button class="btn primary small">Send</button></form>` : ""}`));
   }));
-  r.post("/channels/reply", guard(async (req, res) => {
+  r.post("/channels/reply", guard(async (req, res, who) => {
     const address = String(req.body.address ?? "");
     if (!/^(shopper|merchant):/.test(address)) throw new GtError("Simulator addresses look like shopper:<account id> or merchant:merchant", "validation", 422);
+    if (!config.demoMode && who.kind !== "console" && address !== (who.kind === "shopper" ? `shopper:${who.id}` : `merchant:${MERCHANT}`)) throw new GtError("You can only reply as yourself.", "forbidden", 403);
     await receive("simulator", address, String(req.body.text ?? req.body.buttonId ?? ""), req.body.buttonId ? String(req.body.buttonId) : null, req.body.replyTo ? String(req.body.replyTo) : null);
     back(res, `/channels?address=${encodeURIComponent(address)}`, "Sent");
   }));
@@ -226,7 +229,7 @@ ${addr ? html`<form method="post" action="/channels/reply" class="row"><input ty
 
   // ---- PWA (roadmap B.10) ----
   r.get("/manifest.webmanifest", (_req, res) => {
-    res.type("application/manifest+json").json({ name: "Everyday", short_name: "Everyday", start_url: "/today", display: "standalone", background_color: "#0f172a", theme_color: "#234e8a", icons: [{ src: "/static/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }] });
+    res.type("application/manifest+json").json({ name: "Everyday", short_name: "Everyday", start_url: "/today", display: "standalone", background_color: "#f7f4ee", theme_color: "#1c1a17", icons: [{ src: "/favicon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }] });
   });
   r.get("/sw.js", (_req, res) => {
     res.type("application/javascript").set("Service-Worker-Allowed", "/").send(readFileSync("public/sw.js", "utf8"));

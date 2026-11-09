@@ -117,6 +117,7 @@ ${drafts.length > 1 ? html`<section class="card"><h2>Mandate history</h2><ul cla
     const adopt = req.body.mode === "adopt";
     const id = await savePolicy(a.id, text, compiled, adopt);
     if (adopt) return back(res, "/guard", `Mandate adopted (${compiled.compiler})${compiled.unexpressed.length ? `; could not express: ${compiled.unexpressed.join("; ")}` : ""}`);
+    if (req.get("x-everyday-ui") === "1") return back(res, "/guard#drafts", `Draft saved (read by ${compiled.compiler}). Nothing changes until you adopt it.${compiled.unexpressed.length ? ` Couldn't turn into a rule: ${compiled.unexpressed.join("; ")}.` : ""}`);
     const current = (await activePolicy(a.id))?.rules ?? DEFAULT_RULES;
     res.send(spage(req, a, "Mandate preview", html`<h1>Mandate preview</h1><p class="sub">Compiled by ${compiled.compiler}. Nothing is active until you adopt it.</p>
 <section class="card"><blockquote>${text}</blockquote>${rulesTable(SHOPPER_KEYS, compiled.rules, current)}

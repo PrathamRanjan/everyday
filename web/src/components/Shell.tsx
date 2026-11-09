@@ -1,0 +1,338 @@
+import { useEffect, useState, type ReactNode } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
+import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, RotateCcw, Route, ShieldCheck, ShoppingBag, Sun, SunMoon, Wallet, WifiOff } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { DisplayHelp } from "./DisplayHelp";
+import { useSession } from "@/lib/session";
+import { usePrefs } from "@/lib/prefs";
+import { postAction } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { startTour } from "@/tours/tours";
+
+type Item = { to: string; label: string; icon: ReactNode; tour?: string; badge?: number };
+
+function navFor(kind: "shopper" | "merchant" | null, needs: number): { main: Item[]; more: Item[] } {
+  if (kind === "shopper")
+    return {
+      main: [
+        { to: "/today", label: "Today", icon: <CalendarClock />, tour: "nav-today", badge: needs },
+        { to: "/discover", label: "Find", icon: <Compass />, tour: "nav-discover" },
+        { to: "/plans", label: "Plans", icon: <Map />, tour: "nav-plans" },
+        { to: "/purchases", label: "Bought", icon: <ShoppingBag />, tour: "nav-purchases" },
+      ],
+      more: [
+        { to: "/you", label: "Things I own", icon: <Package /> },
+        { to: "/passport", label: "Wallet and repeat buys", icon: <Wallet /> },
+        { to: "/guard", label: "Rules and approvals", icon: <Gavel />, tour: "nav-guard" },
+        { to: "/safety", label: "Scam protection", icon: <ShieldCheck /> },
+        { to: "/channels", label: "Messages", icon: <MessageSquare /> },
+        { to: "/traces", label: "What the assistant did", icon: <Route /> },
+      ],
+    };
+  if (kind === "merchant")
+    return {
+      main: [
+        { to: "/merchant", label: "Orders", icon: <Inbox />, badge: 0 },
+        { to: "/merchant/money", label: "Money", icon: <Wallet /> },
+        { to: "/merchant/approvals", label: "Approvals", icon: <Gavel />, badge: needs },
+        { to: "/channels", label: "Messages", icon: <MessageSquare /> },
+      ],
+      more: [{ to: "/traces", label: "What the assistant did", icon: <Route /> }],
+    };
+  return { main: [], more: [] };
+}
+
+const DEMO_LINKS: Item[] = [
+  { to: "/judge", label: "Judge mode", icon: <PlayCircle /> },
+  { to: "/demo", label: "Demo controls", icon: <RotateCcw /> },
+  { to: "/console", label: "Operator console", icon: <FlaskConical /> },
+];
+
+function Badge({ n }: { n?: number }) {
+  if (!n) return null;
+  return (
+    <span className="num ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-now px-1.5 text-[11px] font-bold text-paper" aria-label={`${n} need you`}>
+      {n}
+    </span>
+  );
+}
+
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-2 font-display text-xl font-medium tracking-tight", className)}>
+      <svg viewBox="0 0 28 14" className="h-3.5 w-7" aria-hidden>
+        <line x1="2" y1="7" x2="26" y2="7" stroke="var(--rule-2)" strokeWidth="2" strokeLinecap="round" />
+        <line x1="2" y1="7" x2="15" y2="7" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="6" cy="7" r="3" fill="var(--done)" />
+        <circle cx="15" cy="7" r="3.5" fill="var(--now)" />
+        <circle cx="24" cy="7" r="2.5" fill="var(--card)" stroke="var(--ink-2)" strokeWidth="1.4" />
+      </svg>
+      Everyday
+    </span>
+  );
+}
+
+export function ThemeToggle() {
+  const { prefs, set } = usePrefs();
+  const next = prefs.theme === "system" ? "light" : prefs.theme === "light" ? "dark" : "system";
+  const Icon = prefs.theme === "light" ? Sun : prefs.theme === "dark" ? Moon : SunMoon;
+  return (
+    <Button variant="ghost" size="icon-sm" onClick={() => set({ theme: next })} aria-label={`Theme: ${prefs.theme}. Switch to ${next}.`} title={`Theme: ${prefs.theme}`}>
+      <Icon className="size-4" />
+    </Button>
+  );
+}
+
+/** The honest demo ribbon: says this is a sandbox, shows the demo clock, and resets. */
+function DemoRibbon() {
+  const { session, refresh } = useSession();
+  const nav = useNavigate();
+  const [busy, setBusy] = useState<string | null>(null);
+  if (!session?.demo) return null;
+  const act = async (k: string, path: string, data?: Record<string, string>) => {
+    setBusy(k);
+    try {
+      const r = await postAction(path, data);
+      toast.success(r.ok ?? "Done");
+      await refresh();
+      window.dispatchEvent(new Event("ev:changed"));
+      if (k === "reset") nav("/login");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const clock = session.who?.kind === "shopper" ? session.who.clock : null;
+  return (
+    <div data-tour="ribbon" className="border-b border-rule bg-sunk text-xs text-ink-2">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1.5">
+        <span className="font-semibold text-ink">Demo</span>
+        <span>
+          PayPal <b className="font-semibold text-ink">{session.paypal_env}</b>, test money only
+        </span>
+        {clock && (
+          <span className="num">
+            · demo clock <b className="font-semibold text-ink">{clock}</b>
+          </span>
+        )}
+        <span className="ml-auto flex items-center gap-1">
+          {clock && (
+            <>
+              <button className="min-h-8 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("day", "/demo/clock", { step: "day" })}>
+                +1 day
+              </button>
+              <button className="min-h-8 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("week", "/demo/clock", { step: "week" })}>
+                +1 week
+              </button>
+            </>
+          )}
+          <button
+            className="min-h-8 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50"
+            disabled={Boolean(busy)}
+            onClick={() => {
+              if (confirm("Reset the demo? This reloads the seeded data for everyone using this demo and signs you out.")) void act("reset", "/demo/reset");
+            }}
+          >
+            <RotateCcw className="mr-1 inline size-3" />
+            Reset demo
+          </button>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function NavItem({ i, onClick, compact }: { i: Item; onClick?: () => void; compact?: boolean }) {
+  return (
+    <NavLink
+      to={i.to}
+      end={i.to === "/merchant"}
+      onClick={onClick}
+      data-tour={i.tour}
+      className={({ isActive }) =>
+        cn(
+          "flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk hover:text-ink [&_svg]:size-[18px]",
+          isActive && "bg-ink text-paper hover:bg-ink hover:text-paper",
+          compact && "rounded-md",
+        )
+      }
+    >
+      {i.icon}
+      <span className="truncate">{i.label}</span>
+      <Badge n={i.badge} />
+    </NavLink>
+  );
+}
+
+export function Shell({ children }: { children: ReactNode }) {
+  const { session, offline } = useSession();
+  const loc = useLocation();
+  const [open, setOpen] = useState(false);
+  const who = session?.who ?? null;
+  const { main, more } = navFor(who?.kind ?? null, who?.needs ?? 0);
+  useEffect(() => setOpen(false), [loc.pathname]);
+  const signOut = async () => {
+    await postAction("/logout").catch(() => undefined);
+    window.location.assign("/");
+  };
+  const tourKind = who?.kind === "merchant" ? "merchant" : "shopper";
+
+  return (
+    <div className="min-h-dvh bg-paper">
+      <a href="#main" className="sr-only z-50 rounded bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+        Skip to content
+      </a>
+      <DemoRibbon />
+      {offline && (
+        <div role="status" className="flex items-center justify-center gap-2 bg-wait-bg px-4 py-1.5 text-sm text-wait">
+          <WifiOff className="size-4" /> You're offline. What's on screen may be out of date, and nothing can be paid or sent until you're back.
+        </div>
+      )}
+      <header className="sticky top-0 z-30 border-b border-rule bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
+          <Link to={who ? (who.kind === "merchant" ? "/merchant" : "/today") : "/"} className="mr-auto rounded-md" aria-label="Everyday home">
+            <Wordmark />
+          </Link>
+          {who && (
+            <span className="hidden text-sm text-ink-2 sm:inline">
+              {who.kind === "merchant" ? "Merchant · " : ""}
+              {who.first}
+            </span>
+          )}
+          <DisplayHelp />
+          <ThemeToggle />
+          {who ? (
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Menu">
+                  <Menu className="size-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] bg-paper p-0">
+                <SheetHeader className="border-b border-rule">
+                  <SheetTitle className="font-display text-xl">{who.name}</SheetTitle>
+                  <SheetDescription>{who.kind === "merchant" ? "Merchant console" : "Shopper"}</SheetDescription>
+                </SheetHeader>
+                <nav className="flex flex-col gap-1 overflow-y-auto p-3" aria-label="More">
+                  {[...main, ...more].map((i) => (
+                    <NavItem key={i.to} i={i} onClick={() => setOpen(false)} />
+                  ))}
+                  {session?.demo && (
+                    <>
+                      <div className="eyebrow mt-4 px-3">Demo</div>
+                      {DEMO_LINKS.map((i) => (
+                        <NavItem key={i.to} i={i} onClick={() => setOpen(false)} />
+                      ))}
+                    </>
+                  )}
+                  <button onClick={() => startTour(tourKind)} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
+                    <PlayCircle className="size-[18px]" /> Take the tour
+                  </button>
+                  <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
+                    <LogOut className="size-[18px]" /> Sign out
+                  </button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+              <Link to="/login">Sign in</Link>
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <div className={cn("mx-auto max-w-6xl px-4", who && "lg:grid lg:grid-cols-[220px_1fr] lg:gap-8")}>
+        {who && (
+          <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] flex-col gap-1 overflow-y-auto py-6 lg:flex" aria-label="Main">
+            {main.map((i) => (
+              <NavItem key={i.to} i={i} />
+            ))}
+            <div className="my-2 border-t border-rule" />
+            {more.map((i) => (
+              <NavItem key={i.to} i={i} />
+            ))}
+            {session?.demo && (
+              <>
+                <div className="eyebrow mt-4 px-3">Demo</div>
+                {DEMO_LINKS.map((i) => (
+                  <NavItem key={i.to} i={i} />
+                ))}
+              </>
+            )}
+            <div className="mt-auto flex flex-col gap-1 pt-4">
+              <button data-tour="take-tour" onClick={() => startTour(tourKind)} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
+                <PlayCircle className="size-[18px]" /> Take the tour
+              </button>
+              <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
+                <LogOut className="size-[18px]" /> Sign out
+              </button>
+            </div>
+          </aside>
+        )}
+        <main id="main" tabIndex={-1} className={cn("min-w-0 py-6 outline-none sm:py-8", who && "pb-28 lg:pb-10")}>
+          {children}
+        </main>
+      </div>
+
+      {who && (
+        <nav aria-label="Main" className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-paper/95 backdrop-blur lg:hidden">
+          <div className="mx-auto grid max-w-lg grid-cols-5">
+            {main.map((i) => (
+              <NavLink
+                key={i.to}
+                to={i.to}
+                end={i.to === "/merchant"}
+                data-tour={i.tour ? `${i.tour}-m` : undefined}
+                className={({ isActive }) => cn("relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-ink-2 [&_svg]:size-5", isActive && "text-ink")}
+              >
+                {({ isActive }) => (
+                  <>
+                    <span className={cn("flex h-7 w-12 items-center justify-center rounded-full", isActive && "bg-ink text-paper")}>{i.icon}</span>
+                    {i.label}
+                    {i.badge ? <span className="num absolute top-1.5 right-[calc(50%-22px)] min-w-4 rounded-full bg-now px-1 text-center text-[10px] leading-4 text-paper">{i.badge}</span> : null}
+                  </>
+                )}
+              </NavLink>
+            ))}
+            <button onClick={() => setOpen(true)} className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-ink-2">
+              <span className="flex h-7 w-12 items-center justify-center">
+                <ChevronRight className="size-5 rotate-[-90deg]" />
+              </span>
+              More
+            </button>
+          </div>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+/** A small footer for public pages. */
+export function PublicFooter() {
+  return (
+    <footer className="mt-16 border-t border-rule py-8 text-sm text-ink-2">
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <span>Everyday · a hackathon build on the PayPal sandbox</span>
+        <a className="underline underline-offset-4" href="/llms.txt">
+          llms.txt
+        </a>
+        <a className="underline underline-offset-4" href="/skill.md">
+          skill.md
+        </a>
+        <Link className="underline underline-offset-4" to="/safety/model-card">
+          Scam model card
+        </Link>
+        <a className="underline underline-offset-4" href="https://github.com/PrathamRanjan/everyday">
+          Source (MIT)
+        </a>
+        <span className="inline-flex items-center gap-1">
+          <Accessibility className="size-4" /> Display and help is in the header
+        </span>
+      </div>
+    </footer>
+  );
+}

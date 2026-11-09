@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Everyday — know what you bought, and when it runs out</title>
+    <meta name="description" content="Everyday turns a clip or a sentence into a checked plan, pays with PayPal, and keeps each purchase's return, price-promise and warranty dates in view." />
+    <meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14120f" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      // Apply the saved theme and display settings before first paint (no flash).
+      try {
+        var p = JSON.parse(localStorage.getItem("a11y") || "{}"), r = document.documentElement, t = localStorage.getItem("ev-theme");
+        if (t === "light" || t === "dark") r.dataset.theme = t;
+        if (p.textScale) r.dataset.a11yText = String(p.textScale);
+        if (p.contrast) r.dataset.a11yContrast = p.contrast;
+        if (p.font) r.dataset.a11yFont = p.font;
+        if (p.reducedMotion === true) r.dataset.a11yMotion = "off";
+        if (p.bigTargets) r.dataset.a11yTargets = "big";
+        if (p.simpleWords) r.dataset.a11ySimple = "on";
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Everyday needs JavaScript for its app screens. The agent and API entry points (/llms.txt, /skill.md, /mcp) work without it.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

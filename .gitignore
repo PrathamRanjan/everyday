@@ -3,3 +3,6 @@ dist
 data
 .env
 eval/cache/*.live.json
+web/dist
+web/node_modules
+data/
