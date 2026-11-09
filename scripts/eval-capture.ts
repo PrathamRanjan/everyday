@@ -1,0 +1,11 @@
+import { writeFileSync } from "node:fs";
+import { getDb } from "../src/db.js";
+import { runCaptureEval } from "../src/eval/capture.js";
+import { seedAll } from "../src/services/seed.js";
+const db = await getDb();
+const n = Number((await db.query("SELECT count(*)::int AS n FROM accounts")).rows[0]?.n ?? 0);
+if (!n) await seedAll();
+const r = await runCaptureEval();
+writeFileSync("eval/capture.md", r.markdown);
+console.log(r.markdown);
+process.exit(0);

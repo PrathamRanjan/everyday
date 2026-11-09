@@ -1,0 +1,105 @@
+# Everyday
+
+**Show Everyday something you like, or say what you need. It helps you decide, buys with your approval, and keeps helping after delivery.**
+
+A personal buying and ownership assistant. A shared Reel/TikTok/Short becomes a compatible, budgeted plan that knows what you already own; the plan is bought through PayPal after you approve an exact quote; delays, damage and returns are handled on the same record; delivered items become possessions that shape future decisions.
+
+Spec: https://claude.ai/artifact/TZVLZwxENw3CTmxr7LMYGN
+
+## Built and tested
+
+- **Capture** (Telegram adapter + app): Instagram/TikTok/YouTube links normalised to one record per item; every capture states its evidence basis (link only, seeded demo clip, screenshot read by a model, or description). Object selection; Telegram account linking with one-time codes and a secret-token webhook.
+- **Intent**: budget, deadline, possessions ("I already own a monitor"), recipient, comfort and style words; only questions that change eligibility are asked (the laptop's port).
+- **Retrieval**: BM25 + hashed trigram TF-IDF vectors fused by reciprocal rank fusion; exact model numbers rank first.
+- **Hard constraints with reasons**: video output, laptop port, monitor inputs, VESA size, lumbar support, already owned; unknown stays unknown.
+- **Learning**: pairwise logistic (Bradley-Terry) preference model; global prior trained offline; bounded online updates from explicit this-or-that choices; reasons gate learning ("too expensive" → price only, "already own"/"wrong recipient" → nothing); gift recipients learn separately; discovery-sourced items never train (data-use guard); "why you see this" panel with forget/delete.
+- **Planner**: exhaustive best-bundle search under budget, shipping rules (free over $300, express only when needed) and deadline, with a gap report; unasked extras are suggested outside the total.
+- **Purchase**: hashed 15-minute quote (re-checks price, stock, plan version, monthly limit), PayPal Orders v2 with an item breakdown, capture read-back with fee, RecoveryOS repair of lost responses, idempotent returns.
+- **After**: merchant console (ship, deliver, backorder, price, cases); backorder → deadline risk → in-stock swap with the difference refunded on the original capture; cases with claims vs observations, Rebuy-style return eligibility, partial remedies, merchant approval, PayPal refund verified; owned items with return and warranty dates; recall matching; repair-or-replace; price watches on recorded changes; Today and a commitments calendar.
+
+## Run
+
+```bash
+npm install
+cp .env.example .env   # PayPal sandbox keys; optional TELEGRAM_BOT_TOKEN + TELEGRAM_WEBHOOK_SECRET
+npm run dev            # http://localhost:3500
+```
+
+`/demo` → Reset → sign in as Maya. The Telegram simulator (`/telegram`) posts real Bot API updates to the same webhook a live bot uses. `/console` shows the model evaluation, training manifest, choice log and the failure lab.
+
+```bash
+npm test                          # 19 tests: core (links, retrieval eval, model, constraints, planner, returns) + 4 HTTP flows
+node --import tsx scripts/experiment.ts   # the preference experiment report
+```
+
+## Evidence (labelled honestly)
+
+- Preference model, **synthetic shoppers** (hidden taste weights; real catalog attributes), 140 train / 60 held-out, 5 seeds, NDCG@3 within category: popularity ≈ 0.74, global ≈ 0.75, **personal after 5 choices ≈ 0.85** (gain 0.105, larger than seed spread → promoted). Synthetic data establishes mechanics, not real-world uplift.
+- Retrieval, 20 authored judged queries on a 35-product catalog: Recall@5 BM25 0.95, trigram 1.0, fused 1.0 (small, easy catalog; not a benchmark).
+- **Live PayPal sandbox run (9 Nov demo clock; checked against the PayPal API):**
+  - Telegram simulator → seeded Short → lamp picked → goal "comfortable study setup by Friday for $350, I already own a monitor" → one question (laptop port) → plan $289 (lamp $49, chair $169, dock $59, shipping $12); no monitor suggested.
+  - Hashed quote approved; PayPal order 01D1253357982945Y with item breakdown; capture 9P656496MU567232L **$289.00 COMPLETED, fee $10.13, net $278.87** (read back).
+  - The first checkout link was abandoned unapproved; the second attempt used a new request id (`order:…:2`) and the old order was never captured.
+  - Merchant backordered the chair to 2026-11-17 (after the Friday deadline). Everyday offered **no swap**, correctly: no in-stock ergonomic chair at or below $169 exists in the catalog, so the $20 swap refund shown in the tests did not occur live.
+  - Lamp delivered → damaged case → eligibility (window to 2026-12-09, no fee because damaged) → shopper chose "keep it, $15 back" → merchant approved → refund 675385122W840225J **$15.00 COMPLETED**; capture now PARTIALLY_REFUNDED. App shows paid $289, refunded $15, net $274.
+- Found live and fixed: confirmation messages after case actions were placed after `#cases` in the redirect and never shown.
+
+## Changes on 8 Nov 2026
+
+From the six-product review and implementation plan (https://claude.ai/artifact/5sDaBKUfMziPvxnTwDfswc). 25 tests pass; each change below has a test on the fake PayPal; price protection and payment finality were re-run live (below).
+
+- Only a COMPLETED capture with the quoted amount marks an order paid and takes stock; PENDING waits for the reconciler; DECLINED lets the shopper pay again.
+- A refund whose first PayPal call fails stays recorded and is retried by the worker with the same request id; the case still resolves once PayPal confirms.
+- New: every preference update has a receipt on the You page, and Undo rebuilds the model by replaying the remaining choices (undoing the latest restores the exact earlier weights).
+- New: the laptop question is tried against the catalog first, asked only if the answer changes what fits, and shows why.
+- New: price protection. Each order keeps the merchant policy it was bought under, and Northlight's says 14 days after delivery. When Northlight records a lower price for the same item, in stock, the owner is told and Today shows the claim. The shopper asks; the merchant approves; the refund goes on the original capture through the case flow; the owned item's cost drops once PayPal confirms. A further drop pays only the further difference. Outside the window, out of stock, returned, or a claim already open: refused with the reason. A price protection promise is the merchant's, not PayPal's.
+- Found live and fixed: a capture PayPal refused (`INSTRUMENT_DECLINED`, when the sandbox buyer's balance couldn't cover it) was shown as "declined" with no reason, and the reconciler kept retrying it. Now the order records PayPal's reason, says nothing was charged, stops retrying, and the next Pay creates a fresh PayPal order (test added). Also fixed: a Pay pressed while the reconciler was clearing that order showed "still being confirmed".
+
+### Live rerun on the 8 Nov code (checked with `scripts/pp-check.mts`)
+
+- Demo reset; study-setup plan $289 (lamp $49, chair $169, dock $59, shipping $12). First order `16958994BA562841B`: approved, capture refused with `INSTRUMENT_DECLINED` (the buyer's balance had just paid another app's deposit); nothing charged, order cleared with the reason shown.
+- Second order `4T459510Y84666018` (attempt 2; balance plus sandbox Visa): capture `4YL25828JE900393G` **$289.00 COMPLETED** (fee $10.13), read back before EV-4001 counted as paid.
+- Price protection: lamp delivered; Northlight recorded the Halden Oak lamp at $39; Maya was notified and Today showed "$10.00 back is available"; she claimed it under NL-returns-2026-10 (14 days after delivery); Northlight approved; refund `7YV35564HW882994G` **$10.00 COMPLETED** on the original capture (now PARTIALLY_REFUNDED); her owned lamp now costs $39.
+
+## Review fixes (9 Nov 2026)
+
+From the 8 Nov independent review: each defect its probes reproduced is fixed, and each probe is now a regression test that checks the correct behaviour (test/flows.test.ts). 33 tests pass. These fixes are tested on the fake PayPal; they have not been re-run live on the sandbox yet.
+
+- Refunds count only once PayPal says COMPLETED, through one conditional update, so overlapping checks lower an item's cost once. (A PENDING refund was being counted straight away; fixed.)
+- A refund PayPal marks FAILED is not counted; the case goes back to the merchant and a retry uses a new request id.
+- A capture for the wrong amount or currency is an exception with no new checkout.
+- The order keeps the merchant policy that was in the quote the shopper approved (it is part of the quote's hash).
+- An approved replacement creates a real replacement order line; the case closes when it is delivered.
+- Undo replays the features each choice was made on, so later catalog edits don't change the restored model.
+- Unknown lumbar-support data doesn't satisfy a comfort requirement; an owned item fills its slot instead of blocking the plan.
+
+## Foundation and widening (9 Nov 2026)
+
+Everything below is built and covered by `test/foundation.test.ts` (walks every new route, 59 of them, and fails on any 5xx or unvisited route) plus `test/structural.test.ts` (every PayPal write in `src/services` is preceded by the gate in the same function). Suite: 45/45.
+
+### What is real
+
+- **Plain-words mandates** (`/guard`, `/merchant/approvals`). A shopper or merchant writes rules in a sentence or two; `src/guard/policy.ts` compiles them (model-assisted when `AI_PROVIDER=openai`, regex otherwise), clamps them, and versions them. Backtest against the seeded purchase year shows what would have run, waited or been denied before you activate.
+- **Dry-run gate** (`src/guard/dryrun.ts`). Every money move (order, capture, refund, repeat buy, tracking, evidence) is checked for kill switches, integer cents, provenance of the amount, the mandate, the monthly limit, the merchant's refund ceiling and live PayPal state before PayPal is called. Holds create an approval and notify the party on their linked channel.
+- **Traces** (`/trace/:id`, `/traces`, `/api/v1/runs`). Each run records gate decisions and PayPal request/debug ids. The MCP `get_trace` tool exposes them to agents on their own entities only.
+- **Webhooks**: `/webhooks/paypal` (signature-verified against `PAYPAL_WEBHOOK_ID`, recorded once in `webhook_events`, unverified posts rejected; PayPal read-back remains the source of truth).
+- **Channels** (`/channels`, `/webhooks/telegram`, `/webhooks/whatsapp`). Approve and decline buttons, countersign above `EV_COUNTERSIGN_ABOVE_CENTS`, passkey endpoints, hash-chained audit log at `/guard/audit.json`. Without tokens, messages are recorded as simulated and shown on `/channels`.
+- **PWA and push** (`/manifest.webmanifest`, `/sw.js`, `/push/*`). Simulated until VAPID keys are set.
+- **Purchase passport** (`/passport`). Seeded, labelled purchase year; saved PayPal (vault) setup and revoke; repeat buys that run through the gate and are held or denied by the mandate; Channel3 product search with an honest catalog fallback.
+- **Merchant money desk** (`/merchant/money`). Tracking numbers posted to PayPal orders, dispute sync, evidence packs, accept-claim (gated refund), transaction reconciliation and PayPal negative-test codes (also gated).
+- **MCP server** (`/mcp`, Bearer shopper key). Tools: my_constraints, plan_for, quote, approve_purchase, repeat_buy, passport, get_trace. Rate limited, idempotent, kill-switch aware.
+- **Merchant MCP (read-only)** (`/merchant/mcp`, Bearer merchant key): list_orders, get_order, list_cases, list_approvals, list_disputes, get_performance, get_trace. Nothing on it ships, refunds or decides.
+- **Eval explorer, llms.txt, skill.** `GET /console/eval` slices every eval row by arm, outcome and trap with CSV at `/console/eval.csv`; `/llms.txt`; skill file `skill/SKILL.md` at `/skill.md`; file map in `docs/foundation.md`.
+- **Screenshot reading** uses the OpenAI vision tier when configured; on-image instructions are quarantined and only flagged, never obeyed.
+
+### Evals (numbers are from the seeded sandbox, limits stated in each file)
+
+- `npm run eval:techjam` → `eval/techjam.md`. 120 held-out scenarios: baseline BM25 vs Everyday's hybrid search with reply tree, reranker and abstain. Everyday wins on hit rate, MRR and conversion but pays 11% false abstains and 2.6 turns. Protocol reimplemented from the public description; no TechJam material included.
+- `npm run eval:adversarial` → `eval/adversarial.md`. 24 attacks on the gate (negative, fractional, smuggled, untrusted-provenance and over-limit amounts, excluded merchants, blocked categories). All refused before PayPal.
+- `npm run eval:capture` → `eval/capture.md`. 10 drawn frames including 2 instruction traps; model and oracle arms 10/10, rules arm 2/10. Frames are far easier than real screenshots.
+
+If the dev server holds `./data/pglite`, run evals with `PGLITE_PATH=./data/pglite-eval`.
+
+### Waiting on you
+
+Keys for Channel3, Telegram, WhatsApp and VAPID (see `.env.example`). Everything degrades to a labelled simulation without them. Deployment, demo video and LICENSE are still parked.

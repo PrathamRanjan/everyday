@@ -1,0 +1,75 @@
+/**
+ * What Everyday says on channels and how it answers replies (roadmap B.8). Shoppers get approval requests for held
+ * repeat buys, price-protection and recall alerts and order updates; the merchant gets approval requests for refunds
+ * above its threshold and case events. A button press on a held move is the approval; amounts above the
+ * countersign threshold are sent back to the app for a passkey. The existing Telegram bot (services/captures.ts)
+ * keeps handling clips and plans; this handles the foundation's messages on Telegram, WhatsApp and the simulator.
+ */
+import { config } from "../config.js";
+import { getDb } from "../db.js";
+import { enqueue } from "../jobs.js";
+import { countersignThreshold, decideApproval } from "../guard/dryrun.js";
+import { MERCHANT } from "../guard/policy.js";
+import { link, onInbound, type Party } from "./index.js";
+
+const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
+
+export function installChannelHandlers() {
+  onInbound(async (m) => {
+    const text = m.text.trim();
+    const db = await getDb();
+    const linkMatch = text.match(/^\/?link\s+(shopper|merchant):(\S+)$/i);
+    if (linkMatch && m.channel !== "simulator") {
+      const party = linkMatch[1].toLowerCase() as Party;
+      const id = linkMatch[2];
+      const exists = party === "merchant" ? id === MERCHANT || (await db.query("SELECT 1 FROM merchants WHERE id = $1", [id])).rows.length > 0 : (await db.query("SELECT 1 FROM accounts WHERE id = $1", [id])).rows.length > 0;
+      if (!exists) return "That id does not exist. Copy it from the Channels page while signed in.";
+      await link(m.channel, m.address, party, party === "merchant" ? MERCHANT : id);
+      return `Linked. You will get ${party === "merchant" ? "refund approval requests and case updates" : "approval requests, price-protection and recall alerts, and order updates"} here.`;
+    }
+    const party = m.party ?? (m.channel === "simulator" && /^(shopper|merchant):/.test(m.address) ? { party: m.address.split(":")[0], party_id: m.address.split(":").slice(1).join(":") } : null);
+    if (!party) return "This address is not linked yet. Send: link shopper:<account id> or link merchant:merchant.";
+    const ownerId = party.party === "merchant" ? MERCHANT : party.party_id;
+
+    const cmd = (m.buttonId ?? text).match(/^(approve|decline):(\S+)$/i);
+    if (cmd) {
+      const approve = cmd[1].toLowerCase() === "approve";
+      const a = (await db.query<any>("SELECT * FROM approvals WHERE id = $1 AND owner_id = $2 AND status = 'pending'", [cmd[2], ownerId])).rows[0];
+      if (!a) return "That request is no longer pending.";
+      if (approve && a.payload.cents > countersignThreshold()) return `${usd(a.payload.cents)} is above your countersign threshold (${usd(countersignThreshold())}). Approve it with your passkey in the app (${config.appUrl}${party.party === "merchant" ? "/merchant/approvals" : "/guard"}).`;
+      const payload = await decideApproval(a.id, ownerId, approve, "click");
+      if (payload && approve) await enqueue(db, "release_approved", { approvalId: a.id }, new Date(), `release:${a.id}`);
+      return approve ? `Approved ${usd(a.payload.cents)}. The ${String(a.action).replace("_", " ")} is back in the queue.` : "Declined. Nothing moves.";
+    }
+    if (/^(pending|approvals|waiting)$/i.test(text)) {
+      const rows = (await db.query<any>("SELECT * FROM approvals WHERE owner_id = $1 AND status = 'pending' ORDER BY created_at", [ownerId])).rows;
+      if (!rows.length) return "Nothing waiting for you.";
+      return rows.map((a: any) => `${String(a.action).replace("_", " ")} ${usd(a.payload.cents)} (${a.payload.entity} ${a.payload.entity_id}): reply approve:${a.id} or decline:${a.id}`).join("\n");
+    }
+    if (party.party === "shopper") {
+      if (/^(orders|purchases|status)$/i.test(text)) {
+        const rows = (await db.query<any>("SELECT number, status, total_cents, refunded_cents FROM orders WHERE account_id = $1 ORDER BY created_at DESC LIMIT 8", [party.party_id])).rows;
+        return rows.length ? rows.map((o: any) => `${o.number}: ${String(o.status).replace(/_/g, " ")}, ${usd(o.total_cents)}${o.refunded_cents ? ` (${usd(o.refunded_cents)} back)` : ""}`).join("\n") : "No purchases yet.";
+      }
+      if (/^(stop|kill|freeze)$/i.test(text)) {
+        const { setKill } = await import("../guard/kill.js");
+        await setKill(`account:${party.party_id}`, true, "stopped from a channel", "shopper");
+        return "Stopped. No order, capture or repeat buy runs for your account until you release it in the app under Guard.";
+      }
+      if (/^(watch|watches|protection)$/i.test(text)) {
+        const rows = (await db.query<any>("SELECT w.target_cents, w.status, p.title, p.price_cents FROM price_watches w JOIN products p ON p.id = w.product_id WHERE w.account_id = $1", [party.party_id])).rows;
+        return rows.length ? rows.map((w: any) => `${w.title}: now ${usd(w.price_cents)}, you want ${usd(w.target_cents)} (${w.status})`).join("\n") : "No price watches.";
+      }
+      return "Reply 'pending' for approvals waiting on you, 'orders' for your purchases, 'watch' for price watches, or 'stop' to freeze all buying.";
+    }
+    if (/^(cases|open)$/i.test(text)) {
+      const rows = (await db.query<any>("SELECT number, issue, status, refund_cents FROM cases WHERE status IN ('awaiting_merchant','refunding') ORDER BY created_at LIMIT 10")).rows;
+      return rows.length ? rows.map((c: any) => `${c.number}: ${c.issue}, ${String(c.status).replace(/_/g, " ")}${c.refund_cents ? `, ${usd(c.refund_cents)}` : ""}`).join("\n") : "No open cases.";
+    }
+    if (/^(disputes)$/i.test(text)) {
+      const rows = (await db.query<any>("SELECT paypal_id, status, amount_cents FROM disputes ORDER BY synced_at DESC LIMIT 10")).rows;
+      return rows.length ? rows.map((d: any) => `${d.paypal_id}: ${d.status}${d.amount_cents ? `, ${usd(d.amount_cents)}` : ""}`).join("\n") : "No disputes on file.";
+    }
+    return "Reply 'pending' for refunds waiting on you, 'cases' for open cases, or 'disputes'.";
+  });
+}

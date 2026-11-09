@@ -1,0 +1,6 @@
+{
+  "note": "Held-out manifest for the TechJam-style eval: scenarios are generated from these seeds by src/core/techjam.ts scenarios(seed, 40). Fixed on 9 Nov 2026 before the reranker weights were tuned on seeds 1-5.",
+  "seeds": [11, 23, 37],
+  "per_seed": 40,
+  "mix": { "exact": 0.4, "vague": 0.4, "ambiguous": 0.15, "out_of_catalog": 0.05 }
+}

@@ -1,0 +1,13 @@
+import { writeFileSync } from "node:fs";
+import { getDb } from "../src/db.js";
+import { runAdversarial } from "../src/eval/adversarial.js";
+import { seedAll } from "../src/services/seed.js";
+const db = await getDb();
+const n = Number((await db.query("SELECT count(*)::int AS n FROM accounts")).rows[0]?.n ?? 0);
+if (!n) await seedAll();
+const acc = (await db.query<any>("SELECT id FROM accounts ORDER BY created_at LIMIT 1")).rows[0].id;
+const ord = (await db.query<any>("SELECT id FROM orders WHERE capture_id IS NOT NULL ORDER BY created_at DESC LIMIT 1")).rows[0]?.id ?? null;
+const r = await runAdversarial(acc, ord);
+writeFileSync("eval/adversarial.md", r.markdown);
+console.log(r.markdown);
+process.exit(r.leaked.length ? 1 : 0);
