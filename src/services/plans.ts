@@ -62,7 +62,9 @@ export function parseGoal(text: string, now: Date) {
   if (/monitor_arm/.test(t2) && !cats.includes("monitor_arm")) cats.push("monitor_arm");
   const mentioned = cats;
   const style_words = ["wood", "oak", "black", "white", "minimal", "warm", "cosy", "cozy", "quiet", "playful", "premium", "compact"].filter((w) => t.includes(w));
-  return { mentioned, goal: (setup ? "desk_setup" : "single") as Reqs["goal"], budget_cents, deadline, owned, replace, categories: setup ? [] : cats, require_ergonomic: /\b(comfortable|comfort|ergonomic|back pain|posture|long hours)\b/.test(t), style_words, recipient: t.match(/\bfor my (sister|brother|mum|mom|dad|friend|partner|son|daughter)\b/)?.[1] ?? null };
+  // Items the person names are what gets planned; the full desk template is only for an open "set up my desk" ask.
+  const named = cats.length > 0 && !(setup && cats.length >= 3);
+  return { mentioned, goal: (setup && !named ? "desk_setup" : "single") as Reqs["goal"], budget_cents, deadline, owned, replace, categories: named ? cats : setup ? [] : cats, require_ergonomic: /\b(comfortable|comfort|ergonomic|back pain|posture|long hours)\b/.test(t), style_words, recipient: t.match(/\bfor my (sister|brother|mum|mom|dad|friend|partner|son|daughter)\b/)?.[1] ?? null };
 }
 
 // ---------- Context ----------

@@ -36,20 +36,28 @@ export async function searchProducts(query: string, q?: Queryable): Promise<{ re
   if (channel3Ready()) {
     try {
       const f = fetchImpl ?? fetch;
-      const res = await f(`${config.channel3.baseUrl}/v0/search`, { method: "POST", headers: { "content-type": "application/json", "x-api-key": config.channel3.apiKey }, body: JSON.stringify({ query: key, limit: 10 }), signal: AbortSignal.timeout(8000) });
+      const res = await f(`${config.channel3.baseUrl}/v1/search`, { method: "POST", headers: { "content-type": "application/json", "x-api-key": config.channel3.apiKey }, body: JSON.stringify({ query: key, limit: 10 }), signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`Channel3 ${res.status}`);
       const data = (await res.json()) as any;
       const items: any[] = Array.isArray(data) ? data : (data.products ?? data.results ?? []);
-      const results: ExternalProduct[] = items.slice(0, 10).map((p) => ({
-        title: String(p.title ?? p.name ?? "Untitled").slice(0, 160),
-        brand: p.brand ? String(p.brand).slice(0, 60) : null,
-        price_cents: priceCents(p.price ?? p.offers?.[0]?.price ?? null),
-        currency: String(p.currency ?? p.offers?.[0]?.currency ?? "USD").slice(0, 3),
-        url: typeof (p.url ?? p.link) === "string" && /^https?:\/\//.test(p.url ?? p.link) ? String(p.url ?? p.link).slice(0, 500) : null,
-        merchant: p.merchant?.name ? String(p.merchant.name).slice(0, 80) : p.vendor ? String(p.vendor).slice(0, 80) : null,
-        image: typeof p.image_url === "string" && /^https:\/\//.test(p.image_url) ? p.image_url.slice(0, 500) : null,
-        source: "channel3",
-      }));
+      const results: ExternalProduct[] = items.slice(0, 10).map((p) => {
+        // v1 shape: brands[], images[] (prefer a cleaned hero shot), offers[] with price { price, currency }, url and domain.
+        const offer = Array.isArray(p.offers) ? p.offers.find((o: any) => o?.availability === "InStock") ?? p.offers[0] : null;
+        const imgs: any[] = Array.isArray(p.images) ? p.images : [];
+        const img = imgs.find((i) => i?.shot_type === "hero" && i?.cleaned_url) ?? imgs.find((i) => i?.is_main_image) ?? imgs[0];
+        const imgUrl = img?.cleaned_url ?? img?.url ?? p.image_url;
+        const url = offer?.url ?? p.url ?? p.link;
+        return {
+          title: String(p.title ?? p.name ?? "Untitled").slice(0, 160),
+          brand: p.brands?.[0]?.name ? String(p.brands[0].name).slice(0, 60) : p.brand ? String(p.brand).slice(0, 60) : null,
+          price_cents: priceCents(offer?.price?.price ?? offer?.price ?? p.price ?? null),
+          currency: String(offer?.price?.currency ?? p.currency ?? "USD").slice(0, 3),
+          url: typeof url === "string" && /^https?:\/\//.test(url) ? url.slice(0, 500) : null,
+          merchant: offer?.domain ? String(offer.domain).slice(0, 80) : p.merchant?.name ? String(p.merchant.name).slice(0, 80) : null,
+          image: typeof imgUrl === "string" && /^https:\/\//.test(imgUrl) ? imgUrl.slice(0, 500) : null,
+          source: "channel3" as const,
+        };
+      });
       await db.query("INSERT INTO channel3_cache (query, results, source, fetched_at) VALUES ($1,$2,'channel3',now()) ON CONFLICT (query) DO UPDATE SET results = EXCLUDED.results, source = 'channel3', fetched_at = now()", [key, JSON.stringify(results)]);
       return { results, source: "channel3", note: "Live Channel3 results. Discovery only: buying happens with the merchant, not here." };
     } catch (e) {
