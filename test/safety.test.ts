@@ -28,7 +28,7 @@ describe("messages", () => {
     expect(loadRiskModel().features).toContain("t_off_platform");
     const clean = payeeRules({ payeeAgeDays: null, detailsChangedDaysAgo: null, detailsChangeSource: null, amountCents: 4500, historyMedianCents: 4000, velocity10m: 0, velocity24hSumRatio: 1, requestChannelUntrusted: false, hourLocal: 12 }).features;
     const p0 = riskScore(clean);
-    expect(riskScore({ ...clean, payee_age_days: 0, request_channel_untrusted: 1, t_off_platform: 1, t_urgency_secrecy: 1 })).toBeGreaterThan(p0);
+    expect(riskScore({ ...clean, payee_age_days: 0, request_channel_untrusted: 1, t_off_platform: 1, t_urgency: 1 })).toBeGreaterThan(p0);
   });
 });
 
