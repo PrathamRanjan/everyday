@@ -15,7 +15,7 @@ import { seed, seedAll } from "../services/seed.js";
 import { aiUsageSummary, hasOpenAI, providerLabel } from "../ai/provider.js";
 import { evalRows, summarise } from "../eval/store.js";
 import { verifyChain } from "../guard/audit.js";
-import { telegramReady, whatsappReady } from "../channels/index.js";
+import { telegramReady } from "../channels/index.js";
 import { pushReady } from "../channels/push.js";
 import { channel3Ready } from "../services/channel3.js";
 import { runTechjam } from "../core/techjam.js";
@@ -120,7 +120,7 @@ ${Object.entries(rep.personal).map(([k, v]: any) => html`<tr><td>Personal after 
 <tr><th>Models</th><td>${providerLabel()}. ${ai.calls} calls recorded (${ai.ok} ok), about ${ai.cost_usd.toFixed(3)} at list prices. Models read screenshots and compile mandates; they never set a price, a refund or a payee.</td></tr>
 <tr><th>Catalog</th><td>Seeded Northlight catalog; demo clips have authored objects. Channel3 ${channel3Ready() ? "live" : "not configured: catalog results stand in and say so"}.</td></tr>
 <tr><th>Agents</th><td>Shopper agent over MCP (${real.agent_requests} requests logged). Agents plan and quote; the shopper approves on PayPal; the gate decides repeat buys.</td></tr>
-<tr><th>Channels</th><td>Telegram ${telegramReady() ? "live" : "not configured"} · WhatsApp ${whatsappReady() ? "live" : "not configured"} · Web push ${pushReady() ? "live" : "not configured"} · Simulator always on at <a href="/channels">/channels</a>.</td></tr>
+<tr><th>Channels</th><td>Telegram ${telegramReady() ? "live" : "not configured"} · Web push ${pushReady() ? "live" : "not configured"} · Simulator always on at <a href="/channels">/channels</a>.</td></tr>
 <tr><th>Audit chain</th><td>${chain.ok ? `intact, ${chain.rows} rows` : `BROKEN at row ${chain.broken_at}`}, head <span class="mono">${chain.head.slice(0, 16)}…</span></td></tr>
 </tbody></table>
 <div class="stats"><div><b>${real.captures}</b><span>PayPal captures</span></div><div><b>${real.refunds}</b><span>refunds sent</span></div><div><b>${real.repeats_paid}</b><span>repeat buys paid</span></div><div><b>${real.repeats_stopped}</b><span>repeat buys held/denied</span></div><div><b>${real.vaults}</b><span>saved PayPals</span></div><div><b>${real.trackers}</b><span>trackers</span></div><div><b>${real.disputes}</b><span>disputes</span></div><div><b>${real.runs}</b><span>runs traced</span></div><div><b>${real.approvals_pending}</b><span>approvals waiting</span></div><div><b>${real.model_captures}</b><span>captures read by a model</span></div></div></section>
