@@ -103,3 +103,17 @@ If the dev server holds `./data/pglite`, run evals with `PGLITE_PATH=./data/pgli
 ### Waiting on you
 
 Keys for Channel3, Telegram, WhatsApp and VAPID (see `.env.example`). Everything degrades to a labelled simulation without them. Deployment, demo video and LICENSE are still parked.
+
+## Scam and fraud protection (9 Nov 2026)
+
+Three layers, strictest wins, none can approve a payment (`SAFETY_ACCESSIBILITY_SPEC.md` §4, Everyday row of §6):
+
+- **Rules in code** (`src/safety/rules.ts`): the first payment to a seller found on the open web is a caution, or a hold at $200 and above; three new sellers in ten minutes holds; a message that asks for a code, moves payment off PayPal, asks for gift cards or a fee, or claims an overpayment holds. An amount above the shopper's own history is a caution only, because the shopper approves every checkout on PayPal.
+- **Scam text model in the browser** (`public/safety/`, 23 MB int8 ONNX, fine-tuned MiniLM): scores a pasted seller or marketplace message on the shopper's device at `/safety`. Advisory; its score never reaches the gate.
+- **Payment-risk model** (`public/safety/risk_lgbm.json`): monotone LightGBM walked in TypeScript, **trained on synthetic data**, shown as a ranking signal with the rule reasons.
+
+The gate (`src/guard/dryrun.ts`) runs the check on every order and repeat buy and records a `scam check` line; a hold becomes an approval with `safety_rule` and `safety_reasons` in its payload, listed on `/safety`. Protected mode (`/safety#protected`) turns the first payment to any new seller into a hold and names up to two trusted contacts. Inbound messages on `/safety` carry a red or amber scam banner from the rules. Tests: `test/safety.test.ts`; the model's measured results are on `/safety/model-card`.
+
+## Accessibility (9 Nov 2026)
+
+`public/a11y.js` and `public/a11y.css` on every page: a **Display and help** button with text size, high contrast, Atkinson Hyperlegible, read-aloud, voice input (on-device where the browser supports it), plain words, bigger targets, more time and no motion. A first-visit card offers the same choices. The profile stays in this browser's `localStorage`; typing and buttons always work without it.

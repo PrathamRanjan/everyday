@@ -33,7 +33,7 @@ export function layout(o: LayoutOpts, body: Raw): string {
   const area = o.area ?? (o.who ? "shopper" : "public");
   const nav =
     area === "shopper"
-      ? [["/today", "Today"], ["/discover", "Discover"], ["/plans", "Plans"], ["/purchases", "Purchases"], ["/passport", "Passport"], ["/guard", "Guard"], ["/you", "You"]]
+      ? [["/today", "Today"], ["/discover", "Discover"], ["/plans", "Plans"], ["/purchases", "Purchases"], ["/passport", "Passport"], ["/guard", "Guard"], ["/safety", "Safety"], ["/you", "You"]]
       : area === "merchant"
         ? [["/merchant", "Orders"], ["/merchant#cases", "Cases"], ["/merchant#catalog", "Catalog"], ["/merchant/money", "Money"], ["/merchant/approvals", "Approvals"]]
         : area === "console"
@@ -61,6 +61,7 @@ ${o.head ? o.head.value : ""}
 <main id="main"><div class="wrap">${flash}${body.value}</div></main>
 <footer><div class="wrap">Everyday · PayPal sandbox and a clearly identified test merchant: no real money or goods move. Recommendations explain themselves; payments need your approval.</div></footer>
 <script src="/static/pwa.js" defer></script>
+<link rel="stylesheet" href="/static/a11y.css"><script src="/static/a11y.js" defer></script>
 </body>
 </html>`;
 }

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { getDb } from "./db.js";
 import { GtError } from "./lib/util.js";
 import { opsRoutes } from "./web/ops.js";
+import { safetyRoutes } from "./web/safety.js";
 import { shopperRoutes } from "./web/shopper.js";
 import { guardRoutes } from "./web/guard.js";
 import { traceRoutes } from "./web/trace.js";
@@ -47,6 +48,7 @@ export function createApp() {
   app.use(guardRoutes());
   app.use(traceRoutes());
   app.use(passportRoutes());
+  app.use(safetyRoutes());
   app.use(shopperRoutes());
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof GtError) return res.status(err.status).type("text").send(err.message);

@@ -8,6 +8,7 @@ import { seed, type Seeded } from "../src/services/seed.js";
 import { Client } from "./client.js";
 import { serveTracked } from "./journey-coverage.js";
 import { FOUNDATION_ROUTES } from "./foundation-routes.js";
+import { DEMO_SCAM } from "../src/web/safety.js";
 
 // Acceptance journey: the shopper (app and Telegram) and the merchant end to end over HTTP: capture,
 // compatible plan, taste, quote, PayPal, backorder swap, damage case, price protection, a dropped return
@@ -61,6 +62,17 @@ describe("Everyday acceptance journey", () => {
     expect((await back.post("/login", { as: `acc:${s.account}`, next: "/purchases" })).location).toBe("/purchases");
     const maya = new Client(base);
     ok(await maya.post("/login", { as: `acc:${s.account}` }));
+
+    // Scam and fraud protection (SAFETY_ACCESSIBILITY_SPEC §4): the page, the model card, a scan, protected mode on and off.
+    expect((await maya.get("/safety")).text).toMatch(/Scam and fraud protection/);
+    expect((await maya.get("/safety/model-card")).text).toMatch(/ScamShield/);
+    const scan = await maya.req("POST", "/safety/scan", { json: { text: DEMO_SCAM } });
+    expect(scan.status).toBe(200);
+    expect(JSON.parse(scan.text).level).toBe("hold");
+    expect((await maya.post("/safety/protected", { on: "1" })).status).toBe(302);
+    expect((await maya.get("/safety")).text).toMatch(/Turn protected mode off/);
+    expect((await maya.post("/safety/protected", { on: "0" })).status).toBe(302);
+
     const nl = new Client(base);
     ok(await nl.post("/login", { as: `mer:${s.merchant}` }));
     for (const u of ["/today", "/discover", "/plans", "/purchases", "/you", "/console", "/telegram"]) expect((await maya.get(u)).status, u).toBe(200);

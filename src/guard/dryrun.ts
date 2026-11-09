@@ -6,6 +6,7 @@
  * tracking/evidence writes which carry no money.
  */
 import { createHash } from "node:crypto";
+import { assessPurchase } from "../safety/index.js";
 import { config } from "../config.js";
 import type { Queryable } from "../db.js";
 import { getDb } from "../db.js";
@@ -122,9 +123,18 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
     return refuse(`PayPal state could not be read: ${(e as Error).message.slice(0, 160)}`);
   }
 
-  const needsPerson = !m.customerInitiated && (m.action === "repeat_buy" || m.action === "refund") && m.cents >= rules.approve_above_cents;
+  // Scam check (SAFETY_ACCESSIBILITY_SPEC §4): rules plus the risk model on the shopper's own records. A hold here is a
+  // pause for a person even when the shopper clicked buy; the text model in the browser never reaches this gate.
+  let safety: Awaited<ReturnType<typeof assessPurchase>> | null = null;
+  if ((m.action === "order" || m.action === "repeat_buy") && m.ownerId !== MERCHANT) {
+    const merchantId = m.entity === "order" ? (await db.query<{ merchant_id: string }>("SELECT merchant_id FROM orders WHERE id = $1", [m.entityId])).rows[0]?.merchant_id ?? null : null;
+    safety = await assessPurchase(m.ownerId, merchantId, m.cents, db);
+    checks.push(`scam check: ${safety.summary}`);
+  }
+  const safetyHold = safety?.level === "hold";
+  const needsPerson = safetyHold || (!m.customerInitiated && (m.action === "repeat_buy" || m.action === "refund") && m.cents >= rules.approve_above_cents);
   if (needsPerson && !(await approvedFor(m.entity, m.entityId, m.action, m.cents, db))) {
-    const payload = { action: m.action, entity: m.entity, entity_id: m.entityId, cents: m.cents };
+    const payload = { action: m.action, entity: m.entity, entity_id: m.entityId, cents: m.cents, ...(safetyHold ? { safety_rule: safety!.rule ?? "rule", safety_reasons: safety!.reasons, safety_risk: safety!.risk } : {}) };
     const existing = (await db.query<{ id: string }>("SELECT id FROM approvals WHERE owner_id = $1 AND payload_hash = $2 AND status = 'pending'", [m.ownerId, payloadHash(payload)])).rows[0];
     const approvalId = existing?.id ?? newId("apr");
     if (!existing) await db.query("INSERT INTO approvals (id, owner_id, action, payload_hash, payload) VALUES ($1,$2,$3,$4,$5)", [approvalId, m.ownerId, m.action, payloadHash(payload), JSON.stringify(payload)]);
