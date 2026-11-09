@@ -186,7 +186,7 @@ ${order ? html`<p class="banner info">Ordered: <a href="/orders/${order.id}">${o
   r.get("/purchases", shopper(async (req, res, a) => {
     const db = await getDb();
     const orders = (await db.query<any>("SELECT * FROM orders WHERE account_id = $1 ORDER BY created_at DESC", [a.id])).rows;
-    res.send(page(req, a, "Purchases", html`<h1>Purchases</h1><section class="card">${orders.length ? html`<div class="table-wrap"><table><thead><tr><th>Order</th><th>Status</th><th class="num">Paid</th><th class="num">Refunded</th></tr></thead><tbody>${orders.map((o) => html`<tr><td><a href="/orders/${o.id}">${o.number}</a></td><td>${pill(o.status)}${o.repaired ? html` <span class="flag good">repaired from PayPal</span>` : ""}</td><td class="num">${money(o.gross_cents ?? o.total_cents)}</td><td class="num">${o.refunded_cents ? money(o.refunded_cents) : ""}</td></tr>`)}</tbody></table></div>` : html`<p class="muted">No purchases yet.</p>`}</section>`));
+    res.send(page(req, a, "Purchases", html`<h1>Purchases</h1><section class="card">${orders.length ? html`<div class="table-wrap"><table><thead><tr><th>Order</th><th>Status</th><th class="num">Paid</th><th class="num">Refunded</th></tr></thead><tbody>${orders.map((o) => html`<tr><td><a href="/orders/${o.id}">${o.number}</a></td><td>${pill(o.status, o.status === "created" ? "awaiting payment" : undefined)}${o.repaired ? html` <span class="flag good">repaired from PayPal</span>` : ""}</td><td class="num">${o.status === "created" ? html`<span class="muted">not paid · ${money(o.total_cents)} due</span>` : money(o.gross_cents ?? o.total_cents)}</td><td class="num">${o.refunded_cents ? money(o.refunded_cents) : ""}</td></tr>`)}</tbody></table></div>` : html`<p class="muted">No purchases yet.</p>`}</section>`));
   }));
 
   r.get("/orders/:id", shopper(async (req, res, a) => {
@@ -199,8 +199,8 @@ ${order ? html`<p class="banner info">Ordered: <a href="/orders/${order.id}">${o
     const events = (await db.query<any>("SELECT * FROM events WHERE entity_id = $1 ORDER BY id DESC", [o.id])).rows;
     const i = (await db.query<any>("SELECT * FROM intents WHERE id = $1", [o.intent_id])).rows[0];
     const prot = new Map((await protectionsFor(db, a)).filter((x) => x.order_id === o.id).map((x) => [x.line_id, x]));
-    res.send(page(req, a, o.number, html`<p><a href="/purchases">← Purchases</a> · <a href="/plans/${o.intent_id}">plan</a></p><h1>${o.number} ${pill(o.status)}</h1>
-${o.status === "created" ? html`<p class="banner warn">${o.paypal_order_id ? "Confirming your PayPal payment. Everyday reads PayPal back every minute." : "Not paid yet."}</p><form method="post" action="/orders/${o.id}/pay"><button class="btn primary" type="submit">Pay ${money(o.total_cents)} with PayPal</button></form>` : ""}
+    res.send(page(req, a, o.number, html`<p><a href="/purchases">← Purchases</a> · <a href="/plans/${o.intent_id}">plan</a></p><h1>${o.number} ${pill(o.status, o.status === "created" ? "awaiting payment" : undefined)}</h1>
+${o.status === "created" ? html`<p class="banner warn">${o.paypal_order_id ? "Not paid yet. A PayPal checkout was started but not approved. If you closed the PayPal window, pay again below; if you did approve it, this page updates within a minute once PayPal confirms." : "Not paid yet."}</p><form method="post" action="/orders/${o.id}/pay"><button class="btn primary" type="submit">Pay ${money(o.total_cents)} with PayPal</button></form>` : ""}
 <section class="card"><h2>Items</h2>${lines.map((l) => {
   const offer = J<any>(l.swap_offer);
   return html`<div class="slot"><div class="pick"><div><b>${l.title}</b> ${pill(l.status)}<br><span class="small muted">${l.eta ? `ETA ${l.eta}` : ""}${l.delivered_at ? ` · delivered ${l.delivered_at.replace("T", " ")}` : ""}${i.deadline && l.eta && l.eta > i.deadline && l.status !== "delivered" ? ` · after your ${i.deadline} deadline` : ""}</span></div><div class="price">${money(l.unit_cents)}</div></div>
