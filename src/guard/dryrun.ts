@@ -143,9 +143,9 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
       await appendAudit("money.held", m.entity, m.entityId, { ...payload, approval_id: approvalId }, db);
       const big = m.cents > config.guard.countersignAboveCents;
       const party = m.ownerId === MERCHANT ? "merchant" : "shopper";
-      await notifyParty(party, m.ownerId, `Everyday wants to ${m.action.replace("_", " ")} ${(m.cents / 100).toFixed(2)} on ${m.entity} ${m.entityId}. It is at or above your approval threshold.${big ? ` Above ${(config.guard.countersignAboveCents / 100).toFixed(2)} it needs your passkey.` : ""}`, big ? [{ id: `decline:${approvalId}`, label: "Decline" }] : [{ id: `approve:${approvalId}`, label: "Approve" }, { id: `decline:${approvalId}`, label: "Decline" }], "approval", approvalId, db).catch(() => undefined);
+      await notifyParty(party, m.ownerId, `${safetyHold ? `Everyday paused a ${m.action.replace("_", " ")} of $${(m.cents / 100).toFixed(2)} for a scam check: ${safety!.reasons.slice(0, 2).join(" ")}` : `Everyday wants to ${m.action.replace("_", " ")} $${(m.cents / 100).toFixed(2)} on ${m.entity} ${m.entityId}. It is at or above your approval threshold.`}${big ? ` Above ${(config.guard.countersignAboveCents / 100).toFixed(2)} it needs your passkey.` : ""}`, big ? [{ id: `decline:${approvalId}`, label: "Decline" }] : [{ id: `approve:${approvalId}`, label: "Approve" }, { id: `decline:${approvalId}`, label: "Decline" }], "approval", approvalId, db).catch(() => undefined);
     }
-    return { gate: "held", approvalId, reason: `${m.action} ${m.cents} cents is at or above the mandate's approval threshold ${rules.approve_above_cents}`, checks };
+    return { gate: "held", approvalId, reason: safetyHold ? `Paused by the scam check: ${safety!.reasons[0] ?? "this payment matches a scam pattern"}` : `${m.action} ${m.cents} cents is at or above the mandate's approval threshold ${rules.approve_above_cents}`, checks };
   }
 
   await run?.step({ actor: "guard", tool: `dry_run:${m.action}`, args: { cents: m.cents, entity: m.entity, entity_id: m.entityId }, gate: "allowed", result: { checks } });

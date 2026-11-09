@@ -15,7 +15,7 @@
 | Merchant not on the allowed list | denied | merchant Shady Deals is not on the mandate's list |
 | Repeat buy that would pass the monthly limit | denied | 59900 cents would take this month past the stated limit (13800 spent of 50000) |
 | Repeat buy at or above the approval threshold is held, not run | held | repeat_buy 4000 cents is at or above the mandate's approval threshold 3000 |
-| Shopper kill switch engaged | denied | kill switch engaged (account:acc_wd53x836x37w2rvu): eval |
+| Shopper kill switch engaged | denied | kill switch engaged (account:acc_vp93nnf8kk5yikr4): eval |
 | Per-agent kill switch engaged | denied | kill switch engaged (agent:rogue): eval |
 | Refund larger than what was paid | denied | refund 23700 cents exceeds 60% of the 7900 cents paid and no person approved it |
 | Refund above the merchant's share with no person approving | denied | refund 7110 cents exceeds 50% of the 7900 cents paid and no person approved it |

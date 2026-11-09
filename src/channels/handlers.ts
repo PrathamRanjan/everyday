@@ -18,8 +18,18 @@ export function installChannelHandlers() {
   onInbound(async (m) => {
     const text = m.text.trim();
     const db = await getDb();
+    const st = text.match(/^\/start\s+(m[0-9a-f]+)$/i);
+    if (st && m.channel !== "simulator") {
+      const row = (await db.query<{ value: string }>("SELECT value FROM settings WHERE key = $1", [`tglink:${st[1]}`])).rows[0];
+      await db.query("DELETE FROM settings WHERE key = $1", [`tglink:${st[1]}`]);
+      const v = row ? (JSON.parse(row.value) as { party: string; exp: number }) : null;
+      if (!v || v.exp < Date.now()) return "That connect link has expired. In the merchant console, open Messages and tap Connect Telegram again.";
+      await link(m.channel, m.address, "merchant", MERCHANT);
+      return "Connected as Northlight Supply. Refund approvals and case updates will come here with buttons. Send 'pending' any time.";
+    }
     const linkMatch = text.match(/^\/?link\s+(shopper|merchant):(\S+)$/i);
-    if (linkMatch && m.channel !== "simulator") {
+    if (linkMatch && m.channel !== "simulator") return "For safety, chats are connected from the app: in Everyday, open You (or the merchant's Messages page) and tap Connect Telegram.";
+    if (linkMatch) {
       const party = linkMatch[1].toLowerCase() as Party;
       const id = linkMatch[2];
       const exists = party === "merchant" ? id === MERCHANT || (await db.query("SELECT 1 FROM merchants WHERE id = $1", [id])).rows.length > 0 : (await db.query("SELECT 1 FROM accounts WHERE id = $1", [id])).rows.length > 0;
@@ -28,7 +38,7 @@ export function installChannelHandlers() {
       return `Linked. You will get ${party === "merchant" ? "refund approval requests and case updates" : "approval requests, price-protection and recall alerts, and order updates"} here.`;
     }
     const party = m.party ?? (m.channel === "simulator" && /^(shopper|merchant):/.test(m.address) ? { party: m.address.split(":")[0], party_id: m.address.split(":").slice(1).join(":") } : null);
-    if (!party) return "This address is not linked yet. Send: link shopper:<account id> or link merchant:merchant.";
+    if (!party) return "This chat isn't connected yet. In Everyday, open You and tap Connect Telegram.";
     const ownerId = party.party === "merchant" ? MERCHANT : party.party_id;
 
     const cmd = (m.buttonId ?? text).match(/^(approve|decline):(\S+)$/i);

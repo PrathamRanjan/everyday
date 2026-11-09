@@ -15,6 +15,12 @@ import { keyLogin, shopper, signIn, signOut, whoami } from "./auth.js";
 import { back, flashOf } from "./common.js";
 import { html, layout, money, pill, raw, type Raw } from "./html.js";
 import { readForm } from "./upload.js";
+import { randomBytes } from "node:crypto";
+import { landing } from "./landing.js";
+import { icon } from "./icons.js";
+import { messageFlag } from "./safetyui.js";
+import { approvalCard } from "./guard.js";
+import { pendingApprovals } from "../guard/dryrun.js";
 
 const page = (req: Request, a: Account | null, title: string, body: Raw, area: "shopper" | "public" = "shopper") => layout({ title, area, who: a ? { name: a.name, clock: fmtWall(nowOf(a)) } : null, flash: flashOf(req) }, body);
 
@@ -36,15 +42,20 @@ export function shopperRoutes() {
     const w = await whoami(req);
     if (w?.account) return res.redirect("/today");
     if (w?.merchant) return res.redirect("/merchant");
-    res.send(page(req, null, "Everyday", html`<section class="hero"><h1>Show Everyday something you like, or say what you need.</h1><p class="lead">It helps you decide (including deciding not to buy), completes the purchase with PayPal when you approve, and keeps helping after delivery: delays, returns, warranties and what you already own.</p><p class="actions"><a class="btn primary" href="/login">Sign in</a><a class="btn" href="/demo">Demo setup</a></p></section>`, "public"));
+    await landing(req, res);
   });
 
   r.get("/login", async (req, res) => {
     const db = await getDb();
     const accounts = config.demoMode ? (await db.query<any>("SELECT id, name FROM accounts")).rows : [];
     const merchants = config.demoMode ? (await db.query<any>("SELECT id, name FROM merchants WHERE kind = 'test_merchant'")).rows : [];
-    res.send(page(req, null, "Sign in", html`<section class="card" style="max-width:600px"><h1>Sign in</h1><form method="post" action="/login" class="stack"><div class="field"><label for="key">Access key</label><input id="key" type="password" name="key"></div><input type="hidden" name="next" value="${String(req.query.next ?? "")}"><button class="btn primary" type="submit">Sign in</button></form>
-${accounts.length ? html`<h2 style="margin-top:1rem">Demo</h2>${accounts.map((a) => html`<div class="persona"><div><b>${a.name}</b> · shopper</div><form method="post" action="/login" class="inline"><input type="hidden" name="as" value="acc:${a.id}"><input type="hidden" name="next" value="${String(req.query.next ?? "")}"><button class="btn small" type="submit">Sign in as ${a.name}</button></form></div>`)}${merchants.map((m) => html`<div class="persona"><div><b>${m.name}</b> · merchant console</div><form method="post" action="/login" class="inline"><input type="hidden" name="as" value="mer:${m.id}"><button class="btn small" type="submit">Open merchant console</button></form></div>`)}` : ""}</section>`, "public"));
+    const next = String(req.query.next ?? "");
+    res.send(page(req, null, "Sign in", html`<div class="page-head"><div><h1>Sign in to Everyday</h1><p>Shoppers see their plans and purchases; the test merchant sees orders and cases.</p></div></div>
+<div class="lp-personas">
+${accounts.map((a) => html`<div class="persona-card"><div class="who"><span class="avatar">${a.name[0]}</span><span><b>${a.name}</b><span>Demo shopper</span></span></div><form method="post" action="/login"><input type="hidden" name="as" value="acc:${a.id}"><input type="hidden" name="next" value="${next}"><button class="btn primary" type="submit">Continue as ${a.name}</button></form></div>`)}
+${merchants.map((m) => html`<div class="persona-card"><div class="who"><span class="avatar">${raw(icon("store"))}</span><span><b>${m.name}</b><span>Test merchant console</span></span></div><form method="post" action="/login"><input type="hidden" name="as" value="mer:${m.id}"><button class="btn" type="submit">Open merchant console</button></form></div>`)}
+<div class="persona-card"><div class="who"><span class="avatar">${raw(icon("lock"))}</span><span><b>With an access key</b><span>For your own account</span></span></div><form method="post" action="/login" class="stack"><label for="key">Access key</label><input id="key" type="password" name="key" autocomplete="off"><input type="hidden" name="next" value="${next}"><button class="btn" type="submit">Sign in</button></form></div>
+</div>`, "public"));
   });
 
   r.post("/login", async (req, res) => {
@@ -66,11 +77,18 @@ ${accounts.length ? html`<h2 style="margin-top:1rem">Demo</h2>${accounts.map((a)
     const cal = await calendar(db, a);
     const sp = await spending(db, a);
     const inbox = (await db.query<any>("SELECT * FROM inbox WHERE account_id = $1 AND channel = 'app' ORDER BY id DESC LIMIT 5", [a.id])).rows;
-    res.send(page(req, a, "Today", html`<h1>Today</h1>
-<div class="stat-grid"><div class="kpi"><div class="label">Left this month</div><div class="value">${money(sp.left_cents)}</div><div class="hint">of your ${money(sp.limit_cents)} limit · ${sp.note}</div></div><div class="kpi"><div class="label">Spent</div><div class="value">${money(sp.spent_cents)}</div><div class="hint">${sp.reserved_cents ? `${money(sp.reserved_cents)} awaiting payment` : "net of refunds"}</div></div><div class="kpi"><div class="label">Needs you</div><div class="value">${items.length}</div></div></div>
-<section class="card"><h2>Needs attention</h2>${items.length ? html`<div class="attn">${items.map((i) => html`<a class="item" href="${i.href}"><span><b>${i.title}</b><br><span class="small muted">${i.detail}</span></span><span>${pill(i.urgency >= 4 ? "backordered" : i.urgency >= 3 ? "pending" : "current", i.kind)}</span></a>`)}</div>` : html`<p class="muted">All clear. Share something you like in Discover.</p>`}</section>
-<section class="card"><h2>Coming up</h2>${cal.length ? html`<ul>${cal.map((c) => html`<li><b>${c.date}</b> — <a href="${c.href}">${c.what}</a></li>`)}</ul>` : html`<p class="muted">Nothing dated yet.</p>`}</section>
-${inbox.length ? html`<section class="card"><h2>Messages</h2><ul>${inbox.map((m) => html`<li>${m.text}</li>`)}</ul></section>` : ""}`));
+    const held = (await pendingApprovals(a.id)).slice(0, 4);
+    const KIND: Record<string, [string, string]> = { question: ["sparkles", ""], approve: ["checkCircle", ""], gap: ["alert", "muted"], payment: ["wallet", ""], risk: ["truck", "bad"], delivery: ["package", ""], case: ["receipt", ""], return: ["undo", ""], warranty: ["shield", "muted"], recall: ["alert", "bad"], price: ["chart", ""] };
+    const first = a.name.split(" ")[0];
+    res.send(page(req, a, "Today", html`<div class="page-head"><div><h1>Hi ${first}</h1><p>${items.length || held.length ? `${items.length + held.length} thing${items.length + held.length === 1 ? "" : "s"} could use you today.` : "Nothing needs you today."} Share something you like in Discover any time.</p></div><a class="btn primary" href="/discover">${raw(icon("camera"))}Share something</a></div>
+<div class="kpis"><div class="kpi"><div class="label">Left this month</div><div class="value">${money(sp.left_cents)}</div><div class="hint">of your ${money(sp.limit_cents)} limit · ${sp.note}</div></div><div class="kpi"><div class="label">Spent</div><div class="value">${money(sp.spent_cents)}</div><div class="hint">${sp.reserved_cents ? `${money(sp.reserved_cents)} not paid yet` : "net of refunds"}</div></div><div class="kpi"><div class="label">Needs you</div><div class="value">${items.length + held.length}</div><div class="hint">${held.length ? `${held.length} payment${held.length === 1 ? "" : "s"} paused for you` : "plans, deliveries and returns"}</div></div></div>
+${held.length ? html`<div class="section-title"><h2>Paused for you</h2><p>Payments Everyday stopped before they happened. Nothing has been charged.</p></div>${held.map((h: any) => approvalCard(h, "/guard", "/today"))}` : ""}
+<div class="section-title"><h2>Needs attention</h2><p>Most urgent first.</p></div>
+${items.length ? html`<div class="rows" style="margin-bottom:1.5rem">${items.map((i) => { const [ic, tone] = KIND[i.kind] ?? ["sparkles", ""]; return html`<a class="r" href="${i.href}"><span class="av ${tone === "muted" ? "muted" : ""}" style="${tone === "bad" ? "background:var(--ui-destructive-bg);color:var(--ui-destructive)" : ""}">${raw(icon(ic))}</span><span><div class="t">${i.title}</div><div class="s">${i.detail}</div></span><span class="m">${i.when ?? ""}</span><span class="act">${raw(icon("arrowRight"))}</span></a>`; })}</div>` : html`<div class="empty" style="margin-bottom:1.5rem">All clear. Share something you like in Discover.</div>`}
+<div class="grid g2">
+<section class="card"><h2>Coming up</h2>${cal.length ? html`<div class="stack">${cal.map((c) => html`<div class="spread"><a href="${c.href}">${c.what}</a><span class="small muted num">${c.date}</span></div>`)}</div>` : html`<p class="muted">Nothing dated yet.</p>`}</section>
+<section class="card"><h2>Messages</h2>${inbox.length ? html`<div class="stack">${inbox.map((m) => html`<div>${messageFlag(String(m.text), "Everyday only pays through PayPal checkout; nothing in a message changes that.")}<p style="margin:0">${m.text}</p></div>`)}</div>` : html`<p class="muted">No messages.</p>`}</section>
+</div>`));
   }));
 
   // ---------- Discover ----------
@@ -200,7 +218,7 @@ ${order ? html`<p class="banner info">Ordered: <a href="/orders/${order.id}">${o
     const i = (await db.query<any>("SELECT * FROM intents WHERE id = $1", [o.intent_id])).rows[0];
     const prot = new Map((await protectionsFor(db, a)).filter((x) => x.order_id === o.id).map((x) => [x.line_id, x]));
     res.send(page(req, a, o.number, html`<p><a href="/purchases">← Purchases</a> · <a href="/plans/${o.intent_id}">plan</a></p><h1>${o.number} ${pill(o.status, o.status === "created" ? "awaiting payment" : undefined)}</h1>
-${o.status === "created" ? html`<p class="banner warn">${o.paypal_order_id ? "Not paid yet. A PayPal checkout was started but not approved. If you closed the PayPal window, pay again below; if you did approve it, this page updates within a minute once PayPal confirms." : "Not paid yet."}</p><form method="post" action="/orders/${o.id}/pay"><button class="btn primary" type="submit">Pay ${money(o.total_cents)} with PayPal</button></form>` : ""}
+${o.status === "created" ? html`${(await pendingApprovals(a.id)).filter((x: any) => x.payload?.entity_id === o.id).map((x: any) => approvalCard(x, "/guard", `/orders/${o.id}`))}<p class="banner warn">${o.paypal_order_id ? "Not paid yet. A PayPal checkout was started but not approved. If you closed the PayPal window, pay again below; if you did approve it, this page updates within a minute once PayPal confirms." : "Not paid yet."}</p><form method="post" action="/orders/${o.id}/pay"><button class="btn primary" type="submit">Pay ${money(o.total_cents)} with PayPal</button></form>` : ""}
 <section class="card"><h2>Items</h2>${lines.map((l) => {
   const offer = J<any>(l.swap_offer);
   return html`<div class="slot"><div class="pick"><div><b>${l.title}</b> ${pill(l.status)}<br><span class="small muted">${l.eta ? `ETA ${l.eta}` : ""}${l.delivered_at ? ` · delivered ${l.delivered_at.replace("T", " ")}` : ""}${i.deadline && l.eta && l.eta > i.deadline && l.status !== "delivered" ? ` · after your ${i.deadline} deadline` : ""}</span></div><div class="price">${money(l.unit_cents)}</div></div>
@@ -274,7 +292,7 @@ ${recalls.length ? html`<div class="banner bad">${recalls.map((r0) => html`<p><b
 <details><summary>Add something you own</summary><form method="post" action="/you/owned" class="grid g3"><div class="field"><label for="ot">Name</label><input id="ot" name="title" required></div><div class="field"><label for="oc">Kind</label><select id="oc" name="category">${Object.entries(CATEGORY_LABEL).map(([k, v]) => html`<option value="${k}">${v}</option>`)}</select></div><div class="field"><label for="ob">Brand / model</label><input id="ob" name="brand_model" placeholder="Dell P2422H"></div><div class="field"><label for="oi">Monitor inputs</label><input id="oi" name="inputs" placeholder="hdmi, dp"></div><div class="field"><label for="ov">VESA</label><input id="ov" type="number" name="vesa"></div><div class="field"><label for="op">Price ($)</label><input id="op" type="number" name="price"></div><button class="btn" type="submit">Add</button></form></details></section>
 <section class="card"><h2>Why you see what you see</h2><p class="small muted">What Everyday has learned from your explicit choices, compared with the general model. Gifts learn separately.</p>${panels}</section>
 <section class="card"><h2>Spending limit</h2><form method="post" action="/you/limit" class="row"><label for="lim">Monthly limit ($)</label><input id="lim" type="number" name="limit" value="${a.monthly_limit_cents / 100}" style="width:8rem"><button class="btn small" type="submit">Save</button></form><p class="small muted">A stated allowance used to check purchases before approval; not a bank balance.</p></section>
-<section class="card"><h2>Telegram</h2>${linked.length ? html`<p>Linked chat: ${linked.map((l) => l.external_id).join(", ")}</p>` : ""}<form method="post" action="/you/telegram" class="inline"><button class="btn small" type="submit">Get a link code</button></form>${req.query.code ? html`<p>Send <code>/start ${req.query.code}</code> to the Everyday bot within 15 minutes.</p>` : ""}</section>
+<section class="card" id="phone"><h2>Everyday on your phone</h2><p class="small muted">Share Reels straight from Telegram, and get approvals, delays and price drops there with buttons.</p><div class="row">${linked.length ? html`<span class="pill good">Telegram connected</span>` : html`<span class="pill">Telegram not connected</span>`}<form method="post" action="/connect/telegram" class="inline" target="_blank"><button class="btn ${linked.length ? "" : "primary"}" type="submit">${raw(icon("message"))}${linked.length ? "Connect another chat" : "Connect Telegram"}</button></form><button class="btn" type="button" id="push-sub">${raw(icon("zap"))}Notifications in this browser</button></div><p class="small muted">Telegram opens with a one-time code that lasts 15 minutes: press Start and you're done.</p></section>
 ${facts.length ? html`<section class="card"><h2>Facts Everyday keeps</h2><ul>${facts.map((f) => html`<li>${f.key.replace("_", " ")}: ${f.value} <span class="small muted">(${f.source})</span></li>`)}</ul></section>` : ""}`));
   }));
 
@@ -324,6 +342,21 @@ ${facts.length ? html`<section class="card"><h2>Facts Everyday keeps</h2><ul>${f
     const code = await linkCode(a);
     res.redirect(`/you?code=${code}`);
   }, true));
+  /** One tap: a 15-minute one-time code, then straight into Telegram; the shared bot routes "everyday-<code>" here. */
+  r.post("/connect/telegram", async (req, res, next) => {
+    try {
+      const w = await whoami(req);
+      if (w?.account) return res.redirect(303, `https://t.me/${config.channels.telegramBot}?start=everyday-${await linkCode(w.account)}`);
+      if (w?.merchant) {
+        const code = `m${randomBytes(9).toString("hex")}`;
+        await (await getDb()).query("INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [`tglink:${code}`, JSON.stringify({ party: "merchant", exp: Date.now() + 15 * 60_000 })]);
+        return res.redirect(303, `https://t.me/${config.channels.telegramBot}?start=everyday-${code}`);
+      }
+      res.redirect("/login?next=/you");
+    } catch (e) {
+      next(e);
+    }
+  });
 
   void raw;
   return r;

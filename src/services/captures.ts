@@ -1,3 +1,4 @@
+import { link as linkParty } from "../channels/index.js";
 import { config } from "../config.js";
 import { getDb, type Queryable } from "../db.js";
 import { forcedToolCall, hasModel } from "../ai/anthropic.js";
@@ -129,14 +130,15 @@ export async function handleTelegram(update: any): Promise<void> {
   const start = text.match(/^\/start\s+(\d{6})/);
   if (start) {
     const row = (await db.query<any>("UPDATE link_codes SET used = true WHERE code = $1 AND NOT used AND expires_at > now() RETURNING account_id", [start[1]])).rows[0];
-    if (!row) return reply(null, "That code is not valid or has expired. Get a new one in the Everyday app under You → Telegram.");
+    if (!row) return reply(null, "That connect link has expired. In Everyday, open You and tap Connect Telegram again.");
     await db.query("INSERT INTO channel_links (account_id, channel, external_id) VALUES ($1,'telegram',$2) ON CONFLICT (channel, external_id) DO UPDATE SET account_id = EXCLUDED.account_id", [row.account_id, chatId]);
     const a = await accountById(db, row.account_id);
+    await linkParty("telegram", chatId, "shopper", a.id);
     await logEvent(db, a, "account", a.id, "telegram.linked", "Telegram chat linked", a.name);
-    return reply(a.id, `Hi ${a.name}! Share a Reel, TikTok or Short here and it'll appear in your Everyday library.`);
+    return reply(a.id, `Hi ${a.name}! Share a Reel, TikTok or Short here and it'll appear in your Everyday library. Approvals, delays and price drops will come here too, with buttons. Everyday only ever pays through PayPal checkout, never through a link in a chat.`);
   }
   const account = await accountForChat(db, chatId);
-  if (!account) return reply(null, "Link this chat first: open Everyday → You → Telegram and send the /start code shown there.");
+  if (!account) return reply(null, "This chat isn't connected yet. In Everyday, open You and tap Connect Telegram.");
   if (update.callback_query) {
     const [kind, captureId, key] = String(update.callback_query.data ?? "").split(":");
     if (kind === "obj") {

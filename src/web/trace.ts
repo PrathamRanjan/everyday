@@ -2,6 +2,9 @@
  * Traces, judge mode, channels simulator, webhooks and PWA routes (roadmap B.2, B.8, B.9, B.10) for Everyday.
  * Shoppers see runs on their own entities; the merchant sees runs on its orders; the operator console sees all.
  */
+import { icon } from "./icons.js";
+import { messageFlag } from "./safetyui.js";
+import { handleTelegram } from "../services/captures.js";
 import { Router, type Request, type Response } from "express";
 import { readFileSync } from "node:fs";
 import { timingSafeEqual } from "node:crypto";
@@ -148,12 +151,13 @@ ${t.run.entity === "order" ? html`<p class="small"><a href="${who.kind === "merc
     const addr = typeof req.query.address === "string" ? req.query.address : addressOf(who);
     const msgs = addr ? await conversation(addr, 60) : await recentMessages(60);
     const accounts = (await (await getDb()).query<any>("SELECT id, name FROM accounts ORDER BY name")).rows;
-    res.send(pageFor(req, who, "Channels", html`<h1>Channels</h1><p class="sub">Shopper and merchant get every approval request and alert on the channel they already use. Telegram ${telegramReady() ? pill("live") : pill("not_configured", "not configured")} · WhatsApp ${whatsappReady() ? pill("live") : pill("not_configured", "not configured")} · Web push ${pushReady() ? pill("live") : pill("not_configured", "not configured")}. The simulator below shows exactly what the live channels would send and lets you reply as any party.</p>
-<form class="row" method="get" action="/channels"><input type="text" name="address" value="${addr}" placeholder="shopper:<account id> or merchant:merchant" list="addrs"><datalist id="addrs"><option value="merchant:${MERCHANT}">${raw(accounts.map((a: any) => `<option value="shopper:${a.id}">${String(a.name).replace(/</g, "&lt;")}</option>`).join(""))}</datalist><button class="btn small">Show</button></form>
-<div class="chat">${raw((msgs as any[]).slice().reverse().map((m) => `<div class="msg ${m.direction}"><div class="meta small muted">${m.channel} · ${String(m.address).replace(/</g, "&lt;")} · ${fmtDate(m.created_at)} · ${m.status}</div><div class="body">${String(m.body).replace(/</g, "&lt;")}</div>${m.buttons && m.direction === "out" ? `<div class="row">${(typeof m.buttons === "string" ? JSON.parse(m.buttons) : m.buttons).map((b: any) => `<form method="post" action="/channels/reply" class="inline"><input type="hidden" name="address" value="${String(m.address).replace(/"/g, "&quot;")}"><input type="hidden" name="replyTo" value="${m.id}"><input type="hidden" name="buttonId" value="${String(b.id).replace(/"/g, "&quot;")}"><button class="btn small">${String(b.label).replace(/</g, "&lt;")}</button></form>`).join("")}</div>` : ""}</div>`).join(""))}${msgs.length ? "" : `<p class="muted small">No messages for this address yet.</p>`}</div>
-${addr ? html`<form method="post" action="/channels/reply" class="row"><input type="hidden" name="address" value="${addr}"><input type="text" name="text" placeholder="Reply as this party (try: pending, orders, watch, stop, cases, disputes)" required maxlength="500"><button class="btn primary small">Send</button></form>` : ""}
-<div class="card small"><h3>Link a real channel</h3><p class="muted">Telegram: message the bot and send <span class="mono">/link ${addr || "shopper:<account id>"}</span>. WhatsApp: send the same text to the business number. Web push: <button class="btn small" id="push-sub" type="button">enable on this device</button>.</p></div>
-<script>setTimeout(()=>location.reload(), 8000)</script>`));
+    const tg = who.kind === "console" ? false : Number((await (await getDb()).query<any>("SELECT count(*)::int AS n FROM party_links WHERE channel = 'telegram' AND party_id = $1", [who.kind === "merchant" ? MERCHANT : who.id]).catch(() => ({ rows: [{ n: 0 }] }))).rows[0]?.n ?? 0) > 0;
+    res.send(pageFor(req, who, "Messages", html`<div class="page-head"><div><h1>Messages and alerts</h1><p>Approvals, delays, price drops and refunds reach you on your phone, with buttons.</p></div></div>
+${who.kind !== "console" ? html`<section class="card" id="phone"><h2>On your phone</h2><div class="row">${tg ? html`<span class="pill good">Telegram connected</span>` : html`<span class="pill">Telegram not connected</span>`}<form method="post" action="/connect/telegram" class="inline" target="_blank"><button class="btn primary" type="submit">${raw(icon("message"))}${tg ? "Connect another chat" : "Connect Telegram"}</button></form><button class="btn" id="push-sub" type="button">${raw(icon("zap"))}Notifications in this browser</button></div><p class="small muted">Telegram opens with a one-time code that lasts 15 minutes: press Start and you're done.${telegramReady() ? "" : " The bot token isn't set on this server, so messages are recorded below as simulated."}</p></section>` : ""}
+<div class="section-title"><h2>Message simulator</h2><p>Exactly what the phone channels would send, and replies as any party.</p></div>
+<form class="row" method="get" action="/channels"><label class="sr" for="addr">Address</label><input id="addr" type="text" name="address" value="${addr}" placeholder="shopper:<account id> or merchant:merchant" list="addrs"><datalist id="addrs"><option value="merchant:${MERCHANT}">${raw(accounts.map((a: any) => `<option value="shopper:${a.id}">${String(a.name).replace(/</g, "&lt;")}</option>`).join(""))}</datalist><button class="btn small">Show</button></form>
+<div class="chat">${(msgs as any[]).slice().reverse().map((m) => html`<div class="msg ${m.direction}"><div class="meta small muted">${m.channel} · ${m.direction === "in" ? "received" : "sent"} · ${fmtDate(m.created_at)} · ${m.status}</div>${m.direction === "in" ? messageFlag(String(m.body), "Everyday only acts on its own buttons and commands; a message can't change where money goes.") : ""}<div class="body">${String(m.body)}</div>${m.buttons && m.direction === "out" ? html`<div class="row">${(typeof m.buttons === "string" ? JSON.parse(m.buttons) : m.buttons).map((b: any) => html`<form method="post" action="/channels/reply" class="inline"><input type="hidden" name="address" value="${String(m.address)}"><input type="hidden" name="replyTo" value="${m.id}"><input type="hidden" name="buttonId" value="${String(b.id)}"><button class="btn small">${String(b.label)}</button></form>`)}</div>` : ""}</div>`)}${msgs.length ? "" : html`<p class="muted small">No messages for this address yet.</p>`}</div>
+${addr ? html`<form method="post" action="/channels/reply" class="row"><input type="hidden" name="address" value="${addr}"><label class="sr" for="rp">Reply</label><input id="rp" type="text" name="text" placeholder="Reply as this party (try: pending, orders, watch, stop, cases, disputes)" required maxlength="500"><button class="btn primary small">Send</button></form>` : ""}`));
   }));
   r.post("/channels/reply", guard(async (req, res) => {
     const address = String(req.body.address ?? "");
@@ -187,7 +191,12 @@ ${addr ? html`<form method="post" action="/channels/reply" class="row"><input ty
     const secret = req.header("x-telegram-bot-api-secret-token") ?? "";
     if (config.channels.telegramSecret && !safeEq(secret, config.channels.telegramSecret)) return res.status(401).end();
     try {
-      await telegramUpdate(req.body);
+      const u = req.body ?? {};
+      const t = String(u.message?.text ?? "").trim();
+      const data = String(u.callback_query?.data ?? "");
+      const foundation = /^\/start\s+m[0-9a-f]+$/i.test(t) || /^\/?link\s/i.test(t) || /^(approve|decline):/i.test(t) || /^(pending|approvals|waiting|orders|purchases|status|stop|kill|freeze|watch|watches|protection|cases|open|disputes)$/i.test(t) || (data !== "" && !data.startsWith("obj:"));
+      if (foundation) await telegramUpdate(u);
+      else await handleTelegram(u);
     } catch (e) {
       console.error("[telegram]", (e as Error).message);
     }

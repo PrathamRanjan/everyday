@@ -4,6 +4,7 @@
  * approves or declines held moves (passkey above the countersign threshold). The merchant has the same for refunds
  * at /merchant/approvals. "The agent proposes, code decides, the owner can always stop it."
  */
+import { guardCard, nextOf } from "./safetyui.js";
 import { Router, type Request, type Response } from "express";
 import { config } from "../config.js";
 import { getDb } from "../db.js";
@@ -51,13 +52,23 @@ async function release(approvalId: string) {
 const spage = (req: Request, a: Account, title: string, body: Raw) => layout({ title, area: "shopper", who: { name: a.name, clock: fmtWall(nowOf(a)) }, flash: flashOf(req) }, body);
 const mpage = (req: Request, title: string, body: Raw) => layout({ title, area: "merchant", flash: flashOf(req) }, body);
 
+/** One held move as an in-flow card: what it is, why it waited, and approve or decline right there (passkey above the countersign line). */
+export function approvalCard(a: any, base: string, next: string): Raw {
+  const p = a.payload ?? {};
+  const scam = Array.isArray(p.safety_reasons) && p.safety_reasons.length > 0;
+  const big = Number(p.cents ?? 0) > countersignThreshold();
+  const what = `${String(a.action).replace(/_/g, " ")} of ${money(Number(p.cents ?? 0))}`;
+  const reasons = scam ? p.safety_reasons : [`It's at or above the approval limit you set (${base === "/guard" ? "Approvals and limits" : "merchant policy"}).`];
+  return html`<div id="ap-${a.id}">${guardCard({ level: scam ? "hold" : "caution", reasons }, { approve: big ? null : `${base}/approvals/${a.id}`, next, title: what.charAt(0).toUpperCase() + what.slice(1), doText: big ? "Above your passkey limit: your passkey signs the exact amount." : scam ? "Nothing was charged. Check the seller is real (a site you know, reviews, a way to contact them) before you approve." : "Approve it and Everyday carries on; decline and nothing moves." })}${big ? html`<div class="row" style="margin-top:-0.5rem;margin-bottom:0.75rem"><button class="btn primary small" data-countersign="${a.id}" type="button">Sign with passkey and approve</button><form method="post" action="${base}/approvals/${a.id}/decline" class="inline"><input type="hidden" name="next" value="${next}"><button class="btn small" type="submit">Decline</button></form></div>` : ""}</div>`;
+}
+
 /** Approvals, kill switch, passkey and audit blocks shared by the shopper and merchant consoles. */
 async function approvalsBlock(ownerId: string, base: string): Promise<Raw> {
   const [approvals, passkey, chain, audit] = await Promise.all([pendingApprovals(ownerId), hasPasskey(ownerId), verifyChain(), recentAudit(25)]);
   return html`<div class="grid g2">
 <section class="card" id="approvals"><h2>Waiting for you (${approvals.length})</h2>
 <p class="small muted">Moves above ${money(countersignThreshold())} need your passkey; the signature covers the exact amount and entity, so nothing can be swapped after you sign. ${passkey ? "Passkey registered." : html`<button class="btn small" id="pk-register" type="button">Register a passkey</button>`}</p>
-${approvals.length ? html`<ul class="approvals">${raw(approvals.map((a: any) => `<li><div><b>${String(a.action).replace("_", " ")}</b> ${money(a.payload.cents)} · <span class="mono small">${a.payload.entity} ${a.payload.entity_id}</span><br><span class="small muted">asked ${fmtDate(a.created_at)}</span></div><div class="row">${a.payload.cents > countersignThreshold() ? `<button class="btn primary small" data-countersign="${a.id}" type="button">Sign and approve</button>` : `<form method="post" action="${base}/approvals/${a.id}/click" class="inline"><button class="btn primary small" name="approve" value="1">Approve</button></form>`}<form method="post" action="${base}/approvals/${a.id}/click" class="inline"><button class="btn small" name="approve" value="0">Decline</button></form></div></li>`).join(""))}</ul>` : html`<p class="muted">Nothing waiting.</p>`}</section>
+${approvals.length ? html`<div class="stack">${approvals.map((a: any) => approvalCard(a, base, base === "/guard" ? "/guard#approvals" : "/merchant/approvals"))}</div>` : html`<p class="muted">Nothing waiting.</p>`}</section>
 <section class="card"><h2>Audit chain <span class="pill ${chain.ok ? "good" : "bad"}">${chain.ok ? `intact · ${chain.rows} rows` : `BROKEN at ${chain.broken_at}`}</span></h2>
 <p class="small muted">Every money decision is hashed over the previous row. Head <span class="mono">${chain.head.slice(0, 16)}…</span> · <a href="${base}/audit.json">Export</a></p>
 <div class="table-wrap"><table class="small"><thead><tr><th>#</th><th>When</th><th>Kind</th><th>Entity</th><th>Hash</th></tr></thead><tbody>${raw(audit.map((a: any) => `<tr><td>${a.seq}</td><td>${fmtDate(a.at)}</td><td>${a.kind}</td><td class="mono">${a.entity} ${String(a.entity_id).slice(0, 18)}</td><td class="mono">${String(a.hash).slice(0, 12)}…</td></tr>`).join(""))}</tbody></table></div></section></div>`;
@@ -165,6 +176,16 @@ ${compiled.unexpressed.length ? html`<p class="banner warn"><b>Could not express
     back(res, "/guard", approve ? "Approved; the held step is back in the queue" : "Declined");
   }, true));
 
+  r.post("/guard/approvals/:id/:choice(approve|decline)", shopper(async (req, res, a) => {
+    const approve = req.params.choice === "approve";
+    const ap = (await (await getDb()).query<any>("SELECT * FROM approvals WHERE id = $1 AND owner_id = $2", [req.params.id, a.id])).rows[0];
+    if (!ap) throw new GtError("Approval not found", "not_found", 404);
+    if (approve && ap.payload.cents > countersignThreshold()) throw new GtError("This amount needs your passkey", "passkey_required", 403);
+    const payload = await decideApproval(ap.id, a.id, approve, "click");
+    if (payload && approve) await release(ap.id);
+    back(res, nextOf(req.body?.next, "/guard"), approve ? "Approved. Everyday is carrying on with it." : "Declined. Nothing was charged.");
+  }, true));
+
   // Passkey endpoints serve both owners: the signed-in party decides which owner id applies.
   const ownerOf = async (req: Request): Promise<{ id: string; name: string }> => {
     const w = await whoami(req);
@@ -247,6 +268,15 @@ ${await approvalsBlock(MERCHANT, "/merchant/approvals")}`));
     const payload = await decideApproval(ap.id, MERCHANT, approve, "click");
     if (payload && approve) await release(ap.id);
     back(res, "/merchant/approvals", approve ? "Approved; the refund is back in the queue" : "Declined");
+  }, true));
+  r.post("/merchant/approvals/:id/:choice(approve|decline)", merchant(async (req, res) => {
+    const approve = req.params.choice === "approve";
+    const ap = (await (await getDb()).query<any>("SELECT * FROM approvals WHERE id = $1 AND owner_id = $2", [req.params.id, MERCHANT])).rows[0];
+    if (!ap) throw new GtError("Approval not found", "not_found", 404);
+    if (approve && ap.payload.cents > countersignThreshold()) throw new GtError("This amount needs your passkey", "passkey_required", 403);
+    const payload = await decideApproval(ap.id, MERCHANT, approve, "click");
+    if (payload && approve) await release(ap.id);
+    back(res, nextOf(req.body?.next, "/merchant/approvals"), approve ? "Approved; the refund is back in the queue." : "Declined. Nothing moves.");
   }, true));
   return r;
 }

@@ -94,7 +94,10 @@ export async function today(q: Queryable, a: Account): Promise<TodayItem[]> {
     else out.push({ kind: "gap", title: "Plan doesn't fit yet", detail: p.body.gap ?? "", href: `/plans/${i.id}`, when: i.deadline, urgency: 2 });
   }
   const unpaid = (await q.query<any>("SELECT * FROM orders WHERE account_id = $1 AND status = 'created'", [a.id])).rows;
-  for (const o of unpaid) out.push({ kind: "payment", title: `${o.number}: ${o.paypal_order_id ? "confirming your PayPal payment" : "finish paying"}`, detail: `$${(o.total_cents / 100).toFixed(2)}${o.paypal_order_id ? "; Everyday reads PayPal back and records it if it went through" : ""}`, href: `/orders/${o.id}`, when: null, urgency: 4 });
+  for (const o of unpaid) {
+    const held = (await q.query<any>("SELECT 1 FROM approvals WHERE owner_id = $1 AND status = 'pending' AND payload->>'entity_id' = $2", [a.id, o.id])).rows.length > 0;
+    out.push({ kind: "payment", title: `${o.number}: not paid yet`, detail: `$${(o.total_cents / 100).toFixed(2)} due. ${held ? "Paused for a scam check: read why and approve or cancel it on the order." : o.paypal_order_id ? "PayPal checkout was started but not approved. Nothing has been charged." : "Pay with PayPal when you're ready."}`, href: `/orders/${o.id}`, when: null, urgency: 4 });
+  }
   const lines = (await q.query<any>("SELECT l.*, o.number, o.id AS oid, i.deadline FROM order_lines l JOIN orders o ON o.id = l.order_id JOIN intents i ON i.id = o.intent_id WHERE o.account_id = $1 AND l.status IN ('backordered','ordered','shipped')", [a.id])).rows;
   for (const l of lines) {
     if (l.status === "backordered") out.push({ kind: "risk", title: `${l.title} delayed to ${l.eta}`, detail: `${l.deadline && l.eta > l.deadline ? `Misses your ${l.deadline} deadline. ` : ""}${J<any>(l.swap_offer) ? `In stock instead: ${J<any>(l.swap_offer).title}.` : "No in-stock alternative yet."}`, href: `/orders/${l.oid}`, when: l.eta, urgency: 5 });

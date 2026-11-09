@@ -165,6 +165,17 @@ describe("Everyday foundation", () => {
     expect(flash(await maya.post("/passport/repeat", { product: hp, qty: "1" }))).toMatch(/Refused before PayPal/);
     expect(fake.calls.filter((c) => c === "createVaultedCaptureOrder")).toHaveLength(2);
     expect((await maya.post("/guard/approvals/nope/click", { approve: "1" })).status).toBe(404);
+    expect((await maya.post("/guard/approvals/nope/approve", { next: "/today" })).status).toBe(404);
+    // One-tap Telegram: the shopper's code links the chat for clips and approvals; the merchant's links the merchant.
+    const tg = await maya.post("/connect/telegram", {});
+    expect(tg.status).toBe(303);
+    const tcode = String(tg.location).split("start=everyday-")[1];
+    expect(tcode).toMatch(/^\d{6}$/);
+    const post = (body: unknown) => fetch(`${base}/webhooks/telegram`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    expect((await post({ message: { chat: { id: 5150 }, text: "/start " + tcode } })).status).toBe(200);
+    expect((await one("SELECT party FROM party_links WHERE channel = 'telegram' AND address = '5150'"))?.party).toBe("shopper");
+    expect((await post({ message: { chat: { id: 5152 }, text: "link shopper:" + s.account } })).status).toBe(200);
+    expect(await one("SELECT party FROM party_links WHERE channel = 'telegram' AND address = '5152'")).toBeUndefined();
     expect((await maya.get("/passport.json")).status).toBe(200);
     expect((await maya.get("/channels")).status).toBe(200);
     expect((await maya.req("POST", "/channels/link", { json: { channel: "telegram", address: "tg:1" } })).status).toBe(200);
@@ -179,6 +190,11 @@ describe("Everyday foundation", () => {
     expect((await nl.req("POST", "/merchant/approvals/passkey/sign/start", { json: { approvalId: "none" } })).status).toBe(404);
     expect((await nl.req("POST", "/merchant/approvals/passkey/sign/finish", { json: { approvalId: "none" } })).status).toBe(404);
     expect((await nl.post("/merchant/approvals/none/click", { approve: "0" })).status).toBe(404);
+    expect((await nl.post("/merchant/approvals/none/decline", {})).status).toBe(404);
+    const mt = await nl.post("/connect/telegram", {});
+    const mcode = String(mt.location).split("start=everyday-")[1];
+    await fetch(`${base}/webhooks/telegram`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: { chat: { id: 5151 }, text: "/start " + mcode } }) });
+    expect((await one("SELECT party FROM party_links WHERE channel = 'telegram' AND address = '5151'"))?.party).toBe("merchant");
     expect((await nl.get("/merchant/approvals/audit.json")).status).toBe(200);
     expect((await nl.get("/merchant/money")).status).toBe(200);
     const line = await one("SELECT id FROM order_lines WHERE order_id = $1", [order.id]);

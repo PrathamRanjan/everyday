@@ -34,7 +34,7 @@ export function createApp() {
     res.setHeader("X-Frame-Options", "DENY");
     next();
   });
-  app.use("/static", express.static(join(root, "public"), { maxAge: "1h" }));
+  app.use("/static", express.static(join(root, "public"), { maxAge: 0, setHeaders: (res, file) => { if (/[\\/]safety[\\/]/.test(file)) res.setHeader("Cache-Control", "public, max-age=86400"); } }));
   app.get("/healthz", async (_req, res) => {
     try {
       await (await getDb()).query("SELECT 1");

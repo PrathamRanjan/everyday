@@ -20,7 +20,7 @@ async function gated(m: MoneyMove, run?: Awaited<ReturnType<typeof startRun>> | 
   try {
     return await gate(m, run);
   } catch (e) {
-    if (e instanceof HeldForApproval) throw new GtError(`Waiting for a person to approve this ${m.action.replace("_", " ")} of ${money(m.cents)} (approval ${e.approvalId}).`, "held", 409);
+    if (e instanceof HeldForApproval) throw new GtError(e.message.startsWith("Paused by the scam check") ? `${e.message} Nothing was charged. If you've checked the seller, approve it on this order or under Approvals.` : `Waiting for you to approve this ${m.action.replace("_", " ")} of ${money(m.cents)}: it's above your approval limit.`, "held", 409);
     if (e instanceof GateDenied) throw new GtError(`Refused before PayPal: ${e.message}`, e.gate === "denied" ? "denied" : "dry_run_refused", 409);
     throw e;
   }
