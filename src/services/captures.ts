@@ -4,6 +4,7 @@ import { getDb, type Queryable } from "../db.js";
 import { forcedToolCall, hasModel } from "../ai/anthropic.js";
 import { hasOpenAI } from "../ai/provider.js";
 import { readFrame, type FrameSignal } from "./vision.js";
+import { coverOf } from "./oembed.js";
 import { scanText } from "../ai/scan.js";
 import { findLinks, normalizeLink } from "../core/url.js";
 import { newId } from "../lib/ids.js";
@@ -23,6 +24,7 @@ export const BASIS: Record<string, string> = {
   link_saved: "Link saved. Everyday has no permitted access to this video's frames; pick or describe the item, or add a screenshot.",
   analysed_fixture: "Demo clip: scene objects were authored for the demo, not detected from video.",
   analysed_screenshot: "Objects read from the screenshot you added.",
+  analysed_cover: "Objects read by a vision model from the video's public cover image and title (YouTube or TikTok oEmbed), not from the full video. Pick the one you mean, or add a screenshot of the exact moment.",
   described: "Based on your description.",
 };
 
@@ -43,6 +45,24 @@ export async function capture(account: Account, input: { url?: string; text?: st
   }
   let signal: FrameSignal | null = null;
   let reader = "rules";
+  // A real public video: read its cover with the vision model (only when there's no screenshot, which is better evidence).
+  if (link && status === "link_saved" && !input.image) {
+    const cover = await coverOf(link);
+    if (cover?.title) title = cover.title + (cover.author ? ` · ${cover.author}` : "");
+    if (cover?.image && hasOpenAI()) {
+      try {
+        const s2 = await readFrame(cover.image);
+        if (s2.reader === "vision-model" && s2.objects.length) {
+          signal = s2;
+          objects = s2.objects.map((o) => ({ key: o.key, label: o.label, query: o.query, category: o.category, match_sku: null, price_seen: o.price_seen.grounded ? o.price_seen.value : null }));
+          status = "analysed_cover";
+          reader = s2.model ?? "vision-model";
+        }
+      } catch {
+        signal = null;
+      }
+    }
+  }
   if (input.image && hasOpenAI()) {
     try {
       signal = await readFrame(input.image);

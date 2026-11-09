@@ -9,6 +9,7 @@ import { GtError } from "../lib/util.js";
 import { accountById, J, logEvent, notify, nowOf, selfRecipient, type Account } from "../store.js";
 import { catalog, CATEGORY_LABEL, type Product } from "./catalog.js";
 import { featuresOf, medianPrice, modelFor, recordChoice } from "./ml.js";
+import { dateForDay, readRequest, type Reading } from "../ai/request.js";
 
 // ---------- Parsing a goal ----------
 
@@ -36,6 +37,10 @@ export interface Reqs {
   focus: { key: string; label: string; query: string; category: string | null; match_sku: string | null } | null;
   owned_mentioned: string[];
   addons: string[]; // optional slots the person asked for
+  /** Qualities the person asked for in words ("quiet", "oak"): ranked as stated requirements, not taste. */
+  must_have?: string[];
+  /** Who read the request: the model (with the quotes it was grounded on) or the rules parser. */
+  read?: { reader: "model" | "rules"; model: string | null; readings: Reading[]; dropped: number };
 }
 
 export function parseGoal(text: string, now: Date) {
@@ -127,9 +132,30 @@ function questionsFor(slots: { category: string; outcome?: string }[], ctx: Ctx,
 export async function createIntent(account: Account, input: { text: string; capture_id?: string | null; recipient_id?: string | null; channel: "app" | "telegram" }) {
   const db = await getDb();
   if (!input.text.trim() && !input.capture_id) throw new GtError("Tell Everyday what you want to do.", "invalid");
+  // The model reads the words (outside the transaction: it is a network call); code reads every number.
+  const read = await readRequest(input.text);
   return db.tx(async (q) => {
     const now = nowOf(account);
     const g = parseGoal(input.text, now);
+    if (read.reader === "model") {
+      g.owned = [...new Set([...g.owned, ...read.owns])];
+      g.replace = [...new Set([...g.replace, ...read.replace])];
+      g.mentioned = [...new Set([...g.mentioned, ...read.wants])].filter((c) => !g.owned.includes(c) || g.replace.includes(c));
+      if (g.goal === "single" || read.whole_setup === false) {
+        const named = [...new Set([...g.categories, ...read.wants])].filter((c) => !g.owned.includes(c) || g.replace.includes(c));
+        if (read.whole_setup && named.length < 3) {
+          g.goal = "desk_setup";
+          g.categories = [];
+        } else if (named.length) {
+          g.goal = "single";
+          g.categories = named;
+        }
+      }
+      if (read.deadline_day) g.deadline = dateForDay(read.deadline_day, now);
+      if (read.recipient) g.recipient = read.recipient;
+      if (read.comfort) g.require_ergonomic = true;
+    }
+    const must = [...new Set([...g.style_words, ...read.must_have])].slice(0, 8);
     let recipientId = input.recipient_id ?? null;
     if (!recipientId && g.recipient) {
       const r = (await q.query<{ id: string }>("SELECT id FROM recipients WHERE account_id = $1 AND lower(relation) = $2", [account.id, g.recipient])).rows[0];
@@ -150,7 +176,7 @@ export async function createIntent(account: Account, input: { text: string; capt
     }
     const categories = g.goal === "single" ? (g.categories.length ? g.categories : focus?.category ? [focus.category] : []) : [];
     if (g.goal === "single" && !categories.length) throw new GtError("What kind of item is it? Try “a desk lamp under $60” or pick an object in a saved clip.", "invalid");
-    const reqs: Reqs = { goal: g.goal, categories, require_ergonomic: g.require_ergonomic, laptop_port: null, replace: g.replace, style_words: g.style_words, focus, owned_mentioned: g.owned, addons: g.goal === "desk_setup" ? g.mentioned.filter((c) => ["mouse", "keyboard", "monitor_arm", "desk_mat", "webcam"].includes(c)) : [] };
+    const reqs: Reqs = { goal: g.goal, categories, require_ergonomic: g.require_ergonomic, laptop_port: null, replace: g.replace, style_words: g.style_words, focus, owned_mentioned: g.owned, addons: g.goal === "desk_setup" ? g.mentioned.filter((c) => ["mouse", "keyboard", "monitor_arm", "desk_mat", "webcam"].includes(c)) : [], must_have: must, read: { reader: read.reader, model: read.model, readings: read.readings, dropped: read.dropped } };
     const id = newId("int");
     const flags = scanText(input.text);
     await q.query("INSERT INTO intents (id, account_id, recipient_id, capture_id, goal, text, budget_cents, deadline, reqs, channel) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [id, account.id, recipientId, input.capture_id ?? null, g.goal, input.text.slice(0, 1000), g.budget_cents, g.deadline, JSON.stringify(reqs), input.channel]);
@@ -219,6 +245,8 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
   const views: SlotView[] = [];
   const cands: Record<string, PCand[]> = {};
   const owned = await ownedOf(q, i.account_id, i.recipient_id);
+  const rcp = (await q.query<any>("SELECT name, is_self FROM recipients WHERE id = $1", [i.recipient_id])).rows[0];
+  const owns = rcp && !rcp.is_self ? `${rcp.name} owns` : "You own";
   for (const s of slots) {
     const inCat = cat.products.filter((p) => p.category === s.category);
     const median = medianPrice(inCat);
@@ -234,7 +262,7 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
     if (ownedHere && !ctx.replace_categories.has(s.category)) {
       // You already have one: it fills this slot rather than blocking the plan.
       view.outcome = "use_owned";
-      view.note = `You own ${ownedHere.title}; it fills this slot.`;
+      view.note = `${owns} ${ownedHere.title}; it fills this slot.`;
       views.push(view);
       continue;
     }
@@ -243,7 +271,10 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
       const c = check({ category: p.category, attrs: p.attrs, stock: p.stock, checkout: p.checkout }, ctx);
       const exact = Boolean(reqs.focus?.match_sku && reqs.focus.match_sku === p.sku);
       const x = featuresOf(p, median);
-      const style = reqs.style_words.some((w) => (p.attrs.finish === w || (w === "oak" && p.attrs.finish === "wood") || (p.attrs.style ?? []).includes(w))) ? 0.4 : 0;
+      const has = (w: string) => p.attrs.finish === w || p.attrs.material === w || (w === "oak" && (p.attrs.finish === "wood" || p.attrs.material === "wood")) || (p.attrs.style ?? []).includes(w) || new RegExp(`\\b${w.replace(/[^a-z -]/g, "")}\\b`, "i").test(`${p.title} ${p.description ?? ""}`);
+      const stated = (reqs.must_have ?? reqs.style_words).filter(has);
+      // Words the person typed are requirements they stated, so they outweigh learned taste (whose weights stay below ~1).
+      const style = stated.length * 1.2;
       const utility = dot(model.weights, x) + (exact ? 0.8 : 0) + style + (rank.has(p.id) ? 0.3 / (1 + rank.get(p.id)!) : 0);
       if (!p.checkout) {
         if (c.reasons.length === 0) view.discovery.push({ id: p.id, title: p.title, price_cents: p.price_cents, label: p.merchant_label, url: p.url });
@@ -257,11 +288,11 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
           continue;
         }
         cands[s.key] = [...(cands[s.key] ?? []), { id: p.id, slot: s.key, title: p.title, price_cents: p.price_cents, utility, delay_days: p.stock > 0 ? 0 : p.backorder_days }];
-        (view as any)._why = { ...(view as any)._why, [p.id]: [...(exact ? ["exact match for the item in your clip"] : []), ...explain(model.weights, x, avg)] };
+        (view as any)._why = { ...(view as any)._why, [p.id]: [...(exact ? ["exact match for the item in your clip"] : []), ...stated.map((w) => `${w}, as you asked`), ...explain(model.weights, x, avg)] };
         (view as any)._exact = { ...(view as any)._exact, [p.id]: exact };
       }
     }
-    if (ownedHere && !ctx.replace_categories.has(s.category)) view.note = `You own ${ownedHere.title}.`;
+    if (ownedHere && !ctx.replace_categories.has(s.category)) view.note = `${owns} ${ownedHere.title}.`;
     views.push(view);
   }
   const daysAvailable = i.deadline ? Math.max(0, Math.floor(workHoursBetween(now, wall(`${i.deadline}T17:00`)) / 8)) : null;
@@ -310,7 +341,7 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
     considered: result.considered,
     model: { version: model.version, prior: model.prior_id },
     note,
-    avoided: [...new Set([...(reqs.goal === "desk_setup" ? ["monitor"] : []), ...(reqs.owned_mentioned ?? []), ...(reqs.focus?.category ? [reqs.focus.category] : [])])].filter((c) => ctx.owned_categories.has(c) && !ctx.replace_categories.has(c)).map((c) => `You own ${ctx.owned_categories.get(c)}.`),
+    avoided: [...new Set([...(reqs.goal === "desk_setup" ? ["monitor"] : []), ...(reqs.owned_mentioned ?? []), ...(reqs.focus?.category ? [reqs.focus.category] : [])])].filter((c) => ctx.owned_categories.has(c) && !ctx.replace_categories.has(c)).map((c) => `${owns} ${ctx.owned_categories.get(c)}.`),
   };
   if (prev) await q.query("UPDATE plans SET status = 'superseded' WHERE id = $1", [prev.id]);
   await q.query("UPDATE quotes SET status = 'superseded' WHERE plan_id IN (SELECT id FROM plans WHERE intent_id = $1) AND status IN ('open','approved')", [i.id]);
