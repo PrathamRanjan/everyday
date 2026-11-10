@@ -107,7 +107,7 @@ export function AuditChain({ chain, audit }: { chain: GuardCommon["chain"]; audi
             <span className="num text-xs text-ink-2">#{x.seq}</span>
             <span>
               {words(x.kind)} <span className="text-xs text-ink-2">· {when(x.at)}</span>
-              <span className="id block text-[11px] text-ink-3" data-detail>
+              <span className="id block text-[11px] text-ink-2" data-detail>
                 {x.hash.slice(0, 20)}…
               </span>
             </span>

@@ -337,7 +337,7 @@ export default function Order() {
                           </div>
                           {x.reason && <div className="text-xs">{x.reason}</div>}
                           {x.status === "failed" && x.error && <div className="text-xs text-stop">{x.error.slice(0, 160)}</div>}
-                          <div className="id mt-0.5 text-[11px] text-ink-3" data-detail>
+                          <div className="id mt-0.5 text-[11px] text-ink-2" data-detail>
                             {x.paypal_id ?? "—"} · {x.request_id}
                           </div>
                         </li>

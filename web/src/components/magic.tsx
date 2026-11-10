@@ -34,7 +34,8 @@ export function NumberTicker({ value, format, className }: { value: number; form
     };
   }, [value]);
   return (
-    <span ref={ref} className={cn("num", className)} aria-label={format(value)}>
+    <span ref={ref} className={cn("num", className)}>
+      <span className="sr-only">{format(value)}</span>
       <span aria-hidden>{format(n)}</span>
     </span>
   );

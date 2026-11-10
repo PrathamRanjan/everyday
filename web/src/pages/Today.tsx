@@ -128,7 +128,7 @@ export default function Today() {
                     <ul className="mt-4 divide-y divide-rule border-t border-rule text-sm">
                       {d.calendar.slice(0, 6).map((c, i) => (
                         <li key={i} className="flex items-center gap-3">
-                          <span className="num w-16 shrink-0 text-ink-2">{day(c.date)}</span>
+                          <span className="num min-w-16 shrink-0 whitespace-nowrap text-ink-2">{day(c.date)}</span>
                           <Link to={c.href} className="flex min-h-11 min-w-0 flex-1 items-center truncate hover:underline">
                             {c.what}
                           </Link>

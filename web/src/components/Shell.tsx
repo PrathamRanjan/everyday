@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, RotateCcw, Route, ShieldCheck, ShoppingBag, Sun, SunMoon, Wallet, WifiOff } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { DisplayHelp } from "./DisplayHelp";
+// Loaded just after the first paint: the popover and the phone menu bring positioning and dialog code.
+const DisplayHelp = lazy(() => import("./DisplayHelp").then((m) => ({ default: m.DisplayHelp })));
+const MenuSheet = lazy(() => import("./MenuSheet"));
 import { useSession } from "@/lib/session";
 import { usePrefs } from "@/lib/prefs";
 import { postAction } from "@/lib/api";
@@ -90,7 +91,9 @@ function DemoRibbon() {
   const { session, refresh } = useSession();
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
-  if (!session?.demo) return null;
+  // The server puts the demo flag in the page, so the ribbon is there on first paint and nothing below it shifts.
+  const boot = (window as { __EV_BOOT__?: { demo: boolean; paypal_env: string; who: { kind: string; clock?: string } | null } }).__EV_BOOT__;
+  if (!(session ? session.demo : boot?.demo)) return null;
   const act = async (k: string, path: string, data?: Record<string, string>) => {
     setBusy(k);
     try {
@@ -105,13 +108,13 @@ function DemoRibbon() {
       setBusy(null);
     }
   };
-  const clock = session.who?.kind === "shopper" ? session.who.clock : null;
+  const clock = session ? (session.who?.kind === "shopper" ? session.who.clock : null) : (boot?.who?.clock ?? null);
   return (
     <div data-tour="ribbon" className="border-b border-rule bg-sunk text-xs text-ink-2">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1.5">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 px-4">
         <span className="font-semibold text-ink">Demo</span>
         <span>
-          PayPal <b className="font-semibold text-ink">{session.paypal_env}</b>, test money only
+          PayPal <b className="font-semibold text-ink">{session?.paypal_env ?? boot?.paypal_env}</b>, test money only
         </span>
         {clock && (
           <span className="num">
@@ -121,16 +124,16 @@ function DemoRibbon() {
         <span className="ml-auto flex items-center gap-1">
           {clock && (
             <>
-              <button className="min-h-8 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("day", "/demo/clock", { step: "day" })}>
+              <button className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("day", "/demo/clock", { step: "day" })}>
                 +1 day
               </button>
-              <button className="min-h-8 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("week", "/demo/clock", { step: "week" })}>
+              <button className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("week", "/demo/clock", { step: "week" })}>
                 +1 week
               </button>
             </>
           )}
           <button
-            className="min-h-8 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50"
+            className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50"
             disabled={Boolean(busy)}
             onClick={() => {
               if (confirm("Reset the demo? This reloads the seeded data for everyone using this demo and signs you out.")) void act("reset", "/demo/reset");
@@ -179,6 +182,11 @@ export function Shell({ children }: { children: ReactNode }) {
     window.location.assign("/");
   };
   const tourKind = who?.kind === "merchant" ? "merchant" : "shopper";
+  const menuButton = (
+    <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Menu">
+      <Menu className="size-5" />
+    </Button>
+  );
 
   return (
     <div className="min-h-dvh bg-paper">
@@ -202,20 +210,19 @@ export function Shell({ children }: { children: ReactNode }) {
               {who.first}
             </span>
           )}
-          <DisplayHelp />
+          <Suspense
+            fallback={
+              <Button variant="ghost" size="icon-sm" aria-label="Display and help" title="Display and help" disabled className="disabled:opacity-100">
+                <Accessibility className="size-[18px]" />
+              </Button>
+            }
+          >
+            <DisplayHelp />
+          </Suspense>
           <ThemeToggle />
           {who ? (
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Menu">
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] bg-paper p-0">
-                <SheetHeader className="border-b border-rule">
-                  <SheetTitle className="font-display text-xl">{who.name}</SheetTitle>
-                  <SheetDescription>{who.kind === "merchant" ? "Merchant console" : "Shopper"}</SheetDescription>
-                </SheetHeader>
+            <Suspense fallback={menuButton}>
+              <MenuSheet open={open} onOpenChange={setOpen} trigger={menuButton} title={who.name} description={who.kind === "merchant" ? "Merchant console" : "Shopper"}>
                 <nav className="flex flex-col gap-1 overflow-y-auto p-3" aria-label="More">
                   {[...main, ...more].map((i) => (
                     <NavItem key={i.to} i={i} onClick={() => setOpen(false)} />
@@ -235,8 +242,8 @@ export function Shell({ children }: { children: ReactNode }) {
                     <LogOut className="size-[18px]" /> Sign out
                   </button>
                 </nav>
-              </SheetContent>
-            </Sheet>
+              </MenuSheet>
+            </Suspense>
           ) : (
             <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
               <Link to="/login">Sign in</Link>

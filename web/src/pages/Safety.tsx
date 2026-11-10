@@ -272,7 +272,7 @@ export function ModelCard() {
       <PageHead eyebrow="Model card" title="How the scam check was tested" lede="Numbers come from frozen test sets the model never trained on. Everything synthetic is marked." />
       <div className="space-y-6">
         <Panel title="Text model" sub="Runs in your browser, 23 MB, int8 ONNX.">
-          <div className="rail-scroll">
+          <div className="rail-scroll" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs tracking-wide text-ink-2 uppercase">

@@ -11,6 +11,19 @@ import { ground, quarantine } from "./grounding.js";
 import { hasOpenAI, structured } from "./provider.js";
 
 export const REQUEST_CATS = ["lamp", "chair", "dock", "mouse", "keyboard", "monitor", "monitor_arm", "desk_mat", "webcam", "headphones"] as const;
+/** Words that name each category. A category reading whose quote has none of them is not supported by the text. */
+const CAT_NAMED: Record<(typeof REQUEST_CATS)[number], RegExp> = {
+  lamp: /\b(lamps?|light(ing|s)?)\b/i,
+  chair: /\b(chairs?|seat(ing|s)?|stools?)\b/i,
+  dock: /\b(docks?|docking|hubs?|adapters?|ports?|dongles?)\b/i,
+  mouse: /\b(mouse|mice)\b/i,
+  keyboard: /\b(keyboards?|keys)\b/i,
+  monitor: /\b(monitors?|screens?|displays?)\b/i,
+  monitor_arm: /\b(arms?|mounts?|stands?)\b/i,
+  desk_mat: /\b(mats?|pads?)\b/i,
+  webcam: /\b(webcams?|cameras?|cams?)\b/i,
+  headphones: /\b(headphones?|headsets?|earbuds|earphones|cans)\b/i,
+};
 const RELATIONS = ["sister", "brother", "mum", "mom", "dad", "friend", "partner", "son", "daughter"] as const;
 const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "tomorrow"] as const;
 
@@ -82,7 +95,16 @@ export async function readRequest(text: string): Promise<RequestRead> {
       out.readings.push({ field, value: String(value), quote: g.quote! });
       return g.value;
     };
-    const cats = (field: string, arr: unknown) => [...new Set((Array.isArray(arr) ? arr : []).map((x: any) => (REQUEST_CATS as readonly string[]).includes(x?.category) ? keep<string>(field, x.category, x.quote) : null).filter((x): x is string => Boolean(x)))];
+    // A category also needs its quote to name it: "comfortable study desk" is in the text, but it doesn't say "desk mat".
+    const cats = (field: string, arr: unknown) =>
+      [...new Set((Array.isArray(arr) ? arr : []).map((x: any) => {
+        if (!(REQUEST_CATS as readonly string[]).includes(x?.category)) return null;
+        if (typeof x.quote !== "string" || !CAT_NAMED[x.category as (typeof REQUEST_CATS)[number]].test(x.quote)) {
+          out.dropped++;
+          return null;
+        }
+        return keep<string>(field, x.category, x.quote);
+      }).filter((x): x is string => Boolean(x)))];
     out.wants = cats("wants", o.wants);
     out.owns = cats("owns", o.owns);
     out.replace = cats("replace", o.replace);

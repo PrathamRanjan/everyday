@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Shell } from "@/components/Shell";
 import { PageSkeleton } from "@/components/kit";
 import { useFlash } from "@/lib/api";
@@ -55,7 +54,7 @@ export function App() {
   }, [loc.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <TooltipProvider delayDuration={200}>
+    <>
       <Shell>
         <Suspense fallback={<PageSkeleton />}>
           <Routes>
@@ -91,6 +90,6 @@ export function App() {
         </Suspense>
       </Shell>
       <Toaster />
-    </TooltipProvider>
+    </>
   );
 }

@@ -1,0 +1,46 @@
+{
+  "/": {
+    "performance": 93,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "fcp": "2.6 s",
+    "lcp": "2.6 s",
+    "tbt": "0 ms",
+    "cls": "0",
+    "failing": []
+  },
+  "/login": {
+    "performance": 90,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "fcp": "2.7 s",
+    "lcp": "3.0 s",
+    "tbt": "0 ms",
+    "cls": "0",
+    "failing": []
+  },
+  "/judge": {
+    "performance": 90,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "fcp": "2.7 s",
+    "lcp": "3.0 s",
+    "tbt": "0 ms",
+    "cls": "0",
+    "failing": []
+  },
+  "/today": {
+    "performance": 91,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100,
+    "fcp": "2.1 s",
+    "lcp": "3.2 s",
+    "tbt": "0 ms",
+    "cls": "0.003",
+    "failing": []
+  }
+}

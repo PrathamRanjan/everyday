@@ -68,6 +68,14 @@ describe("request reader", () => {
     expect(JSON.stringify(calls[0].text.format.schema)).not.toMatch(/budget|cents|amount|price/i);
   });
 
+  it("drops a category whose quote is real but doesn't name it", async () => {
+    fakeModel(() => ({ ...empty, wants: [{ category: "desk_mat", quote: "comfortable study desk" }, { category: "lamp", quote: "a lamp" }], whole_setup: { value: true, quote: "set up a comfortable study desk" } }));
+    const r = await readRequest("Help me set up a comfortable study desk by Friday, with a lamp. I already own a monitor.");
+    expect(r.wants).toEqual(["lamp"]);
+    expect(r.readings.map((x) => x.value)).not.toContain("desk_mat");
+    expect(r.dropped).toBe(1);
+  });
+
   it("drives the plan: model-read words plus the code-read budget, and a stated quality outranks learned taste", async () => {
     fakeModel(() => ({ ...empty, wants: [{ category: "mouse", quote: "quiet mouse" }], must_have: [{ word: "quiet", quote: "quiet mouse" }] }));
     const a = await accountById(db, s.account);

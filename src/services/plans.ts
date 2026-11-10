@@ -1,10 +1,11 @@
 import { getDb, type Queryable } from "../db.js";
 import { scanText } from "../ai/scan.js";
 import { check, type Ctx } from "../core/constraints.js";
-import { plan as planBundle, type PCand, type PSlot } from "../core/planner.js";
+import { plan as planBundle, shippingFor, type PCand, type PSlot } from "../core/planner.js";
 import { changes, dot, explain, pickPairs, type Reason } from "../core/prefs.js";
 import { addWorkDays, fmtWall, wall, wallIso, workHoursBetween } from "../core/time.js";
 import { newId } from "../lib/ids.js";
+import { money as dollars } from "../lib/money.js";
 import { GtError } from "../lib/util.js";
 import { accountById, J, logEvent, notify, nowOf, selfRecipient, type Account } from "../store.js";
 import { catalog, CATEGORY_LABEL, type Product } from "./catalog.js";
@@ -224,7 +225,7 @@ export interface SlotView {
   outcome: "buy" | "use_owned" | "skip" | "none" | "not_needed" | "suggested";
   note: string | null;
   pick: { id: string; title: string; price_cents: number; merchant: string; label: string; reasons: string[]; exact: boolean; delay_days: number } | null;
-  alternatives: { id: string; title: string; price_cents: number; reasons: string[] }[];
+  alternatives: { id: string; title: string; price_cents: number; reasons: string[]; total_if_chosen_cents?: number | null; over_budget_cents: number }[];
   excluded: { id: string; title: string; price_cents: number; reasons: string[] }[];
   unknown: { id: string; title: string; unknown: string[] }[];
   discovery: { id: string; title: string; price_cents: number; label: string; url: string | null }[];
@@ -319,7 +320,24 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
         v.pick = { id: p.id, title: p.title, price_cents: p.price_cents, merchant: p.merchant_name, label: p.merchant_label, reasons: why[p.id] ?? [], exact: false, delay_days: fit.delay_days };
       }
     } else if (v.outcome === "none") v.outcome = v.required ? "none" : "skip";
-    v.alternatives = pool.filter((x) => x.id !== c?.id).slice(0, 3).map((x) => ({ id: x.id, title: x.title, price_cents: x.price_cents, reasons: why[x.id] ?? [] }));
+    // What the total would be with each alternative swapped in, so "over budget" is said, not implied.
+    const swapTotal = (price: number) => {
+      if (!c || !result.feasible) return null;
+      const items = result.items_cents - c.price_cents + price;
+      return items + shippingFor(items, shipping, result.shipping === "express");
+    };
+    v.alternatives = pool.filter((x) => x.id !== c?.id).slice(0, 3).map((x) => {
+      const t = swapTotal(x.price_cents);
+      return { id: x.id, title: x.title, price_cents: x.price_cents, reasons: why[x.id] ?? [], total_if_chosen_cents: t, over_budget_cents: t !== null && i.budget_cents ? Math.max(0, t - i.budget_cents) : 0 };
+    });
+    // A quality the person asked for that the pick lacks, but an over-budget option has: say so plainly.
+    const asked = reqs.must_have ?? reqs.style_words;
+    if (c && asked.length) {
+      const pickWhy: string[] = why[c.id] ?? [];
+      const missing = asked.filter((w) => !pickWhy.includes(`${w}, as you asked`));
+      const better = v.alternatives.find((x) => x.over_budget_cents > 0 && missing.some((w) => x.reasons.includes(`${w}, as you asked`)));
+      if (missing.length && better) v.note = `Nothing ${missing.join(" and ")} fits the budget: ${better.title} comes to ${dollars(better.total_if_chosen_cents ?? 0)} with shipping, ${dollars(better.over_budget_cents)} over. Raise the budget to get it.`;
+    }
     delete (v as any)._why;
     delete (v as any)._exact;
   }

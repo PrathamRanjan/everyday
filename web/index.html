@@ -22,9 +22,16 @@
         if (p.simpleWords) r.dataset.a11ySimple = "on";
       } catch (e) {}
     </script>
+    <style>
+      /* First paint before the app loads: the page colour and the wordmark. React replaces it; nothing shifts. */
+      html { background: #f7f4ee; color: #1c1a17; }
+      html[data-theme="dark"] { background: #14120f; color: #f1ebe0; }
+      @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { background: #14120f; color: #f1ebe0; } }
+      .ev-boot { max-width: 72rem; margin: 0 auto; padding: 0 16px; height: 56px; display: flex; align-items: center; font: 500 1.25rem/1 "Newsreader Variable", Georgia, serif; letter-spacing: -0.01em; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="ev-boot" aria-hidden="true">Everyday</div></div>
     <noscript>Everyday needs JavaScript for its app screens. The agent and API entry points (/llms.txt, /skill.md, /mcp) work without it.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>

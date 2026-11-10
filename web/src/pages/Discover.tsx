@@ -52,7 +52,7 @@ function CaptureForm({ clips }: { clips: DiscoverData["clips"] }) {
         <span className="flex items-center gap-2 text-sm font-medium">
           <ImageUp className="size-4" /> Or a screenshot
         </span>
-        <input ref={fileRef} id="shot" type="file" accept="image/*" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <input ref={fileRef} id="shot" type="file" accept="image/*" className="sr-only" aria-label="Screenshot of something you liked" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <div className="flex items-center gap-3">
           <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
             Choose image

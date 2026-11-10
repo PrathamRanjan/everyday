@@ -18,7 +18,7 @@ interface Slot {
   outcome: "buy" | "use_owned" | "skip" | "none" | "not_needed" | "suggested";
   note: string | null;
   pick: Pick | null;
-  alternatives: { id: string; title: string; price_cents: number; reasons: string[] }[];
+  alternatives: { id: string; title: string; price_cents: number; reasons: string[]; total_if_chosen_cents?: number | null; over_budget_cents?: number }[];
   excluded: { id: string; title: string; price_cents: number; reasons: string[] }[];
   unknown: { id: string; title: string; unknown: string[] }[];
   discovery: { id: string; title: string; price_cents: number; label: string; url: string | null }[];
@@ -92,7 +92,7 @@ function SlotCard({ s, recipient }: { s: Slot; recipient: PlanData["recipient"] 
         ) : (
           <p className="text-sm">{s.note ?? "Nothing picked."}</p>
         )}
-        {s.pick && s.note && <p className="mt-2 text-sm text-ink-2">{s.note}</p>}
+        {s.pick && s.note && <p className={cn("mt-2 text-sm", s.note.startsWith("Nothing ") ? "rounded-md bg-wait-bg p-2.5 text-wait" : "text-ink-2")}>{s.note}</p>}
 
         {s.excluded.length > 0 && (
           <div className="mt-4 rounded-md bg-sunk/70 p-3">
@@ -117,12 +117,13 @@ function SlotCard({ s, recipient }: { s: Slot; recipient: PlanData["recipient"] 
         )}
         {s.alternatives.length > 0 && (
           <details className="mt-3 text-sm" data-detail>
-            <summary className="min-h-9 cursor-pointer py-1 font-semibold">Also fits ({s.alternatives.length})</summary>
+            <summary className="min-h-11 cursor-pointer py-2 font-semibold">Other options ({s.alternatives.length})</summary>
             <ul className="mt-1 space-y-1">
               {s.alternatives.map((x) => (
                 <li key={x.id} className="flex flex-wrap gap-x-2">
                   <span>{x.title}</span>
                   <Amount cents={x.price_cents} className="text-ink-2" />
+                  {x.over_budget_cents ? <span className="font-semibold text-stop">{money(x.over_budget_cents)} over budget with shipping</span> : x.total_if_chosen_cents ? <span className="text-done">fits the budget</span> : null}
                   {x.reasons.length > 0 && <span className="text-ink-2">— {x.reasons.join("; ")}</span>}
                 </li>
               ))}

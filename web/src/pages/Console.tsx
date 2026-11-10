@@ -144,7 +144,7 @@ interface EvidenceData {
 
 function ArmTable({ arms }: { arms: Arm[] }) {
   return (
-    <div className="rail-scroll">
+    <div className="rail-scroll" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
       <table className="num w-full min-w-[620px] text-sm">
         <thead>
           <tr className="border-b border-rule text-left text-xs text-ink-2 uppercase">
@@ -242,7 +242,7 @@ export function Evidence() {
             >
               {d.adversarial.length ? <ArmTable arms={d.adversarial} /> : <p className="text-sm text-ink-2">Not run on this instance yet.</p>}
             </Panel>
-            <Panel title="Conversational shopping eval (TechJam-style)">{d.techjam ? <pre className="rail-scroll rounded-md bg-sunk p-3 text-xs whitespace-pre">{d.techjam}</pre> : <p className="text-sm text-ink-2">Not run yet.</p>}</Panel>
+            <Panel title="Conversational shopping eval (TechJam-style)">{d.techjam ? <pre tabIndex={0} className="rail-scroll rounded-md bg-sunk p-3 text-xs whitespace-pre">{d.techjam}</pre> : <p className="text-sm text-ink-2">Not run yet.</p>}</Panel>
           </div>
         )}
       </Loaded>
@@ -301,7 +301,7 @@ export function Eval() {
               {d.count} of {d.total} rows
             </p>
             {d.rows.length ? (
-              <div className="rail-scroll rounded-lg border border-rule bg-card">
+              <div className="rail-scroll rounded-lg border border-rule bg-card" tabIndex={0} role="region" aria-label="Eval rows (scrolls sideways)">
                 <table className="w-full min-w-[760px] text-xs">
                   <thead>
                     <tr className="border-b border-rule text-left text-ink-2 uppercase">

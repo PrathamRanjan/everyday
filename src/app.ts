@@ -56,7 +56,7 @@ export function createApp() {
   app.use(safetyRoutes());
   app.use(shopperRoutes());
   // Any other page a browser asks for is the app's own "not found" screen.
-  app.use((req, res, next) => (shell && req.method === "GET" && req.accepts(["html", "json"]) === "html" ? (res.status(404), shell(req, res)) : next()));
+  app.use((req, res, next) => (shell && req.method === "GET" && req.accepts(["html", "json"]) === "html" ? (res.status(404), void shell(req, res).catch(next)) : next()));
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof GtError) return res.status(err.status).type("text").send(err.message);
     console.error("[everyday]", req.method, req.path, err);

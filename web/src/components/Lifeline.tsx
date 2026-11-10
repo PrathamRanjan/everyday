@@ -56,7 +56,7 @@ export function Lifeline({ marks, bands = [], today, deadline, compact = false, 
   const progressTo = Math.max(PAD, ...lastDone, Math.min(tx, W - PAD));
 
   return (
-    <figure className={cn("rail-scroll -mx-1 px-1", className)} data-lifeline>
+    <figure className={cn("rail-scroll -mx-1 px-1", className)} data-lifeline tabIndex={0} role="group" aria-label="Timeline (scrolls sideways on small screens)">
       <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full min-w-[520px]" role="img" aria-labelledby={`${uid}-t`}>
         <title id={`${uid}-t`}>{summary}</title>
         {/* the rail */}

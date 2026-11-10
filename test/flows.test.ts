@@ -188,6 +188,18 @@ describe("Everyday flows", () => {
     expect(arm.slots[0].pick.title).toMatch(/Lift/);
   });
 
+  it("an option that only fits a stated quality over budget is named, with what it would cost", async () => {
+    const maya = await login(`acc:${s.account}`);
+    ok(await maya.post("/plans", { text: "A quiet mouse under $45 by Thursday" }));
+    const i = await one("SELECT * FROM intents ORDER BY created_at DESC LIMIT 1");
+    const mouse = (await ui(maya, `/plans/${i.id}`)).plan.slots.find((x: any) => x.key === "mouse");
+    // The budget holds: the pick plus shipping is within $45.
+    expect(mouse.pick.price_cents + 1200).toBeLessThanOrEqual(4500);
+    const silent = mouse.alternatives.find((x: any) => x.title.startsWith("Silent Mouse"));
+    expect(silent).toMatchObject({ total_if_chosen_cents: 4700, over_budget_cents: 200 });
+    expect(mouse.note).toMatch(/Nothing quiet fits the budget: Silent Mouse, Oak comes to \$47\.00 with shipping, \$2\.00 over/);
+  });
+
   it("the one question explains what each answer changes", async () => {
     const maya = await login(`acc:${s.account}`);
     ok(await maya.post("/plans", { text: "Help me set up a comfortable study desk by Friday for $350. I already own a monitor." }));

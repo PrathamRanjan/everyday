@@ -1,5 +1,4 @@
-import { driver, type Driver } from "driver.js";
-import "driver.js/dist/driver.css";
+import type { Driver } from "driver.js";
 import { getJson, postAction } from "@/lib/api";
 
 /**
@@ -111,6 +110,8 @@ async function showStep(s: State) {
   const el = step.el ? await wait(step.el) : null;
   current?.destroy();
   const last = s.i === steps.length - 1;
+  // Loaded on first use, so the tour library isn't in the first page load.
+  const [{ driver }] = await Promise.all([import("driver.js"), import("driver.js/dist/driver.css")]);
   const d = driver({
     popoverClass: "ev-tour",
     allowClose: true,

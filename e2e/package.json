@@ -1,0 +1,16 @@
+{
+  "name": "everyday-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser journeys, screenshots and Lighthouse for Everyday. Not part of the Render build.",
+  "scripts": {
+    "test": "playwright test",
+    "shots": "playwright test screenshots.spec.ts",
+    "lighthouse": "node lighthouse.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.56.1",
+    "lighthouse": "^12.8.2"
+  }
+}
