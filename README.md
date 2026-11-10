@@ -117,3 +117,13 @@ The gate (`src/guard/dryrun.ts`) runs the check on every order and repeat buy an
 ## Accessibility (9 Nov 2026)
 
 `public/a11y.js` and `public/a11y.css` on every page: a **Display and help** button with text size, high contrast, Atkinson Hyperlegible, read-aloud, voice input (on-device where the browser supports it), plain words, bigger targets, more time and no motion. A first-visit card offers the same choices. The profile stays in this browser's `localStorage`; typing and buttons always work without it.
+
+## Improvement spec: live acceptance record
+
+| Item | Result on https://pph-everyday.onrender.com | Date |
+|---|---|---|
+| A2.1 saved demo wallet | **Passed.** With no PayPal login, the demo shopper planned a desk lamp, got the exact quote and pressed **Pay as the demo shopper**. PayPal order `4L752368AR902121V` COMPLETED, capture `9YW71616HF633590Y` COMPLETED, $61.00 USD (fee $2.37), both confirmed with `scripts/pp-check.mts`. The order shows "Paid from the demo's saved sandbox wallet". The wallet-off path (only PayPal's own page offered, no PayPal id made) is covered by unit tests (`test/demowallet.test.ts`); it has not been switched off on live. | 10 Nov 2026 |
+| A1 private workspaces | Not started. | |
+| A4 health check, clocks | Not started. Always-on hosting is a purchase only the owner can make; a keep-warm ping on the free plan would use up the free hours all eight apps share. | |
+| A11, A5.1, A5.4, A5.5 | Not started. | |
+| E1 owned item and empty plan | Not started. | |
