@@ -36,3 +36,9 @@ export function json(fn: (req: Request, res: Response) => Promise<unknown>) {
         next(e);
       });
 }
+
+/** A same-site path to go back to, or the fallback (never an open redirect). */
+export const nextOf = (v: unknown, fallback: string) => {
+  const n = String(v ?? "");
+  return n.startsWith("/") && !n.startsWith("//") ? n : fallback;
+};

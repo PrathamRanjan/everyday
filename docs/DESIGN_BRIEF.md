@@ -67,7 +67,7 @@ Colour (checked with the WCAG 2.2 contrast formula against their own background;
 | `--stop` | #A11D2B (7.0:1) | #F28B8B (7.9:1) | refused, held by a scam rule |
 | `--focus` | #1C1A17 ring + #F7F4EE gap | #F1EBE0 ring | visible focus (2 px + 2 px offset) |
 
-Each status colour has a tinted background (`--now-bg` etc.) at ≤12% strength; status text sits on the tint at ≥4.5:1 (checked in `web/src/tokens.test.ts`).
+Each status colour has a tinted background (`--now-bg` etc.) at ≤12% strength; status text sits on the tint at ≥4.5:1 (checked in `test/tokens.test.ts`, both themes).
 
 Radius: 4 (inputs, chips' inner), 8 (buttons), 12 (cards), 20 (sheets), full (chips, dots). Spacing: 4 px base (4, 8, 12, 16, 24, 32, 48, 64). Elevation: borders first; one soft shadow for floating layers (`0 8px 30px -12px rgb(28 26 23 / .25)`). Motion: 120 ms (press), 200 ms (state), 320 ms (sheets, lifeline draw), `cubic-bezier(.2,.7,.2,1)`; with `prefers-reduced-motion: reduce` or the Display and help "no motion" switch, every transition and the lifeline draw-in are off.
 
@@ -82,6 +82,6 @@ Plain words, short sentences, written for a phone between jobs. Every screen ans
 ## Components and libraries
 
 - shadcn/ui (MIT) for the app: buttons, cards, dialogs, sheets, tabs, badges, tables, forms, toasts (sonner, MIT), command palette (cmdk, MIT), skeletons, tooltips. Restyled to the tokens above; nothing ships with the default zinc look.
-- Magic UI (MIT): two pieces on the public landing page only (an animated number ticker for the quote total and a border beam on the live preview). Never on approval screens.
+- Magic UI (MIT): two pieces on the public landing page only (an animated number ticker for the quote total and a border beam on the live preview), rewritten locally in `web/src/components/magic.tsx` without the motion library and switched off by reduced motion. Never on approval screens.
 - Aceternity UI: considered for the landing hero; not used, because its free components are offered under its own licence terms rather than a standard open-source licence, and the effects (spotlights, glowing beams) fight the paper look. The lifeline hero is our own SVG.
 - Icons: lucide-react (ISC). Tour: Driver.js (MIT). Fonts: Fontsource packages of Newsreader and Public Sans (OFL).

@@ -6,7 +6,6 @@
 import type { Queryable } from "./db.js";
 import { getDb } from "./db.js";
 import { newId } from "./lib/ids.js";
-import { esc, html, raw, type Raw } from "./web/html.js";
 
 export type Actor = "model" | "code" | "paypal" | "agent" | "owner" | "staff" | "customer" | "worker" | "guard";
 
@@ -103,18 +102,3 @@ export async function recentRuns(limit = 50) {
   ).rows as any[];
 }
 
-const GATE_CLASS: Record<string, string> = { allowed: "good", dry_run_refused: "warn", held: "warn", denied: "bad" };
-
-/** Server-rendered trace component used on owner, staff and judge pages. */
-export function renderTrace(steps: TraceStep[], opts: { title?: string; compact?: boolean } = {}): Raw {
-  if (!steps.length) return html`<div class="muted small">No agent steps recorded.</div>`;
-  const rows = steps
-    .map((s) => {
-      const gate = s.gate && s.gate !== "n/a" ? `<span class="pill ${GATE_CLASS[s.gate] ?? ""}">${esc(s.gate.replace(/_/g, " "))}</span>` : "";
-      const pp = s.pp_request_id || s.pp_debug_id ? `<div class="hash small muted">${s.pp_request_id ? `request ${esc(s.pp_request_id)}` : ""}${s.pp_debug_id ? ` · debug ${esc(s.pp_debug_id)}` : ""}</div>` : "";
-      const detail = opts.compact ? "" : `<details><summary class="small muted">arguments and result</summary><pre class="small">${esc(JSON.stringify({ args: s.args ?? null, result: s.result ?? null }, null, 1))}</pre></details>`;
-      return `<li class="trace-step actor-${esc(s.actor)}"><div class="trace-head"><span class="trace-n">${s.step}</span><span class="pill">${esc(s.actor)}</span><strong>${esc(s.tool)}</strong>${s.policy ? `<span class="small muted">rule: ${esc(s.policy)}</span>` : ""}${gate}<span class="small muted right">${s.duration_ms ?? "–"} ms</span></div>${pp}${detail}</li>`;
-    })
-    .join("");
-  return html`<section class="trace">${opts.title ? html`<h3>${opts.title}</h3>` : ""}<ol class="trace-list">${raw(rows)}</ol></section>`;
-}

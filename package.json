@@ -12,13 +12,14 @@
     "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
     "start": "node --env-file-if-exists=.env dist/main.js",
     "worker": "node --env-file-if-exists=.env dist/worker-main.js",
-    "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json && npm run build:web",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "test": "vitest run",
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "eval:capture": "tsx --env-file-if-exists=.env scripts/eval-capture.ts",
     "eval:techjam": "tsx --env-file-if-exists=.env scripts/eval-techjam.ts",
-    "eval:adversarial": "tsx --env-file-if-exists=.env scripts/eval-adversarial.ts"
+    "eval:adversarial": "tsx --env-file-if-exists=.env scripts/eval-adversarial.ts",
+    "build:web": "npm --prefix web ci --include=dev --no-audit --no-fund && npm --prefix web run build"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",

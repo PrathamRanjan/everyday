@@ -35,6 +35,13 @@ const ok = (r: { status: number; location: string | null }) => {
   return r;
 };
 const flash = (r: { location: string | null }) => decodeURIComponent(new URL(r.location!, base).searchParams.get("err") ?? new URL(r.location!, base).searchParams.get("ok") ?? "");
+const ui = async (c: Client, p: string) => {
+  const r = await c.get(`/api/ui${p}`);
+  expect(r.status, p).toBe(200);
+  return r.json as any;
+};
+const uiText = async (c: Client, p: string) => JSON.stringify(await ui(c, p));
+
 
 beforeEach(async () => {
   db = await openDb({ memory: true });
@@ -81,7 +88,7 @@ describe("Everyday foundation", () => {
     expect(await one("SELECT compiler FROM policies WHERE active AND owner_id = $1", [s.account])).toMatchObject({ compiler: "local-rules" });
     const rules = (await one("SELECT rules FROM policies WHERE active AND owner_id = $1", [s.account])).rules;
     expect(rules).toMatchObject({ max_purchase_cents: 40000, approve_above_cents: 3000, one_tap_repeat: true, allowed_merchants: ["northlight"], blocked_categories: ["headphones"] });
-    expect((await maya.get("/guard")).text).toMatch(/Northlight/);
+    expect(await uiText(maya, "/guard")).toMatch(/northlight/i);
 
     // ---- A paid order carries a trace with gate steps and the PayPal request id.
     const order = await paidOrder(maya);
@@ -103,13 +110,15 @@ describe("Everyday foundation", () => {
 
     // ---- Mandate: preview, adopt, activate, backtest, adopt-rules, suggestions (none yet), kill switch.
     const prev = await maya.post("/guard/policy", { text: "Never spend more than $250 on a single purchase. Ask me before any repeat buy over $20. Repeat buys are on. Only buy from Northlight. Never buy headphones. Bananas are yellow", mode: "preview" });
-    expect(prev.status).toBe(200);
-    expect(prev.text).toMatch(/Could not express/);
+    expect(prev.status).toBe(302);
+    expect(flash(prev)).toMatch(/Couldn't turn into a rule: Bananas are yellow/);
     const draft = await one("SELECT id FROM policies WHERE owner_id = $1 AND NOT active ORDER BY created_at DESC LIMIT 1", [s.account]);
     ok(await maya.post(`/guard/policy/${draft.id}/activate`));
     expect((await one("SELECT rules FROM policies WHERE active AND owner_id = $1", [s.account])).rules.max_purchase_cents).toBe(25000);
     ok(await maya.post("/guard/policy", { text: "Never spend more than $400 on a single purchase. Ask me before any repeat buy over $30. Repeat buys are on. Only buy from Northlight. Never buy headphones", mode: "adopt" }));
-    expect((await maya.post("/guard/backtest", { approve_above_cents: "10000" })).status).toBe(200);
+    const bt = await maya.post("/guard/backtest", { approve_above_cents: "10000" });
+    expect(bt.status).toBe(200);
+    expect(bt.json.rules.approve_above_cents).toBe(10000);
     const cur = (await one("SELECT rules FROM policies WHERE active AND owner_id = $1", [s.account])).rules;
     ok(await maya.post("/guard/adopt-rules", { rules: JSON.stringify({ ...cur, approve_above_cents: 3000 }) }));
     expect(flash(await maya.post("/guard/suggestions", {}))).toMatch(/Pick at least one/);
@@ -133,8 +142,8 @@ describe("Everyday foundation", () => {
     expect((await maya.req("POST", "/guard/passkey/register/finish", { json: { chalId: "nope", clientDataJSON: "", authenticatorData: "", rawId: "" } })).status).toBe(400);
 
     // ---- Passport: vault, repeat buy under the threshold runs; above it is held; approve -> queue -> paid.
-    expect((await maya.get("/passport")).text).toMatch(/Dollars recovered/);
-    expect((await maya.get("/passport?q=oak lamp")).text).toMatch(/catalog/);
+    expect((await ui(maya, "/passport")).summary).toHaveProperty("recovered");
+    expect(await uiText(maya, "/passport?q=oak%20lamp")).toMatch(/catalog/);
     const vaultRedirect = await maya.post("/passport/vault");
     expect(vaultRedirect.status).toBe(302);
     const setup = await one("SELECT * FROM vault_tokens ORDER BY created_at DESC LIMIT 1");
@@ -181,7 +190,7 @@ describe("Everyday foundation", () => {
     expect((await maya.req("POST", "/channels/link", { json: { channel: "telegram", address: "tg:1" } })).status).toBe(200);
 
     // ---- Merchant: approvals page and mandate, tracking, disputes, transactions, negative test.
-    expect((await nl.get("/merchant/approvals")).text).toMatch(/Refund mandate/);
+    expect((await ui(nl, "/merchant/approvals")).rules.length).toBeGreaterThan(0);
     ok(await nl.post("/merchant/approvals/policy", { text: "Refund at most 60%. Ask me before refunding more than $150" }));
     ok(await nl.post("/merchant/approvals/kill", { engaged: "1", reason: "drill" }));
     ok(await nl.post("/merchant/approvals/kill", { engaged: "0" }));
@@ -224,7 +233,7 @@ describe("Everyday foundation", () => {
     expect(flash(await nl.post(`/merchant/money/disputes/${d3row.id}/accept`, { note: "ok" }))).toMatch(/Refused before PayPal/);
     ok(await nl.post("/merchant/approvals/kill", { engaged: "0" }));
     expect(fake.calls.filter((c) => c === "acceptDisputeClaim")).toHaveLength(1);
-    expect((await nl.get("/merchant/money?reconcile=1")).text).toMatch(/PayPal transactions/);
+    expect((await ui(nl, "/merchant/money?reconcile=1")).recon).toBeTruthy();
     expect((await nl.get("/merchant/money/transactions.json")).status).toBe(200);
     const neg = await nl.post("/merchant/money/negative-test", { code: "INSTRUMENT_DECLINED" });
     expect(flash(neg)).toMatch(/refused as asked/);
@@ -261,8 +270,8 @@ describe("Everyday foundation", () => {
     expect((await anon.get("/console/adversarial.md")).status).toBe(200);
     expect((await anon.get("/console/techjam.md")).status).toBe(200);
     expect((await anon.get("/console/capture.md")).status).toBe(200);
-    expect((await anon.get("/console/eval")).text).toMatch(/Eval explorer/);
-    expect((await anon.get("/console/eval?suite=adversarial&arm=gate&outcome=correct&trap=trap")).status).toBe(200);
+    expect((await ui(anon, "/eval")).total).toBeGreaterThan(0);
+    expect((await ui(anon, "/eval?suite=adversarial&arm=gate&outcome=correct&trap=trap")).suite).toBe("adversarial");
     expect((await anon.get("/console/eval.csv?suite=capture")).text).toMatch(/^id,arm/);
     expect((await anon.get("/llms.txt")).text).toMatch(/\/merchant\/mcp/);
     expect((await anon.get("/skill.md")).text).toMatch(/Everyday skill/);

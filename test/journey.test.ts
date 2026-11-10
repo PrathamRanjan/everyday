@@ -34,6 +34,13 @@ const prod = (sku: string) => s.products[sku];
 const tg = (body: unknown) => fetch(`${base}/c/telegram/webhook`, { method: "POST", headers: { "content-type": "application/json", "x-telegram-bot-api-secret-token": SECRET }, body: JSON.stringify(body) });
 const msg = (text: string) => ({ update_id: Date.now(), message: { message_id: 1, chat: { id: CHAT, type: "private" }, text } });
 const plan = async (intentId: string) => (await one("SELECT body FROM plans WHERE intent_id = $1 AND status IN ('current','ordered') ORDER BY version DESC LIMIT 1", [intentId])).body;
+const ui = async (c: Client, p: string) => {
+  const r = await c.get(`/api/ui${p}`);
+  expect(r.status, p).toBe(200);
+  return r.json as any;
+};
+const uiText = async (c: Client, p: string) => JSON.stringify(await ui(c, p));
+
 
 beforeEach(async () => {
   config.telegram.webhookSecret = SECRET;
@@ -57,20 +64,21 @@ describe("Everyday acceptance journey", () => {
     for (const u of ["/healthz", "/login", "/demo"]) expect((await anon.get(u)).status, u).toBe(200);
     expect((await anon.get("/")).status).toBeLessThan(400);
     // A shopper coming back from PayPal without a session signs in and lands where they were going.
-    expect((await anon.get("/login?next=/purchases")).text).toMatch(/name="as" value="acc:[^"]+"><input type="hidden" name="next" value="\/purchases"/);
+    expect((await anon.get("/login?next=/purchases")).status).toBe(200);
+    expect((await ui(anon, "/personas")).accounts.map((a: any) => a.id)).toContain(s.account);
     const back = new Client(base);
     expect((await back.post("/login", { as: `acc:${s.account}`, next: "/purchases" })).location).toBe("/purchases");
     const maya = new Client(base);
     ok(await maya.post("/login", { as: `acc:${s.account}` }));
 
     // Scam and fraud protection (SAFETY_ACCESSIBILITY_SPEC §4): the page, the model card, a scan, protected mode on and off.
-    expect((await maya.get("/safety")).text).toMatch(/Scam and fraud protection/);
-    expect((await maya.get("/safety/model-card")).text).toMatch(/ScamShield/);
+    expect((await ui(maya, "/safety")).protected.on).toBe(false);
+    expect((await maya.get("/safety/model-card")).status).toBe(200);
     const scan = await maya.req("POST", "/safety/scan", { json: { text: DEMO_SCAM } });
     expect(scan.status).toBe(200);
     expect(JSON.parse(scan.text).level).toBe("hold");
     expect((await maya.post("/safety/protected", { on: "1" })).status).toBe(302);
-    expect((await maya.get("/safety")).text).toMatch(/Turn protected mode off/);
+    expect((await ui(maya, "/safety")).protected.on).toBe(true);
     expect((await maya.post("/safety/protected", { on: "0" })).status).toBe(302);
 
     const nl = new Client(base);
@@ -84,8 +92,8 @@ describe("Everyday acceptance journey", () => {
     expect((await maya.post("/telegram/send", { chat: String(CHAT), text: "look at this https://youtube.com/shorts/dSk7Setup01?si=abc" })).status).toBe(302);
     const cap = await one("SELECT * FROM captures");
     expect(cap).toMatchObject({ platform: "youtube", channel: "telegram" });
-    expect((await maya.get(`/telegram?chat=${CHAT}`)).text).toMatch(/Which item do you mean/);
-    expect((await maya.get(`/captures/${cap.id}`)).text).toMatch(/Which item do you mean/);
+    expect(await uiText(maya, `/telegram?chat=${CHAT}`)).toMatch(/Which item do you mean/);
+    expect((await ui(maya, `/captures/${cap.id}`)).objects.length).toBeGreaterThan(1);
     ok(await maya.post(`/captures/${cap.id}/select`, { key: "lamp" }));
     // An app capture of the same link is recognised as already saved.
     expect((await maya.post("/discover/capture", { url: "https://www.youtube.com/watch?v=dSk7Setup01" })).status).toBe(302);
@@ -95,7 +103,7 @@ describe("Everyday acceptance journey", () => {
     ok(await maya.post("/plans", { capture_id: cap.id, text: "Help me create this comfortable study setup by Friday for $350. I already own a monitor." }));
     const intent = await one("SELECT * FROM intents ORDER BY created_at DESC LIMIT 1");
     expect(intent).toMatchObject({ budget_cents: 35000, goal: "desk_setup" });
-    expect((await maya.get(`/plans/${intent.id}`)).text).toMatch(/One question|How does your laptop connect/);
+    expect((await ui(maya, `/plans/${intent.id}`)).plan.questions[0].text).toMatch(/How does your laptop connect/);
     ok(await maya.post(`/plans/${intent.id}/answer`, { key: "laptop_port", value: "usb-c-dp" }));
     ok(await maya.post(`/plans/${intent.id}/choose`, { a: prod("NL-CHAIR-ERGO"), b: prod("NL-CHAIR-ERGO-LITE"), chosen: "a" }));
     ok(await maya.post(`/plans/${intent.id}/choose`, { a: prod("NL-LAMP-HALDEN-OAK"), b: prod("NL-LAMP-ORBIT"), chosen: "a" }));
@@ -163,6 +171,58 @@ describe("Everyday acceptance journey", () => {
     ok(await maya.post("/you/delete-memory", { recipient: s.self }));
     ok(await maya.post("/you/limit", { limit: "500" }));
     expect((await one("SELECT monthly_limit_cents FROM accounts WHERE id = $1", [s.account])).monthly_limit_cents).toBe(50000);
+
+    // The new front end: every screen URL serves the app shell, and each screen's data endpoint answers the right
+    // party with no server error. Party boundaries hold: no session is 401, a merchant can't read shopper data.
+    const runId = (await ui(maya, "/traces")).runs[0].id as string;
+    const screens = ["/login", "/today", "/discover", `/captures/${cap.id}`, "/plans", `/plans/${intent.id}`, "/purchases", `/orders/${order.id}`, "/you", "/things", "/guard", "/passport", "/safety", "/safety/model-card", "/channels", "/traces", `/trace/${runId}`, "/merchant", "/merchant/money", "/merchant/approvals", "/judge", "/demo", "/console", "/console/evidence", "/console/eval", "/telegram"];
+    for (const u of screens) {
+      const r = await anon.get(u);
+      expect(r.status, u).toBe(200);
+      expect(r.text, u).toMatch(/<div id="root">/);
+    }
+    for (const f of ["/favicon.svg", "/robots.txt"]) expect((await anon.get(f)).status, f).toBe(200);
+    expect((await anon.get("/")).status).toBe(200);
+    expect((await maya.get("/")).location).toBe("/today");
+    expect((await ui(anon, "/session")).who).toBeNull();
+    expect((await ui(maya, "/session")).who).toMatchObject({ kind: "shopper", id: s.account });
+    expect((await ui(nl, "/session")).who).toMatchObject({ kind: "merchant" });
+    expect((await ui(anon, "/preview")).today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect((await ui(maya, "/today")).first).toBe("Maya");
+    expect((await ui(maya, "/discover")).captures.map((x: any) => x.id)).toContain(cap.id);
+    expect((await ui(maya, "/plans")).plans.map((x: any) => x.id)).toContain(intent.id);
+    expect((await ui(maya, "/purchases")).orders.map((x: any) => x.id)).toContain(order.id);
+    const od = await ui(maya, `/orders/${order.id}`);
+    expect(od.order).toMatchObject({ status: "delivered", refunded_cents: 4500 });
+    expect(od.ops.filter((x: any) => x.kind === "refund").length).toBe(3);
+    expect(od.events.length).toBeGreaterThan(0);
+    expect((await ui(maya, "/you")).owned.some((x: any) => x.title === "Kettle")).toBe(true);
+    expect((await ui(maya, "/guard")).chain.ok).toBe(true);
+    expect((await ui(maya, "/passport")).summary).toBeTruthy();
+    expect((await ui(maya, "/channels")).address).toBe(`shopper:${s.account}`);
+    expect((await ui(maya, `/trace/${runId}`)).steps.length).toBeGreaterThan(0);
+    expect((await ui(nl, "/merchant")).lines.map((x: any) => x.order_id)).toContain(order.id);
+    expect((await ui(nl, "/merchant/money")).totals.orders).toBeGreaterThan(0);
+    expect((await ui(nl, "/merchant/approvals")).chain.ok).toBe(true);
+    expect((await ui(anon, "/judge")).beats.length).toBeGreaterThan(3);
+    expect((await ui(anon, "/demo")).demo).toBe(true);
+    expect((await ui(anon, "/console")).weights.length).toBeGreaterThan(0);
+    expect((await ui(anon, "/evidence")).real.captures).toBeGreaterThan(0);
+    expect((await ui(anon, "/eval?suite=capture")).suite).toBe("capture");
+    expect((await anon.get("/api/ui/today")).status).toBe(401);
+    expect((await anon.get(`/api/ui/orders/${order.id}`)).status).toBe(401);
+    expect((await nl.get(`/api/ui/orders/${order.id}`)).status).toBeGreaterThanOrEqual(400);
+    expect((await maya.get("/api/ui/merchant")).status).toBeGreaterThanOrEqual(400);
+    expect((await anon.get("/api/ui/nope")).status).toBe(404);
+
+    // The front end's bridge: the same form routes, but a redirect comes back as JSON the app can show.
+    const bridged = await maya.req("POST", "/you/limit", { form: { limit: "450" }, headers: { "x-everyday-ui": "1" } });
+    expect(bridged.status).toBe(200);
+    expect(bridged.json).toMatchObject({ to: "/you", external: false });
+    expect(bridged.json.ok).toBeTruthy();
+    const refused = await maya.req("POST", `/orders/${order.id}/pay`, { form: {}, headers: { "x-everyday-ui": "1" } });
+    expect(refused.status).toBe(200);
+    expect(refused.json.err).toBeTruthy();
 
     // Demo controls: the clock, the reconciler again, and a reset; then sign out.
     ok(await anon.post("/demo/clock", { step: "day" }));

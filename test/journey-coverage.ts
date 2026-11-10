@@ -18,7 +18,7 @@ export function routeTable(app: any): string[] {
       if (layer.route) {
         const paths = Array.isArray(layer.route.path) ? layer.route.path : [layer.route.path];
         const methods = verbs(layer.route);
-        for (const p of paths) for (const m of methods) out.add(`${m} ${prefix}${p}`);
+        for (const p of paths) for (const m of methods) out.add(`${m} ${prefix}${String(p)}`);
       } else if (layer.name === "router" && layer.handle?.stack) {
         let sub = "";
         if (!layer.regexp?.fast_slash) {
@@ -44,8 +44,10 @@ export async function serveTracked(app: any) {
         const paths = Array.isArray(req.route.path) ? req.route.path : [req.route.path];
         const m = verbs(req.route).length === 1 && verbs(req.route)[0] === "ALL" ? "ALL" : req.method;
         // An array route (r.get([a, b])) counts the member that matched this request.
-        const matched = paths.length === 1 ? paths[0] : paths.find((p: string) => new RegExp("^" + p.replace(/:[^/]+/g, "[^/]+").replace(/\//g, "\\/") + "$").test(req.path ?? req.url.split("?")[0])) ?? paths[0];
-        hits.add(`${m} ${req.baseUrl ?? ""}${matched}`);
+        const path = req.path ?? req.url.split("?")[0];
+        const fits = (p: string | RegExp) => (p instanceof RegExp ? p.test(path) : new RegExp("^" + p.replace(/:[^/]+/g, "[^/]+").replace(/\//g, "\\/") + "$").test(path));
+        const matched = paths.length === 1 ? paths[0] : paths.find(fits) ?? paths[0];
+        hits.add(`${m} ${req.baseUrl ?? ""}${String(matched)}`);
       }
       if (res.statusCode >= 500) failures.push(`${req.method} ${req.url} → ${res.statusCode}`);
     });

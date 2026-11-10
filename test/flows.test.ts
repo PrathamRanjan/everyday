@@ -39,6 +39,13 @@ const cb = (data: string) => ({ update_id: Date.now(), callback_query: { id: "1"
 const lastBot = async () => (await one("SELECT * FROM inbox WHERE channel = 'telegram' ORDER BY id DESC LIMIT 1")).text as string;
 const plan = async (intentId: string) => (await one("SELECT body FROM plans WHERE intent_id = $1 AND status IN ('current','ordered') ORDER BY version DESC LIMIT 1", [intentId])).body;
 const picks = (b: any) => Object.fromEntries(b.slots.filter((x: any) => x.outcome === "buy").map((x: any) => [x.key, x.pick.title]));
+const ui = async (c: Client, p: string) => {
+  const r = await c.get(`/api/ui${p}`);
+  expect(r.status, p).toBe(200);
+  return r.json as any;
+};
+const uiText = async (c: Client, p: string) => JSON.stringify(await ui(c, p));
+
 
 async function login(as: string) {
   const c = new Client(base);
@@ -141,7 +148,7 @@ describe("Everyday flows", () => {
     const bo = await one("SELECT * FROM order_lines WHERE id = $1", [chairLine.id]);
     expect(bo.eta > "2026-11-13").toBe(true);
     expect(bo.swap_offer).toMatchObject({ title: "Ergo Mesh Chair Lite", diff_cents: 2000 });
-    expect((await maya.get("/today")).text).toMatch(/Ergo Mesh Chair delayed/);
+    expect(await uiText(maya, "/today")).toMatch(/Ergo Mesh Chair delayed/);
     ok(await maya.post(`/lines/${chairLine.id}/swap`));
     ok(await maya.post(`/lines/${chairLine.id}/swap`)); // idempotent
     expect([...fake.refunds.values()].map((r) => r.amount?.value)).toEqual(["20.00"]);
@@ -171,7 +178,7 @@ describe("Everyday flows", () => {
     expect((await one("SELECT refunded_cents FROM orders WHERE id = $1", [orderId])).refunded_cents).toBe(3500);
 
     // Ownership drives the next decision: an arm that fits VESA 100, and no monitor suggestion.
-    const today = (await maya.get("/today")).text;
+    const today = await uiText(maya, "/today");
     expect(today).toMatch(/Recall: Hush ANC Headphones/);
     ok(await maya.post("/plans", { text: "A monitor arm for my monitor under $90" }));
     const armIntent = await one("SELECT * FROM intents ORDER BY created_at DESC LIMIT 1");
@@ -189,7 +196,7 @@ describe("Everyday flows", () => {
     expect(b.questions[0].key).toBe("laptop_port");
     expect(b.questions[0].why).toMatch(/HDMI port → no dock needed/);
     expect(b.questions[0].why).toMatch(/USB-A → 1 dock work/);
-    expect((await maya.get(`/plans/${i.id}`)).text).toMatch(/Your answer changes what fits/);
+    expect((await ui(maya, `/plans/${i.id}`)).plan.questions[0].why).toMatch(/Your answer changes what fits/);
   });
 
   it("every choice has a receipt; undoing the latest restores the exact earlier model", async () => {
@@ -199,7 +206,7 @@ describe("Everyday flows", () => {
     ok(await maya.post(`/plans/${intentId}/choose`, { a: prod("NL-LAMP-HALDEN-OAK"), b: prod("NL-LAMP-ORBIT"), chosen: "b" }));
     const evs = await all("SELECT * FROM pref_events ORDER BY id");
     const last = evs.at(-1);
-    expect((await maya.get("/you")).text).toMatch(/Recent choices and what each changed/);
+    expect((await ui(maya, "/you")).people.find((p: any) => p.is_self).receipts.length).toBeGreaterThan(0);
     ok(await maya.post("/you/undo", { event: String(last.id) }));
     const self = await one("SELECT id FROM recipients WHERE account_id = $1 AND is_self", [s.account]);
     const w = (await one("SELECT weights FROM pref_models WHERE recipient_id = $1", [self.id])).weights;
@@ -323,14 +330,14 @@ describe("Everyday flows", () => {
     await db.query("UPDATE merchants SET return_policy = return_policy || '{\"price_protection_days\": 0}'::jsonb WHERE id = $1", [s.merchant]);
     // A price rise is not a claim.
     ok(await nl.post(`/merchant/products/${lamp.product_id}/price`, { price: ((lamp.unit_cents + 500) / 100).toFixed(2) }));
-    expect((await maya.get(`/orders/${orderId}`)).text).not.toMatch(/Price protection:/);
+    expect((await ui(maya, `/orders/${orderId}`)).lines.find((l: any) => l.id === lamp.id).protection?.eligible ?? false).toBe(false);
     const drop1 = lamp.unit_cents - 1000;
     ok(await nl.post(`/merchant/products/${lamp.product_id}/price`, { price: (drop1 / 100).toFixed(2) }));
     expect((await one("SELECT text FROM inbox WHERE channel = 'telegram' ORDER BY id DESC LIMIT 1")).text).toMatch(/you can ask for the \$10\.00 difference/);
-    expect((await maya.get("/today")).text).toMatch(/\$10\.00 back is available/);
-    const page1 = (await maya.get(`/orders/${orderId}`)).text;
-    expect(page1).toMatch(/Ask for \$10\.00 back/);
-    expect(page1).toMatch(/within 14 days of delivery/);
+    expect(await uiText(maya, "/today")).toMatch(/\$10\.00 back is available/);
+    const page1 = await ui(maya, `/orders/${orderId}`);
+    expect(page1.lines.find((l: any) => l.id === lamp.id).protection).toMatchObject({ eligible: true, amount_cents: 1000 });
+    expect(page1.lines.find((l: any) => l.id === lamp.id).dates.protection_days).toBe(14);
     ok(await maya.post(`/lines/${lamp.id}/price-protection`));
     const c1 = await one("SELECT * FROM cases WHERE issue = 'price_drop'");
     expect(c1).toMatchObject({ status: "awaiting_merchant", refund_cents: 1000, requested: "price_protection" });
@@ -566,8 +573,8 @@ describe("Everyday flows", () => {
     const prior = await one("SELECT weights FROM model_artifacts WHERE promoted");
     expect((await one("SELECT weights FROM pref_models WHERE recipient_id = $1", [s.self])).weights).toEqual(prior.weights);
     const stranger = new Client(base);
-    expect((await stranger.get(`/plans/${intentId}`)).status).toBe(302);
+    expect((await stranger.get(`/api/ui/plans/${intentId}`)).status).toBe(401);
     const nl = await login(`mer:${s.merchant}`);
-    expect((await nl.get(`/plans/${intentId}`)).status).toBe(302);
+    expect((await nl.get(`/api/ui/plans/${intentId}`)).status).toBeGreaterThanOrEqual(400);
   });
 });

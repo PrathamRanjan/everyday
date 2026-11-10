@@ -14,7 +14,7 @@ import { whoami } from "./auth.js";
 
 /** Every screen the app renders. Anything else that a browser asks for as a page also gets the app (its 404 screen). */
 export const PAGES: RegExp[] = [
-  /^\/$/, /^\/login$/, /^\/today$/, /^\/discover$/, /^\/captures\/[\w-]+$/, /^\/plans$/, /^\/plans\/[\w-]+$/, /^\/purchases$/, /^\/orders\/[\w-]+$/,
+  /^\/login$/, /^\/today$/, /^\/discover$/, /^\/captures\/[\w-]+$/, /^\/plans$/, /^\/plans\/[\w-]+$/, /^\/purchases$/, /^\/orders\/[\w-]+$/,
   /^\/you$/, /^\/things$/, /^\/guard$/, /^\/passport$/, /^\/safety$/, /^\/safety\/model-card$/, /^\/channels$/, /^\/traces$/, /^\/trace\/[\w-]+$/,
   /^\/merchant$/, /^\/merchant\/money$/, /^\/merchant\/approvals$/, /^\/judge$/, /^\/demo$/, /^\/console$/, /^\/console\/evidence$/, /^\/console\/eval$/, /^\/telegram$/,
 ];
@@ -46,11 +46,15 @@ export function webDist(root: string) {
 export function serveApp(app: Express, root: string) {
   const dist = webDist(root);
   const indexPath = join(dist, "index.html");
-  if (!existsSync(indexPath)) return false;
+  if (!existsSync(indexPath)) {
+    // No silent fallback to an older UI: say plainly that the build step was skipped.
+    app.get(PAGES, (_req, res) => res.status(503).type("text").send("The Everyday front end is not built. Run `npm run build` (it builds web/ into web/dist)."));
+    return false;
+  }
   let shell = readFileSync(indexPath, "utf8");
   app.use("/assets", express.static(join(dist, "assets"), { immutable: true, maxAge: "1y", index: false }));
   app.use("/fonts", express.static(join(dist, "fonts"), { immutable: true, maxAge: "1y", index: false }));
-  for (const f of ["favicon.svg", "og.png", "robots.txt"]) app.get(`/${f}`, (_req, res) => res.sendFile(join(dist, f), { maxAge: "1d" }));
+  for (const f of ["favicon.svg", "robots.txt"]) app.get(`/${f}`, (_req, res) => res.sendFile(join(dist, f), { maxAge: "1d" }));
   const sendShell = (_req: Request, res: express.Response) => {
     if (process.env.NODE_ENV !== "production") shell = readFileSync(indexPath, "utf8");
     res.set("Cache-Control", "no-cache").type("html").send(shell);
@@ -65,6 +69,6 @@ export function serveApp(app: Express, root: string) {
       next(e);
     }
   });
-  app.get(PAGES, (req, res, next) => (req.get("x-everyday-ui") === "1" ? next() : sendShell(req, res)));
+  app.get(PAGES, (req, res) => sendShell(req, res));
   return sendShell;
 }

@@ -136,7 +136,7 @@ export function apiRoutes() {
   /** The landing page's live preview: the newest real order line (or owned item) and its dates, from this instance's data. */
   r.get("/api/ui/preview", send(async () => {
     const db = await getDb();
-    const l = (await db.query<any>("SELECT l.title, l.unit_cents, l.status, l.eta, l.delivered_at, l.created_at, o.policy, o.number, o.status AS order_status, o.capture_id, o.paypal_order_id FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.capture_id IS NOT NULL ORDER BY o.created_at DESC LIMIT 1")).rows[0];
+    const l = (await db.query<any>("SELECT l.title, l.unit_cents, l.status, l.eta, l.delivered_at, o.created_at, o.policy, o.number, o.status AS order_status, o.capture_id, o.paypal_order_id FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.capture_id IS NOT NULL ORDER BY o.created_at DESC LIMIT 1")).rows[0];
     const own = (await db.query<any>("SELECT title, price_cents, acquired, return_until, warranty_until, source FROM owned_items WHERE status = 'owned' AND warranty_until IS NOT NULL ORDER BY acquired DESC LIMIT 3")).rows;
     const acc = (await db.query<any>("SELECT * FROM accounts ORDER BY created_at LIMIT 1")).rows[0];
     return { line: l ? { title: l.title, cents: l.unit_cents, status: l.status, number: l.number, paid: Boolean(l.capture_id), capture_id: l.capture_id, dates: lineDates(l, J<any>(l.policy), null) } : null, owned: own, today: acc ? wallIso(nowOf(acc)).slice(0, 10) : wallIso(new Date()).slice(0, 10) };
@@ -230,7 +230,7 @@ export function apiRoutes() {
     const lines = (await db.query<any>("SELECT * FROM order_lines WHERE order_id = $1 ORDER BY status = 'swapped', slot", [o.id])).rows;
     const ops = (await db.query<any>("SELECT kind, amount_cents, status, paypal_status, paypal_id, request_id, reason, error, created_at FROM payment_ops WHERE order_id = $1 ORDER BY created_at", [o.id])).rows;
     const cases = (await db.query<any>("SELECT * FROM cases WHERE order_id = $1 ORDER BY created_at", [o.id])).rows;
-    const events = (await db.query<any>("SELECT id, wall, summary, actor, kind FROM events WHERE entity_id = $1 ORDER BY id DESC", [o.id])).rows;
+    const events = (await db.query<any>("SELECT id, wall, summary, actor, type AS kind FROM events WHERE entity_id = $1 ORDER BY id DESC", [o.id])).rows;
     const i = (await db.query<any>("SELECT id, text, deadline FROM intents WHERE id = $1", [o.intent_id])).rows[0];
     const merchant = (await db.query<any>("SELECT name, label FROM merchants WHERE id = $1", [o.merchant_id])).rows[0];
     const prot = new Map((await protectionsFor(db, a)).filter((x) => x.order_id === o.id).map((x) => [x.line_id, x]));
@@ -242,7 +242,7 @@ export function apiRoutes() {
       merchant,
       intent: i ?? null,
       policy,
-      lines: lines.map((l) => ({ id: l.id, title: l.title, status: l.status, unit_cents: l.unit_cents, qty: l.qty, eta: l.eta, delivered_at: l.delivered_at, swap_offer: J<any>(l.swap_offer), protection: prot.get(l.id) ?? null, dates: lineDates(l, policy, i) })),
+      lines: lines.map((l) => ({ id: l.id, title: l.title, status: l.status, unit_cents: l.unit_cents, qty: l.qty, eta: l.eta, delivered_at: l.delivered_at, swap_offer: J<any>(l.swap_offer), protection: prot.get(l.id) ?? null, dates: lineDates({ ...l, created_at: o.created_at }, policy, i) })),
       ops,
       cases: cases.map((c) => ({ id: c.id, number: c.number, status: c.status, issue: c.issue, claim: c.claim, observations: J<string[]>(c.observations), missing: J<any[]>(c.missing), eligibility: J<any>(c.eligibility), options: J<any[]>(c.options), requested: c.requested, merchant_decision: J<any>(c.merchant_decision), refund_cents: c.refund_cents, line_id: c.line_id, created_at: c.created_at })),
       events,
