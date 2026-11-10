@@ -72,7 +72,8 @@ export function guardRoutes() {
     if (scope !== `account:${a.id}` && !scope.startsWith("agent:")) throw new GtError("Scope must be account or agent:<id>", "validation", 422);
     const engaged = String(req.body.engaged) === "1";
     await setKill(scope, engaged, engaged ? String(req.body.reason ?? "").slice(0, 200) || null : null, a.name);
-    back(res, "/guard", engaged ? `Kill switch engaged for ${scope}` : `Kill switch released for ${scope}`);
+    const who = scope.startsWith("agent:") ? `the assistant ${scope.slice(6)}` : "every assistant";
+    back(res, "/guard", engaged ? `Kill switch on: ${who} is stopped from planning, quoting or paying for you.` : `Kill switch off: ${who} can work inside your rules again.`);
   }, true));
 
   r.post("/guard/approvals/:id/click", shopper(async (req, res, a) => {
