@@ -100,7 +100,7 @@ export function approvalView(a: any) {
 }
 
 const lineDates = (l: any, policy: any, i: any) => ({
-  ordered: l.created_at ? wallIso(new Date(l.created_at)).slice(0, 10) : null,
+  ordered: l.placed ? String(l.placed).slice(0, 10) : l.created_at ? wallIso(new Date(l.created_at)).slice(0, 10) : null,
   eta: l.eta ?? null,
   delivered: l.delivered_at ? String(l.delivered_at).slice(0, 10) : null,
   deadline: i?.deadline ?? null,
@@ -217,7 +217,7 @@ export function apiRoutes() {
   r.get("/api/ui/purchases", send(async (req) => {
     const a = await shopperOf(req);
     const db = await getDb();
-    const orders = (await db.query<any>("SELECT id, number, status, total_cents, gross_cents, refunded_cents, repaired, created_at, capture_id, paypal_order_id FROM orders WHERE account_id = $1 ORDER BY created_at DESC", [a.id])).rows;
+    const orders = (await db.query<any>("SELECT id, number, status, total_cents, gross_cents, refunded_cents, repaired, created_at, (SELECT MIN(wall) FROM events WHERE entity_id = orders.id) AS placed_at, capture_id, paypal_order_id FROM orders WHERE account_id = $1 ORDER BY created_at DESC", [a.id])).rows;
     const lines = (await db.query<any>("SELECT l.order_id, l.title, l.status, l.eta FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.account_id = $1 ORDER BY l.slot", [a.id])).rows;
     return { orders: orders.map((o) => ({ ...o, lines: lines.filter((l) => l.order_id === o.id) })) };
   }));
@@ -236,13 +236,15 @@ export function apiRoutes() {
     const prot = new Map((await protectionsFor(db, a)).filter((x) => x.order_id === o.id).map((x) => [x.line_id, x]));
     const held = o.status === "created" ? (await pendingApprovals(a.id)).filter((x: any) => x.payload?.entity_id === o.id).map(approvalView) : [];
     const policy = J<any>(o.policy);
+    // When it was placed on the shopper's clock (the demo clock in demo mode), from the order's first event.
+    const placed = events.map((e) => String(e.wall ?? "")).filter(Boolean).sort()[0] ?? null;
     const runs = await runsFor("order", o.id, 10).catch(() => []);
     return {
-      order: { id: o.id, number: o.number, status: o.status, total_cents: o.total_cents, gross_cents: o.gross_cents, fee_cents: o.fee_cents, refunded_cents: o.refunded_cents, paypal_order_id: o.paypal_order_id, capture_id: o.capture_id, repaired: o.repaired, created_at: o.created_at, exception: o.exception ?? null, intent_id: o.intent_id },
+      order: { id: o.id, number: o.number, status: o.status, total_cents: o.total_cents, gross_cents: o.gross_cents, fee_cents: o.fee_cents, refunded_cents: o.refunded_cents, paypal_order_id: o.paypal_order_id, capture_id: o.capture_id, repaired: o.repaired, created_at: o.created_at, placed_at: placed ?? o.created_at, exception: o.exception ?? null, intent_id: o.intent_id },
       merchant,
       intent: i ?? null,
       policy,
-      lines: lines.map((l) => ({ id: l.id, title: l.title, status: l.status, unit_cents: l.unit_cents, qty: l.qty, eta: l.eta, delivered_at: l.delivered_at, swap_offer: J<any>(l.swap_offer), protection: prot.get(l.id) ?? null, dates: lineDates({ ...l, created_at: o.created_at }, policy, i) })),
+      lines: lines.map((l) => ({ id: l.id, title: l.title, status: l.status, unit_cents: l.unit_cents, qty: l.qty, eta: l.eta, delivered_at: l.delivered_at, swap_offer: J<any>(l.swap_offer), protection: prot.get(l.id) ?? null, dates: lineDates({ ...l, created_at: o.created_at, placed }, policy, i) })),
       ops,
       cases: cases.map((c) => ({ id: c.id, number: c.number, status: c.status, issue: c.issue, claim: c.claim, observations: J<string[]>(c.observations), missing: J<any[]>(c.missing), eligibility: J<any>(c.eligibility), options: J<any[]>(c.options), requested: c.requested, merchant_decision: J<any>(c.merchant_decision), refund_cents: c.refund_cents, line_id: c.line_id, created_at: c.created_at })),
       events,

@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useApi } from "@/lib/api";
 import { daysBetween, day, plural, when } from "@/lib/format";
-import { seenTour, startTour } from "@/tours/tours";
+import { seenTour, startTour, tourActive } from "@/tours/tours";
 import { cn } from "@/lib/utils";
 
 interface TodayData {
@@ -26,7 +26,7 @@ interface TodayData {
 const ICON: Record<string, React.ReactNode> = { recall: <Siren />, approve: <PackageCheck />, question: <HelpCircle />, gap: <AlertTriangle /> };
 
 export function FirstRun({ kind }: { kind: "shopper" | "merchant" }) {
-  const [hide, setHide] = useState(seenTour());
+  const [hide, setHide] = useState(seenTour() || tourActive());
   if (hide) return null;
   return (
     <div className="mb-6 flex items-center gap-3 rounded-lg border border-rule bg-card p-3 pl-4">

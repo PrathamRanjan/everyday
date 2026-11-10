@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAction, useApi } from "@/lib/api";
 import { addDays, day, money, when, words } from "@/lib/format";
-import { useToday } from "@/lib/session";
+import { useSession, useToday } from "@/lib/session";
 
 interface Line {
   id: string;
@@ -42,7 +42,7 @@ interface Case {
   created_at: string;
 }
 interface OrderData {
-  order: { id: string; number: string; status: string; total_cents: number; gross_cents: number | null; fee_cents: number | null; refunded_cents: number; paypal_order_id: string | null; capture_id: string | null; repaired: boolean; created_at: string; exception: string | null; intent_id: string };
+  order: { id: string; number: string; status: string; total_cents: number; gross_cents: number | null; fee_cents: number | null; refunded_cents: number; paypal_order_id: string | null; capture_id: string | null; repaired: boolean; created_at: string; placed_at: string; exception: string | null; intent_id: string };
   merchant: { name: string; label: string } | null;
   intent: { id: string; text: string; deadline: string | null } | null;
   policy: { version?: string; window_days?: number; price_protection_days?: number } | null;
@@ -191,6 +191,7 @@ export default function Order() {
   const st = useApi<OrderData>(`/api/ui/orders/${id}`);
   const { run, busy } = useAction(st.reload);
   const today = useToday();
+  const { session } = useSession();
   return (
     <Loaded state={st} rows={4}>
       {(d) => {
@@ -206,7 +207,7 @@ export default function Order() {
             <PageHead
               eyebrow={
                 <span className="inline-flex flex-wrap items-center gap-2">
-                  <span className="id">{o.number}</span> · {d.merchant?.name.replace(/\s*\(.*\)$/, "") ?? "Shop"} · {when(o.created_at)}
+                  <span className="id">{o.number}</span> · {d.merchant?.name.replace(/\s*\(.*\)$/, "") ?? "Shop"} · {when(o.placed_at)}
                 </span>
               }
               title={unpaid ? "Not paid yet" : o.refunded_cents && o.refunded_cents >= (o.gross_cents ?? 0) ? "Refunded" : `Paid ${money(o.gross_cents ?? o.total_cents)}`}
@@ -319,7 +320,7 @@ export default function Order() {
                     ]}
                   />
                 </Panel>
-                <Panel title="Payment record" sub="Every call to PayPal, in order.">
+                <Panel title="Payment record" sub={session?.demo ? "Every call to PayPal, in order, at the real time it was made (not the demo clock)." : "Every call to PayPal, in order."}>
                   {d.ops.length ? (
                     <ol className="relative space-y-3 border-l border-rule-2 pl-5">
                       {d.ops.map((x, k) => (

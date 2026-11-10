@@ -5,7 +5,7 @@ import { useApi } from "@/lib/api";
 import { day, when } from "@/lib/format";
 
 interface PurchasesData {
-  orders: { id: string; number: string; status: string; total_cents: number; gross_cents: number | null; refunded_cents: number; repaired: boolean; created_at: string; capture_id: string | null; paypal_order_id: string | null; lines: { title: string; status: string; eta: string | null }[] }[];
+  orders: { id: string; number: string; status: string; total_cents: number; gross_cents: number | null; refunded_cents: number; repaired: boolean; created_at: string; placed_at: string | null; capture_id: string | null; paypal_order_id: string | null; lines: { title: string; status: string; eta: string | null }[] }[];
 }
 
 export default function Purchases() {
@@ -29,7 +29,7 @@ export default function Purchases() {
                             <span className="block truncate font-medium">{o.lines.map((l) => l.title).join(", ") || o.number}</span>
                             <span className="num mt-0.5 flex flex-wrap gap-x-2 text-xs text-ink-2">
                               <span className="id">{o.number}</span>
-                              <span>{when(o.created_at)}</span>
+                              <span>{when(o.placed_at ?? o.created_at)}</span>
                               {o.lines.find((l) => l.eta && l.status !== "delivered") && <span>arrives {day(o.lines.find((l) => l.eta)!.eta)}</span>}
                               {o.repaired && <span className="text-done">recovered from PayPal</span>}
                             </span>

@@ -51,6 +51,22 @@ export function Lifeline({ marks, bands = [], today, deadline, compact = false, 
   const BAND0 = RAIL_Y + (compact ? 38 : 52);
   const H = BAND0 + bands.length * 30 + 22;
   const tx = model.x(today);
+  // Mark labels, left to right: centred under the mark where there's room, otherwise nudged right so two close dates
+  // (paid and arrives two days apart) never print on top of each other.
+  const placed = (() => {
+    const lanes = { up: -Infinity, down: -Infinity };
+    return [...dated].sort((a, b) => a.date.localeCompare(b.date)).map((m, i) => {
+      const x = model.x(m.date);
+      const up = i % 2 === 1 && dated.length > 3;
+      const sub = compact ? "" : `${day(m.date)}${m.note ? ` · ${m.note}` : ""}`;
+      const w = Math.max(m.label.length * 6.6, sub.length * 5.8);
+      const want = x < 70 ? x - 7 : x > W - 70 ? x - w + 7 : x - w / 2;
+      const lane = up ? "up" : "down";
+      const lx = Math.max(PAD / 2, Math.min(Math.max(want, lanes[lane] + 10), W - PAD / 2 - w));
+      lanes[lane] = lx + w;
+      return { m, x, lx, up };
+    });
+  })();
   const summary = [title, ...dated.map((m) => `${m.label} ${day(m.date)}${m.note ? ` (${m.note})` : ""}`), ...bands.map((b) => `${b.label} until ${day(b.to)}`), `today ${day(today)}`].filter(Boolean).join("; ");
   const lastDone = dated.filter((m) => m.tone !== "plain" && toDate(m.date).getTime() <= toDate(today).getTime()).map((m) => model.x(m.date));
   const progressTo = Math.max(PAD, ...lastDone, Math.min(tx, W - PAD));
@@ -109,18 +125,15 @@ export function Lifeline({ marks, bands = [], today, deadline, compact = false, 
           </text>
         </g>
         {/* marks */}
-        {dated.map((m, i) => {
-          const x = model.x(m.date);
-          const up = i % 2 === 1 && dated.length > 3;
-          const anchor = x < 70 ? "start" : x > W - 70 ? "end" : "middle";
+        {placed.map(({ m, x, lx, up }) => {
           return (
             <g key={m.key}>
               <MarkGlyph x={x} y={RAIL_Y} tone={m.tone} />
-              <text x={x} y={up ? RAIL_Y - 14 : RAIL_Y + 22} textAnchor={anchor} fontSize={11.5} fill="var(--ink)" fontWeight={600}>
+              <text x={lx} y={up ? RAIL_Y - 14 : RAIL_Y + 22} textAnchor="start" fontSize={11.5} fill="var(--ink)" fontWeight={600}>
                 {m.label}
               </text>
               {!compact && (
-                <text x={x} y={up ? RAIL_Y - 26 : RAIL_Y + 22 + 13} textAnchor={anchor} fontSize={10.5} fill="var(--ink-2)" className="num">
+                <text x={lx} y={up ? RAIL_Y - 26 : RAIL_Y + 22 + 13} textAnchor="start" fontSize={10.5} fill="var(--ink-2)" className="num">
                   {day(m.date)}
                   {m.note ? ` · ${m.note}` : ""}
                 </text>

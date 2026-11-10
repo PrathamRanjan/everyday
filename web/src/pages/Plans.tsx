@@ -56,7 +56,9 @@ export default function Plans() {
               )}
             </Panel>
             <Panel title="New plan">
-              <PlanForm recipients={d.recipients} />
+              <div data-tour="plan-new">
+                <PlanForm recipients={d.recipients} />
+              </div>
             </Panel>
           </div>
         </div>
