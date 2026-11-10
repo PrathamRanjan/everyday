@@ -130,7 +130,7 @@ function questionsFor(slots: { category: string; outcome?: string }[], ctx: Ctx,
 
 // ---------- Intents ----------
 
-export async function createIntent(account: Account, input: { text: string; capture_id?: string | null; recipient_id?: string | null; channel: "app" | "telegram" }) {
+export async function createIntent(account: Account, input: { text: string; capture_id?: string | null; recipient_id?: string | null; channel: "app" | "telegram" | "mobile" | "extension" }) {
   const db = await getDb();
   if (!input.text.trim() && !input.capture_id) throw new GtError("Tell Everyday what you want to do.", "invalid");
   // The model reads the words (outside the transaction: it is a network call); code reads every number.

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Everyday</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup">
+    <header class="top">
+      <img src="icons/mark.svg" alt="" width="28" height="28" />
+      <span class="brand">Everyday</span>
+      <span class="who" id="who" aria-live="polite">…</span>
+    </header>
+    <p class="ribbon" id="ribbon" hidden></p>
+    <main id="main" aria-busy="true">
+      <p class="muted">Reading this page…</p>
+    </main>
+    <footer class="foot">
+      <button type="button" class="link" id="open">Open Everyday</button>
+      <button type="button" class="link" id="settings">Settings</button>
+    </footer>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

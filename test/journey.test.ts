@@ -124,6 +124,16 @@ describe("Everyday acceptance journey", () => {
     expect(err(await maya.post(`/orders/${order.id}/pay`))).toBeTruthy();
     expect((await maya.get(`/orders/${order.id}`)).status).toBe(200);
 
+    // Devices: connect the extension, use its key, disconnect it. The app's PayPal return on a paid order is a no-op.
+    const dev = await maya.postJson("/api/ui/devices", { client: "extension" });
+    expect(dev.status).toBe(200);
+    expect((await maya.get("/api/ui/devices")).json.devices).toHaveLength(1);
+    expect((await new Client(base).req("GET", "/api/ui/today", { headers: { authorization: `Bearer ${dev.json.key}` } })).status).toBe(200);
+    expect((await maya.postJson(`/api/ui/devices/${dev.json.id}/revoke`, {})).status).toBe(200);
+    expect((await new Client(base).get(`/orders/${order.id}/paypal/return-app?token=${token}`)).location).toMatch(/^everyday:\/\/orders\//);
+    expect((await new Client(base).get(`/orders/${order.id}/paypal/cancel-app`)).location).toMatch(/^everyday:\/\//);
+    expect(fake.captures.size).toBe(1);
+
     // Merchant: the chair is backordered past Friday; Maya swaps to the in-stock equivalent and gets $20 back.
     const chair = await one("SELECT * FROM order_lines WHERE order_id = $1 AND slot = 'chair'", [order.id]);
     ok(await nl.post(`/merchant/lines/${chair.id}/backorder`, { days: "4" }));

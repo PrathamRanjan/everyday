@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Everyday settings</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="options">
+    <img src="icons/mark.svg" alt="" width="36" height="36" />
+    <h1>Everyday extension</h1>
+    <p class="muted">
+      If you're signed in to Everyday in this browser, there's nothing to set up. Otherwise make a key on Everyday → Messages → “Connect the extension” and paste it here. The key stays in this browser and is never synced.
+    </p>
+
+    <form id="form">
+      <label for="server">Everyday server</label>
+      <select id="server">
+        <option value="live">Live demo (pph-everyday.onrender.com)</option>
+        <option value="local">This computer (localhost:4111)</option>
+      </select>
+
+      <label for="key">Device key (optional)</label>
+      <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="evd_…" aria-describedby="key-help" />
+      <p class="note" id="key-help">With a key, the extension acts as you without the site's sign-in. Disconnect it any time on Everyday → Messages.</p>
+
+      <div class="row">
+        <button class="btn" type="submit">Save and test</button>
+        <button class="btn secondary" type="button" id="forget">Forget the key</button>
+      </div>
+    </form>
+    <p class="card" id="result" role="status" aria-live="polite" hidden></p>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

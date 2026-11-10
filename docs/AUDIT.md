@@ -24,6 +24,9 @@ Legend: **Live** = configured on the Render service and seen working there. **Co
 | Passkeys (WebAuthn) | Countersign approvals above $200 | `guard/passkey.ts`, `web/src/lib/passkey.ts` | none needed | Tests: bad finishes refused | Code + tests; needs a real device to show |
 | MCP (shopper and merchant agents) | Agents plan, quote and read traces; the shopper still approves on PayPal | `web/mcp.ts` | keys printed by seed | Tests: wrong key refused; merchant key lists orders | Code + tests |
 | In-browser scam model (ONNX) and payment-risk model (LightGBM) | Second pair of eyes before money moves | `public/safety/*`, `safety/*` | none needed | Tests: demo scam held. Training notebooks (`guard-lab`) are not in this repo; the model card says so | Code + tests; provenance partly external |
+| Device keys (phone app, browser extension) | A per-device Bearer key made on Messages, shown once, stored hashed, revocable; acts only as the shopper, and can't mint more keys | `web/auth.ts`, `web/api.ts`, `device_keys` | none needed | `test/devices.test.ts` (4 tests) and the journey | Code + tests |
+| Chrome extension (`extension/`) | Plan a product from any shop page, save it to Find with a screenshot, check a basket total against your own limits, approvals badge | `extension/*` | none needed | `e2e/tests/extension.spec.ts`: loaded unpacked in Chromium against the real server; site sign-in and device key both work; plans tagged `extension`; axe clean | Code + e2e; not on the Chrome Web Store |
+| Phone app return from PayPal | PayPal sends the buyer back to `everyday://orders/:id` after paying in the app's in-app browser | `web/shopper.ts` (`/paypal/return-app`, `/paypal/cancel-app`) | none needed | Tests: paid on return; a mismatched token changes nothing | Code + tests; the app itself is not built yet |
 | WhatsApp | — | webhook only | not set | Deferred; not shown in the product | Not used |
 
 ## 2. Hard-coding hunt

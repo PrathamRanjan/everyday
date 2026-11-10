@@ -28,7 +28,7 @@ export const BASIS: Record<string, string> = {
   described: "Based on your description.",
 };
 
-export async function capture(account: Account, input: { url?: string; text?: string; channel: "app" | "telegram"; image?: { mime: string; body: Buffer } | null }) {
+export async function capture(account: Account, input: { url?: string; text?: string; channel: "app" | "telegram" | "mobile" | "extension"; image?: { mime: string; body: Buffer } | null }) {
   const db = await getDb();
   const link = input.url ? normalizeLink(input.url) : null;
   if (input.url && !link) throw new GtError("That doesn't look like a link.", "invalid");

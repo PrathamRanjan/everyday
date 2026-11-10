@@ -2,7 +2,7 @@ import { Router } from "express";
 import { config } from "../config.js";
 import { getDb } from "../db.js";
 import { GtError } from "../lib/util.js";
-import { nowIso } from "../store.js";
+import { accountById, nowIso } from "../store.js";
 import { catalog } from "../services/catalog.js";
 import { capture, linkCode, selectObject } from "../services/captures.js";
 import { addOwned, repairAdvice, setOwnedStatus, watchPrice } from "../services/life.js";
@@ -10,7 +10,7 @@ import { deleteMemory, forgetFeature, undoChoice } from "../services/ml.js";
 import { claimPriceProtection } from "../services/protect.js";
 import { acceptSwap, approveQuote, checkoutLink, openCase, paypalReturn, quotePlan, requestRemedy } from "../services/orders.js";
 import { answer, choose, createIntent } from "../services/plans.js";
-import { keyLogin, shopper, signIn, signOut, whoami } from "./auth.js";
+import { clientOf, keyLogin, shopper, signIn, signOut, whoami } from "./auth.js";
 import { back } from "./common.js";
 import { money } from "../lib/money.js";
 import { readForm } from "./upload.js";
@@ -35,7 +35,7 @@ export function shopperRoutes() {
     const { fields, files } = await readForm(req);
     const shot = files.shot?.[0] ?? null;
     if (!fields.url && !fields.text && !shot) throw new GtError("Paste a link, add a screenshot or describe it.", "invalid");
-    const c = await capture(a, { url: fields.url || undefined, text: fields.text, channel: "app", image: shot ? { mime: shot.mime, body: shot.body } : null });
+    const c = await capture(a, { url: fields.url || undefined, text: fields.text, channel: clientOf(req), image: shot ? { mime: shot.mime, body: shot.body } : null });
     back(res, `/captures/${c.id}`, c.reused ? "Already in your library." : "Saved.");
   }, true));
 
@@ -50,7 +50,7 @@ export function shopperRoutes() {
   }, true));
 
   r.post("/plans", shopper(async (req, res, a) => {
-    const id = await createIntent(a, { text: String(req.body.text ?? ""), capture_id: req.body.capture_id || null, recipient_id: req.body.recipient_id || null, channel: "app" });
+    const id = await createIntent(a, { text: String(req.body.text ?? ""), capture_id: req.body.capture_id || null, recipient_id: req.body.recipient_id || null, channel: clientOf(req) });
     res.redirect(`/plans/${id}`);
   }, true));
 
@@ -71,18 +71,37 @@ export function shopperRoutes() {
   }, true));
 
   r.post("/quotes/:id/approve", shopper(async (req, res, a) => {
-    const url = await approveQuote(a, req.params.id, String(req.body.hash ?? ""));
+    const url = await approveQuote(a, req.params.id, String(req.body.hash ?? ""), { native: clientOf(req) === "mobile" });
     res.redirect(url);
   }, true));
 
   r.post("/orders/:id/pay", shopper(async (req, res, a) => {
-    res.redirect(await checkoutLink(a, req.params.id));
+    res.redirect(await checkoutLink(a, req.params.id, { native: clientOf(req) === "mobile" }));
   }, true));
 
   r.get("/orders/:id/paypal/return", shopper(async (req, res, a) => {
     const out = await paypalReturn(a, req.params.id, String(req.query.token ?? ""));
     back(res, `/orders/${req.params.id}`, out === "paid" ? "Paid and confirmed with PayPal." : out === "failed" ? "PayPal refused the payment; nothing was charged. Pay again and choose another way to pay." : "Thanks — confirming with PayPal.");
   }, true));
+
+  // The phone app's PayPal return. The in-app browser has no Everyday session, so the order is found by the PayPal
+  // order id PayPal sends back (it must match the order, as on the website) and the buyer lands back in the app.
+  r.get("/orders/:id/paypal/return-app", async (req, res, next) => {
+    try {
+      const token = String(req.query.token ?? "");
+      const db = await getDb();
+      const o = (await db.query<{ account_id: string }>("SELECT account_id FROM orders WHERE id = $1 AND paypal_order_id = $2", [req.params.id, token])).rows[0];
+      const to = `everyday://orders/${encodeURIComponent(req.params.id)}`;
+      if (!o || !token) return res.redirect(`${to}?err=${encodeURIComponent("This PayPal approval does not match the order.")}`);
+      const out = await paypalReturn(await accountById(db, o.account_id), req.params.id, token);
+      const msg = out === "paid" ? "Paid and confirmed with PayPal." : out === "failed" ? "PayPal refused the payment; nothing was charged." : "Thanks — confirming with PayPal.";
+      res.redirect(`${to}?${out === "failed" ? "err" : "ok"}=${encodeURIComponent(msg)}`);
+    } catch (e) {
+      if (e instanceof GtError) return res.redirect(`everyday://orders/${encodeURIComponent(req.params.id)}?err=${encodeURIComponent(e.message)}`);
+      next(e);
+    }
+  });
+  r.get("/orders/:id/paypal/cancel-app", (req, res) => res.redirect(`everyday://orders/${encodeURIComponent(req.params.id)}?err=${encodeURIComponent("Payment cancelled")}`));
 
   r.post("/lines/:id/swap", shopper(async (req, res, a) => {
     const offer = await acceptSwap(a, req.params.id);

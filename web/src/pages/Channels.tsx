@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAction, useApi } from "@/lib/api";
 import { when } from "@/lib/format";
 import { subscribePush } from "@/lib/passkey";
+import { Devices } from "@/components/Devices";
 import { cn } from "@/lib/utils";
 
 interface ChannelsData {
@@ -147,6 +148,7 @@ export default function Channels() {
                   </div>
                 </Panel>
               )}
+              {d.who === "shopper" && <Devices />}
             </aside>
           </div>
         </div>

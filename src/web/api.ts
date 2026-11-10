@@ -9,7 +9,7 @@ import { config } from "../config.js";
 import { getDb } from "../db.js";
 import { fmtWall, wallIso } from "../core/time.js";
 import { FEATURES, label } from "../core/prefs.js";
-import { GtError } from "../lib/util.js";
+import { GtError, hashKey, newSecret } from "../lib/util.js";
 import { accountById, J, nowOf, type Account } from "../store.js";
 import { catalog, CATEGORY_LABEL } from "../services/catalog.js";
 import { BASIS } from "../services/captures.js";
@@ -34,7 +34,7 @@ import { scanText, TACTIC_WORDS, TACTICS } from "../safety/rules.js";
 import { telegramReady, conversation, recentMessages } from "../channels/index.js";
 import { pushReady } from "../channels/push.js";
 import { loadRun, recentRuns, runsFor } from "../trace.js";
-import { whoami } from "./auth.js";
+import { bearerOf, whoami } from "./auth.js";
 import { partyOf, BEATS } from "./trace.js";
 import { DEMO_SCAM } from "./safety.js";
 import { newId } from "../lib/ids.js";
@@ -328,6 +328,38 @@ export function apiRoutes() {
   }));
 
   // ---------- Shopper and merchant ----------
+  // ---------- Devices: the phone app and the browser extension ----------
+  // A key is made on the website (signed in with the session cookie, never with another key), shown once, stored
+  // hashed and revocable. It acts only as this shopper: it can plan, quote and start checkout, and PayPal still asks
+  // the buyer to approve every payment.
+  const deviceRows = async (accountId: string) =>
+    (await (await getDb()).query<any>("SELECT id, label, client, created_at, last_used_at, revoked_at FROM device_keys WHERE account_id = $1 ORDER BY created_at DESC", [accountId])).rows.map((d) => ({ id: d.id, label: d.label, client: d.client, created_at: d.created_at, last_used_at: d.last_used_at, revoked: Boolean(d.revoked_at) }));
+  const cookieShopper = async (req: Request) => {
+    if (bearerOf(req)) throw new GtError("Connect new devices from the Everyday website, not from another device.", "forbidden", 403);
+    return shopperOf(req);
+  };
+  r.get("/api/ui/devices", send(async (req) => ({ devices: await deviceRows((await shopperOf(req)).id) })));
+  r.post("/api/ui/devices", send(async (req) => {
+    const a = await cookieShopper(req);
+    const client = req.body?.client === "mobile" ? "mobile" : req.body?.client === "extension" ? "extension" : null;
+    if (!client) throw new GtError("Say which device: the phone app or the browser extension.", "invalid", 400);
+    const label = String(req.body?.label ?? "").trim().slice(0, 60) || (client === "mobile" ? "Phone app" : "Browser extension");
+    const db = await getDb();
+    const live = (await db.query<{ c: number }>("SELECT count(*)::int AS c FROM device_keys WHERE account_id = $1 AND revoked_at IS NULL", [a.id])).rows[0].c;
+    if (live >= 10) throw new GtError("You have 10 connected devices. Disconnect one first.", "limit", 409);
+    const key = newSecret("evd");
+    const id = newId("dev");
+    await db.query("INSERT INTO device_keys (id, account_id, label, client, key_hash) VALUES ($1,$2,$3,$4,$5)", [id, a.id, label, client, hashKey(key)]);
+    return { id, key, label, client, devices: await deviceRows(a.id) };
+  }));
+  r.post("/api/ui/devices/:id/revoke", send(async (req) => {
+    const a = await shopperOf(req);
+    const db = await getDb();
+    const d = (await db.query("UPDATE device_keys SET revoked_at = COALESCE(revoked_at, now()) WHERE id = $1 AND account_id = $2 RETURNING id", [req.params.id, a.id])).rows[0];
+    if (!d) throw new GtError("Not found", "not_found", 404);
+    return { devices: await deviceRows(a.id) };
+  }));
+
   r.get("/api/ui/channels", send(async (req) => {
     const who = await partyOf(req);
     if (!who) throw signIn();

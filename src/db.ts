@@ -445,6 +445,11 @@ CREATE TABLE IF NOT EXISTS trackers (
 CREATE TABLE IF NOT EXISTS channel3_cache (
   query TEXT PRIMARY KEY, results JSONB NOT NULL, source TEXT NOT NULL, fetched_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Keys for the phone app and the browser extension: one per device, shown once, stored hashed, revocable.
+CREATE TABLE IF NOT EXISTS device_keys (
+  id TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, label TEXT NOT NULL, client TEXT NOT NULL,
+  key_hash TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), last_used_at TIMESTAMPTZ, revoked_at TIMESTAMPTZ
+);
 ALTER TABLE captures ADD COLUMN IF NOT EXISTS signal JSONB;
 ALTER TABLE captures ADD COLUMN IF NOT EXISTS reader TEXT NOT NULL DEFAULT 'rules';
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS paypal_payer_id TEXT;

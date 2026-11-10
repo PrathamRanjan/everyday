@@ -86,7 +86,7 @@ export async function quotePlan(a: Account, intentId: string) {
 }
 
 /** Approve the exact quote by hash, re-check prices/stock/plan/spending, create the PayPal order, return the approval link. */
-export async function approveQuote(a: Account, quoteId: string, hash: string) {
+export async function approveQuote(a: Account, quoteId: string, hash: string, opts: CheckoutOpts = {}) {
   const db = await getDb();
   const order = await db.tx(async (q) => {
     const qu = (await q.query<any>("SELECT q.*, p.intent_id, p.status AS plan_status, p.version AS plan_version FROM quotes q JOIN plans p ON p.id = q.plan_id JOIN intents i ON i.id = p.intent_id WHERE q.id = $1 AND i.account_id = $2 FOR UPDATE", [quoteId, a.id])).rows[0];
@@ -118,10 +118,17 @@ export async function approveQuote(a: Account, quoteId: string, hash: string) {
     await logEvent(q, a, "order", id, "quote.approved", `${a.name} approved quote ${money(body.total_cents)} (hash ${hash.slice(0, 12)}…)`, a.name);
     return (await q.query<any>("SELECT * FROM orders WHERE id = $1", [id])).rows[0];
   });
-  return checkoutLink(a, order.id);
+  return checkoutLink(a, order.id, opts);
 }
 
-export async function checkoutLink(a: Account, orderId: string): Promise<string> {
+/** `native`: the phone app opened PayPal in an in-app browser, so PayPal sends the buyer back to the app, not the site. */
+export type CheckoutOpts = { native?: boolean };
+const returnUrls = (orderId: string, native: boolean) =>
+  native
+    ? { returnUrl: `${config.appUrl}/orders/${orderId}/paypal/return-app`, cancelUrl: `${config.appUrl}/orders/${orderId}/paypal/cancel-app` }
+    : { returnUrl: `${config.appUrl}/orders/${orderId}/paypal/return`, cancelUrl: `${config.appUrl}/orders/${orderId}?err=${encodeURIComponent("Payment cancelled")}` };
+
+export async function checkoutLink(a: Account, orderId: string, opts: CheckoutOpts = {}): Promise<string> {
   const db = await getDb();
   const o = (await db.query<any>("SELECT * FROM orders WHERE id = $1 AND account_id = $2", [orderId, a.id])).rows[0];
   if (!o) throw new GtError("Order not found", "not_found", 404);
@@ -153,7 +160,7 @@ export async function checkoutLink(a: Account, orderId: string): Promise<string>
   }
   await db.query("INSERT INTO payment_ops (id, order_id, kind, status, amount_cents, request_id) VALUES ($1,$2,'order','pending',$3,$4) ON CONFLICT (request_id) DO NOTHING", [newId("pop"), o.id, o.total_cents, requestId]);
   const pp = await paypal().createOrder(
-    { amountCents: o.total_cents, currency: "USD", customId: o.id, invoiceId: `${o.number}-${attempt}-${o.id.slice(-5)}`, description: `Everyday ${o.number}: ${body.lines.length} items from ${body.merchant.name}`, brand: "Everyday (test merchant)", items: body.lines.map((l: any) => ({ name: l.title, sku: l.sku, quantity: l.qty, unitCents: l.unit_cents })), shippingCents: body.shipping.cents, returnUrl: `${config.appUrl}/orders/${o.id}/paypal/return`, cancelUrl: `${config.appUrl}/orders/${o.id}?err=${encodeURIComponent("Payment cancelled")}` },
+    { amountCents: o.total_cents, currency: "USD", customId: o.id, invoiceId: `${o.number}-${attempt}-${o.id.slice(-5)}`, description: `Everyday ${o.number}: ${body.lines.length} items from ${body.merchant.name}`, brand: "Everyday (test merchant)", items: body.lines.map((l: any) => ({ name: l.title, sku: l.sku, quantity: l.qty, unitCents: l.unit_cents })), shippingCents: body.shipping.cents, ...returnUrls(o.id, Boolean(opts.native)) },
     requestId,
   );
   await run.step({ actor: "paypal", tool: "orders.create", args: { request_id: requestId, cents: o.total_cents }, gate: "allowed", result: { paypal_order_id: pp.id, status: pp.status }, pp_request_id: requestId });

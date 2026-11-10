@@ -106,6 +106,13 @@ Strict, out of 10. "Before" is the server-rendered UI with the P0 open, no live 
 
 **Comparison.** I could not see the hackathon field: the Devpost gallery isn't public before the deadline. The comparison above is against public products and categories only.
 
+## Added after the redesign: browser extension and device keys
+
+- **Chrome extension** (`extension/`, [README](../extension/README.md)). On a product page it plans "something like this" through the same planner, or saves the page to Find with a screenshot for the vision model. On a cart page code checks the total against your monthly limit, largest-purchase rule and kill switch. It never pays on other shops. Screenshots: [product](screenshots/extension-product-light.jpg), [checkout, dark](screenshots/extension-checkout-dark.jpg).
+- **Device keys** on Messages for the extension and the coming phone app: shown once, hashed, revocable, shopper-only.
+- **The phone app's PayPal return route** is ready for the React Native app.
+- **Tests:** 73 unit tests and 11 Playwright tests (3 for the extension) pass.
+
 ## Top three changes left before submission
 
 1. **Record the 3-minute video** along the judge tour: request → readings with quotes → code's pick → exact quote → PayPal sandbox → order lifeline → +1 week → a refund.

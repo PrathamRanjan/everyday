@@ -8,14 +8,44 @@ import { back } from "./common.js";
 
 export const COOKIE = "ev_who";
 
-export async function whoami(req: Request): Promise<{ account?: Account; merchant?: { id: string; name: string } } | null> {
+type Who = { account?: Account; merchant?: { id: string; name: string }; via?: "cookie" | "key" } | null;
+
+/** The device key in `Authorization: Bearer ...`, if any. Not a cookie, so a page on another site can't send it. */
+export const bearerOf = (req: Request) => req.get("authorization")?.match(/^Bearer\s+(\S{8,200})$/i)?.[1] ?? null;
+
+/**
+ * Who is asking. The phone app and the browser extension send a device key (shopper only: a key never acts as the
+ * merchant); the website uses the signed session cookie. Memoised per request.
+ */
+export async function whoami(req: Request): Promise<Who> {
+  const memo = req as Request & { __who?: Promise<Who> };
+  return (memo.__who ??= resolveWho(req));
+}
+
+async function resolveWho(req: Request): Promise<Who> {
+  const key = bearerOf(req);
+  if (key) {
+    const db = await getDb();
+    const d = (await db.query<{ id: string; account_id: string }>("SELECT id, account_id FROM device_keys WHERE key_hash = $1 AND revoked_at IS NULL", [hashKey(key)])).rows[0];
+    if (d) {
+      void db.query("UPDATE device_keys SET last_used_at = now() WHERE id = $1", [d.id]).catch(() => undefined);
+      const account = await accountById(db, d.account_id).catch(() => undefined);
+      return account ? { account, via: "key" } : null;
+    }
+    const v = await keyLogin(key);
+    if (v?.startsWith("acc:")) {
+      const account = await accountById(db, v.slice(4)).catch(() => undefined);
+      return account ? { account, via: "key" } : null;
+    }
+    return null;
+  }
   const v = unsign(req.cookies?.[COOKIE]);
   if (!v) return null;
   const db = await getDb();
-  if (v.startsWith("acc:")) return { account: await accountById(db, v.slice(4)).catch(() => undefined) };
+  if (v.startsWith("acc:")) return { account: await accountById(db, v.slice(4)).catch(() => undefined), via: "cookie" };
   if (v.startsWith("mer:")) {
     const m = (await db.query<any>("SELECT id, name FROM merchants WHERE id = $1", [v.slice(4)])).rows[0];
-    return m ? { merchant: m } : null;
+    return m ? { merchant: m, via: "cookie" } : null;
   }
   return null;
 }
@@ -27,6 +57,13 @@ export async function keyLogin(key: string): Promise<string | null> {
   const m = (await db.query<{ id: string }>("SELECT id FROM merchants WHERE key_hash = $1", [hashKey(key.trim())])).rows[0];
   return m ? `mer:${m.id}` : null;
 }
+
+/** Which client sent the request: the website, the phone app or the browser extension. Used to tag captures and plans. */
+export type Client = "app" | "mobile" | "extension";
+export const clientOf = (req: Request): Client => {
+  const c = req.get("x-everyday-client");
+  return c === "mobile" || c === "extension" ? c : "app";
+};
 
 export function signIn(res: Response, value: string) {
   res.cookie(COOKIE, sign(value), { httpOnly: true, sameSite: "lax", secure: config.appUrl.startsWith("https://"), maxAge: 7 * 864e5, path: "/" });
