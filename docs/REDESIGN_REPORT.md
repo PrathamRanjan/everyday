@@ -106,12 +106,20 @@ Strict, out of 10. "Before" is the server-rendered UI with the P0 open, no live 
 
 **Comparison.** I could not see the hackathon field: the Devpost gallery isn't public before the deadline. The comparison above is against public products and categories only.
 
-## Added after the redesign: browser extension and device keys
+## Added after the redesign: browser extension, phone app and device keys
 
 - **Chrome extension** (`extension/`, [README](../extension/README.md)). On a product page it plans "something like this" through the same planner, or saves the page to Find with a screenshot for the vision model. On a cart page code checks the total against your monthly limit, largest-purchase rule and kill switch. It never pays on other shops. Screenshots: [product](screenshots/extension-product-light.jpg), [checkout, dark](screenshots/extension-checkout-dark.jpg).
 - **Device keys** on Messages for the extension and the coming phone app: shown once, hashed, revocable, shopper-only.
-- **The phone app's PayPal return route** is ready for the React Native app.
-- **Tests:** 69 unit tests and 11 Playwright tests (3 for the extension) pass.
+- **Phone app** (`mobile/`, [README](../mobile/README.md)). A React Native app (Expo SDK 58, Expo Router) on the same server:
+  - **Today:** what needs you, the lifeline, the month against your limit and optional reminders on the phone.
+  - **Plans:** model readings with your words quoted, the exact quote and **Pay with PayPal**.
+  - **Find:** a link, a screenshot or words.
+  - **Bought:** each line's lifeline and the PayPal record.
+  - **Approvals:** Face ID before approving, your rules and the kill switch.
+
+  PayPal opens in the system's secure browser and comes back through `everyday://`, after the server has captured and read back the payment. Sign-in uses a phone key kept in the Keychain or Keystore, made by a demo sign-in or pasted from Messages. Screenshots: [Today](screenshots/mobile-today-light.jpg), [plan, dark](screenshots/mobile-plan-dark.jpg), [unpaid order](screenshots/mobile-order-light.jpg), [kill switch](screenshots/mobile-approvals-light.jpg).
+- **An unpaid order's timeline said "Paid"** on the website too. It now says "Ordered, not paid" until PayPal confirms.
+- **Tests:** 71 unit tests and 13 Playwright tests pass: 3 for the extension and 2 for the phone app's browser build. The phone app has not been run on a real phone; see its README for what that leaves unverified.
 
 ## Top three changes left before submission
 

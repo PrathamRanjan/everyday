@@ -64,7 +64,8 @@ const ISSUES = [
 function lineRail(l: Line, today: string): { marks: Mark[]; bands: Band[] } {
   const d = l.dates;
   const marks: Mark[] = [];
-  if (d.ordered) marks.push({ key: "paid", label: "Paid", date: d.ordered, tone: "done", note: money(l.unit_cents * l.qty) });
+  // A line stays "pending" until PayPal confirms the payment: then it is ordered, not yet paid.
+  if (d.ordered) marks.push(l.status === "pending" ? { key: "paid", label: "Ordered, not paid", date: d.ordered, tone: "wait", note: money(l.unit_cents * l.qty) } : { key: "paid", label: "Paid", date: d.ordered, tone: "done", note: money(l.unit_cents * l.qty) });
   if (l.status === "backordered") marks.push({ key: "bo", label: "Backordered", date: d.eta ?? today, tone: "now" });
   else if (d.delivered) marks.push({ key: "del", label: "Delivered", date: d.delivered, tone: "done" });
   else if (d.eta) marks.push({ key: "eta", label: l.status === "shipped" ? "On its way" : "Arrives", date: d.eta, tone: "wait" });

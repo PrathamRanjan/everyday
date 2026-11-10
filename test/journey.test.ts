@@ -130,6 +130,9 @@ describe("Everyday acceptance journey", () => {
     expect((await maya.get("/api/ui/devices")).json.devices).toHaveLength(1);
     expect((await new Client(base).req("GET", "/api/ui/today", { headers: { authorization: `Bearer ${dev.json.key}` } })).status).toBe(200);
     expect((await maya.postJson(`/api/ui/devices/${dev.json.id}/revoke`, {})).status).toBe(200);
+    // The phone app's demo sign-in, then it signs itself out.
+    const phoneKey = (await new Client(base).postJson("/api/ui/devices/demo", { account_id: (await maya.get("/api/ui/session")).json.who.id })).json.key;
+    expect((await new Client(base).postJson("/api/ui/devices/self/revoke", {}, { authorization: `Bearer ${phoneKey}` })).status).toBe(200);
     expect((await new Client(base).get(`/orders/${order.id}/paypal/return-app?token=${token}`)).location).toMatch(/^everyday:\/\/orders\//);
     expect((await new Client(base).get(`/orders/${order.id}/paypal/cancel-app`)).location).toMatch(/^everyday:\/\//);
     expect(fake.captures.size).toBe(1);

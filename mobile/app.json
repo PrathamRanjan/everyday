@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Everyday",
+    "slug": "everyday",
+    "scheme": "everyday",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.everyday.shopper"
+    },
+    "android": {
+      "package": "com.everyday.shopper",
+      "adaptiveIcon": {
+        "backgroundColor": "#1c1a17",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Everyday asks for Face ID before you approve a held payment."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Everyday reads a screenshot you choose to find the product in it."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#b13a0d"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#f7f4ee",
+          "dark": {
+            "backgroundColor": "#14120f"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

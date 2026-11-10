@@ -352,6 +352,27 @@ export function apiRoutes() {
     await db.query("INSERT INTO device_keys (id, account_id, label, client, key_hash) VALUES ($1,$2,$3,$4,$5)", [id, a.id, label, client, hashKey(key)]);
     return { id, key, label, client, devices: await deviceRows(a.id) };
   }));
+  // Demo only: the phone app's "Continue as Maya", like the website's. It makes a phone key for a demo shopper
+  // without a website session. Off when demo mode is off. Older demo keys for that shopper are disconnected first,
+  // so repeated demo sign-ins never pile up.
+  r.post("/api/ui/devices/demo", send(async (req) => {
+    demoOnly();
+    const db = await getDb();
+    const a = (await db.query<{ id: string; name: string }>("SELECT id, name FROM accounts WHERE id = $1", [String(req.body?.account_id ?? "")])).rows[0];
+    if (!a) throw new GtError("Choose one of the demo shoppers.", "invalid", 400);
+    await db.query("UPDATE device_keys SET revoked_at = now() WHERE account_id = $1 AND client = 'mobile' AND label = 'Phone app (demo sign-in)' AND revoked_at IS NULL", [a.id]);
+    const key = newSecret("evd");
+    const id = newId("dev");
+    await db.query("INSERT INTO device_keys (id, account_id, label, client, key_hash) VALUES ($1,$2,'Phone app (demo sign-in)','mobile',$3)", [id, a.id, hashKey(key)]);
+    return { id, key, name: a.name };
+  }));
+  // A device signing itself out: its own key stops working at once.
+  r.post("/api/ui/devices/self/revoke", send(async (req) => {
+    const key = bearerOf(req);
+    if (!key) throw new GtError("Only a connected device can sign itself out.", "invalid", 400);
+    await (await getDb()).query("UPDATE device_keys SET revoked_at = COALESCE(revoked_at, now()) WHERE key_hash = $1", [hashKey(key)]);
+    return { ok: true };
+  }));
   r.post("/api/ui/devices/:id/revoke", send(async (req) => {
     const a = await shopperOf(req);
     const db = await getDb();

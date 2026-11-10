@@ -125,4 +125,32 @@ describe("device keys", () => {
     const cancel = await new Client(base).get(`/orders/${o.id}/paypal/cancel-app`);
     expect(cancel.location).toMatch(/^everyday:\/\/orders\/.+\?err=Payment%20cancelled$/);
   });
+
+  it("the phone app's demo sign-in makes a phone key without a website session, replaces its last one, and signs itself out", async () => {
+    const first = await new Client(base).postJson("/api/ui/devices/demo", { account_id: s.account });
+    expect(first.status).toBe(200);
+    expect(first.json.key).toMatch(/^evd_/);
+    const phone = device(first.json.key, "mobile");
+    expect((await phone.get("/api/ui/session")).json.who).toMatchObject({ kind: "shopper", id: s.account });
+    // Signing in again disconnects the previous demo key.
+    const second = await new Client(base).postJson("/api/ui/devices/demo", { account_id: s.account });
+    expect((await phone.get("/api/ui/today")).status).toBe(401);
+    expect((await one("SELECT count(*)::int AS n FROM device_keys WHERE revoked_at IS NULL AND account_id = $1", [s.account])).n).toBe(1);
+    // An unknown shopper is refused.
+    expect((await new Client(base).postJson("/api/ui/devices/demo", { account_id: "acc_nobody" })).status).toBe(400);
+    // Sign out: the key stops working.
+    const p2 = device(second.json.key, "mobile");
+    expect((await p2.postJson("/api/ui/devices/self/revoke", {})).status).toBe(200);
+    expect((await p2.get("/api/ui/today")).status).toBe(401);
+    expect((await new Client(base).postJson("/api/ui/devices/self/revoke", {})).status).toBe(400);
+  });
+
+  it("only the app's own dev origins get CORS, never with cookies", async () => {
+    const pre = await new Client(base).req("OPTIONS", "/api/ui/today", { headers: { origin: "http://localhost:8081", "access-control-request-method": "GET", "access-control-request-headers": "authorization" } });
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get("access-control-allow-origin")).toBe("http://localhost:8081");
+    expect(pre.headers.get("access-control-allow-credentials")).toBeNull();
+    const other = await new Client(base).req("GET", "/api/ui/session", { headers: { origin: "https://evil.example" } });
+    expect(other.headers.get("access-control-allow-origin")).toBeNull();
+  });
 });

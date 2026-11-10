@@ -25,6 +25,11 @@ export const config = {
   currency: (process.env.EV_CURRENCY || "USD").toUpperCase(),
   sessionSecret: process.env.SESSION_SECRET || randomBytes(32).toString("hex"),
   demoMode: bool(process.env.EV_DEMO_MODE, true),
+  /**
+   * Web origins of the phone app's browser build (Expo's dev server) that may call the API with a device key.
+   * No cookies are allowed cross-origin, so only a Bearer key can act from these origins.
+   */
+  appOrigins: ["http://localhost:8081", "http://127.0.0.1:8081", ...(process.env.EV_APP_ORIGINS || "").split(",").map((x) => x.trim()).filter(Boolean)],
   inlineWorker: bool(process.env.EV_INLINE_WORKER, true),
   workerIntervalMs: num(process.env.EV_WORKER_INTERVAL_MS, 2000),
   maxUploadBytes: num(process.env.EV_MAX_UPLOAD_BYTES, 5 * 1024 * 1024),
