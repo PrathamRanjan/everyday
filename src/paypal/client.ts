@@ -147,11 +147,27 @@ export class PayPalClient implements PayPalApi {
       "/v2/checkout/orders",
       {
         intent: "CAPTURE",
-        purchase_units: [{ reference_id: input.customId, custom_id: input.customId, description: input.description.slice(0, 127), amount: { currency_code: input.currency, value: toValue(input.amountCents) } }],
+        purchase_units: [
+          {
+            reference_id: input.customId.slice(0, 256),
+            custom_id: input.customId.slice(0, 127),
+            invoice_id: input.invoiceId,
+            description: input.description.slice(0, 127),
+            amount: input.items?.length
+              ? { currency_code: input.currency, value: toValue(input.amountCents), breakdown: { item_total: { currency_code: input.currency, value: toValue(input.items.reduce((a, i) => a + i.unitCents * i.quantity, 0)) }, shipping: { currency_code: input.currency, value: toValue(input.shippingCents ?? 0) } } }
+              : { currency_code: input.currency, value: toValue(input.amountCents) },
+            items: input.items?.map((i) => ({ name: i.name.slice(0, 127), sku: i.sku.slice(0, 127), quantity: String(i.quantity), unit_amount: { currency_code: input.currency, value: toValue(i.unitCents) }, category: "PHYSICAL_GOODS" })),
+          },
+        ],
         payment_source: { paypal: { vault_id: input.vaultId } },
       },
       { requestId, prefer: "return=representation" },
     );
+  }
+
+  async getPaymentToken(id: string) {
+    const d = await this.call<Json>("GET", `/v3/vault/payment-tokens/${encodeURIComponent(id)}`);
+    return { id: String(d.id), customerId: d.customer?.id, email: d.payment_source?.paypal?.email_address };
   }
 
   async getOrder(id: string) {

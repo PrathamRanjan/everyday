@@ -3,7 +3,7 @@ import { ApiError, configure, getJson, postJson, SERVERS } from "./api";
 import { getItem, setItem } from "./storage";
 
 export type Who = { kind: "shopper"; id: string; name: string; first: string; clock: string; today: string; needs: number; held: number };
-export type SessionInfo = { demo: boolean; paypal_env: string; who: Who | null };
+export type SessionInfo = { demo: boolean; paypal_env: string; who: Who | null; demo_wallet?: { usable: boolean; state: string; email: string | null; detail: string | null } | null };
 
 type Ctx = {
   ready: boolean;

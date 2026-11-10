@@ -5,6 +5,7 @@ import { Lifeline, type Mark } from "@/components/Lifeline";
 import { Button, Card, KV, Loaded, Money, Note, Pill, Screen, StatePill, Title, TrustStrip, Txt, DemoRibbon } from "@/components/ui";
 import { day, money, plural, words } from "@/lib/format";
 import { useAct } from "@/lib/useAct";
+import { PayChoice } from "@/components/PayChoice";
 import { useApi } from "@/lib/useApi";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -179,10 +180,7 @@ export default function Plan() {
                           <Txt size={12} color={c.ink2}>
                             # {q.hash.slice(0, 16)} · this exact total is what PayPal will show
                           </Txt>
-                          <Button kind="paypal" label={`Pay ${money(q.total_cents)} with PayPal`} busy={busy === "pay"} disabled={Boolean(busy)} onPress={() => void run("pay", `/quotes/${q.id}/approve`, { hash: q.hash })} />
-                          <Txt size={12} color={c.ink2}>
-                            PayPal's sandbox opens in a secure browser. Approve there and you come straight back to the order. Nothing is charged until you approve.
-                          </Txt>
+                          <PayChoice cents={q.total_cents} busy={busy} run={run} wallet={{ path: `/quotes/${q.id}/approve-demo`, data: { hash: q.hash } }} page={{ path: `/quotes/${q.id}/approve`, data: { hash: q.hash } }} />
                         </View>
                       ) : (
                         <Button label="Get the exact quote" busy={busy === "quote"} disabled={!p.feasible || p.questions.length > 0 || !d.open || Boolean(busy)} onPress={() => void run("quote", `/plans/${i.id}/quote`, undefined, { stay: true })} />

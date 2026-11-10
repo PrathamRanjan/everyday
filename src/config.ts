@@ -21,7 +21,15 @@ export const config = {
     clientId: process.env.PAYPAL_CLIENT_ID || "",
     clientSecret: process.env.PAYPAL_CLIENT_SECRET || "",
     webhookId: process.env.PAYPAL_WEBHOOK_ID || "",
+    /**
+     * A2.1: the demo's saved sandbox buyer wallet (a Vault v3 payment token, shared by the hackathon apps). Demo
+     * workspaces may pay from it with no PayPal login; it is never used outside demo mode. Re-approve at /admin.
+     */
+    demoVaultToken: process.env.PAYPAL_DEMO_VAULT_TOKEN || "",
+    demoVaultEmail: process.env.PAYPAL_DEMO_VAULT_EMAIL || "",
   },
+  /** Operator key for /admin (wallet re-approval, global reset). Without it, /admin is closed. */
+  adminKey: process.env.EV_ADMIN_KEY || "",
   currency: (process.env.EV_CURRENCY || "USD").toUpperCase(),
   sessionSecret: process.env.SESSION_SECRET || randomBytes(32).toString("hex"),
   demoMode: bool(process.env.EV_DEMO_MODE, true),

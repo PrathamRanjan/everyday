@@ -1,6 +1,6 @@
 import type { Db, Queryable } from "./db.js";
 
-export type JobType = "reconcile_payments" | "verify_refunds" | "watch_prices" | "process_webhook" | "send_channel_message" | "send_push" | "release_approved" | "repeat_buy" | "sync_disputes" | "price_watch_channel3";
+export type JobType = "reconcile_payments" | "verify_refunds" | "watch_prices" | "process_webhook" | "send_channel_message" | "send_push" | "release_approved" | "repeat_buy" | "sync_disputes" | "price_watch_channel3" | "check_demo_wallet";
 
 export async function enqueue(q: Queryable, type: JobType, payload: Record<string, unknown>, runAt: Date = new Date(), dedupeKey?: string) {
   if (dedupeKey) {

@@ -74,6 +74,8 @@ export interface PayPalApi {
   createOrder(input: OrderInput & { returnUrl: string; cancelUrl: string }, requestId: string): Promise<{ id: string; status: string; approveUrl: string | null }>;
   /** Merchant-initiated charge on a vaulted PayPal token (intent CAPTURE). */
   createVaultedCaptureOrder(input: OrderInput & { vaultId: string }, requestId: string): Promise<PPOrder>;
+  /** Reads a saved payment token back (Vault v3); throws a 404 PayPalError when it no longer exists. */
+  getPaymentToken(id: string): Promise<{ id: string; customerId?: string; email?: string }>;
   getOrder(id: string): Promise<PPOrder>;
   captureOrder(id: string, requestId: string): Promise<PPOrder>;
   getCapture(id: string): Promise<PPCapture>;

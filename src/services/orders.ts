@@ -14,6 +14,7 @@ import { currentPlan, intentRow, ownedOf, type Reqs, type SlotView } from "./pla
 import { gate, GateDenied, HeldForApproval, preApprove, type MoneyMove } from "../guard/dryrun.js";
 import { MERCHANT } from "../guard/policy.js";
 import { startRun } from "../trace.js";
+import { demoWallet, markWalletGone, walletUsable } from "./demowallet.js";
 
 /** Runs the money gate and turns its outcomes into the errors the web layer already understands. */
 async function gated(m: MoneyMove, run?: Awaited<ReturnType<typeof startRun>> | null) {
@@ -87,6 +88,18 @@ export async function quotePlan(a: Account, intentId: string) {
 
 /** Approve the exact quote by hash, re-check prices/stock/plan/spending, create the PayPal order, return the approval link. */
 export async function approveQuote(a: Account, quoteId: string, hash: string, opts: CheckoutOpts = {}) {
+  const order = await orderFromQuote(a, quoteId, hash);
+  return checkoutLink(a, order.id, opts);
+}
+
+/** A2.1: approve the exact quote, then pay it from the demo's saved sandbox wallet (no PayPal login). */
+export async function approveQuoteFromDemoWallet(a: Account, quoteId: string, hash: string) {
+  const order = await orderFromQuote(a, quoteId, hash);
+  return payFromDemoWallet(a, order.id);
+}
+
+/** The order for an approved quote (created once; approving again returns the same order). */
+async function orderFromQuote(a: Account, quoteId: string, hash: string) {
   const db = await getDb();
   const order = await db.tx(async (q) => {
     const qu = (await q.query<any>("SELECT q.*, p.intent_id, p.status AS plan_status, p.version AS plan_version FROM quotes q JOIN plans p ON p.id = q.plan_id JOIN intents i ON i.id = p.intent_id WHERE q.id = $1 AND i.account_id = $2 FOR UPDATE", [quoteId, a.id])).rows[0];
@@ -118,7 +131,7 @@ export async function approveQuote(a: Account, quoteId: string, hash: string, op
     await logEvent(q, a, "order", id, "quote.approved", `${a.name} approved quote ${money(body.total_cents)} (hash ${hash.slice(0, 12)}…)`, a.name);
     return (await q.query<any>("SELECT * FROM orders WHERE id = $1", [id])).rows[0];
   });
-  return checkoutLink(a, order.id, opts);
+  return order;
 }
 
 /** `native`: the phone app opened PayPal in an in-app browser, so PayPal sends the buyer back to the app, not the site. */
@@ -168,11 +181,76 @@ export async function checkoutLink(a: Account, orderId: string, opts: CheckoutOp
     await run.end("failed");
     throw new GtError("PayPal did not return an approval link.", "paypal", 502);
   }
-  await db.query("UPDATE orders SET paypal_order_id = $2, attempt = $3, run_id = $4 WHERE id = $1", [o.id, pp.id, attempt, run.id]);
+  await db.query("UPDATE orders SET paypal_order_id = $2, attempt = $3, run_id = $4, paid_via = 'paypal_page' WHERE id = $1", [o.id, pp.id, attempt, run.id]);
   await db.query("UPDATE payment_ops SET status = 'succeeded', paypal_id = $2, paypal_status = $3, attempts = attempts + 1 WHERE request_id = $1", [requestId, pp.id, pp.status]);
   await run.end("done");
   return pp.approveUrl;
 }
+
+/**
+ * A2.1: pay an unpaid order from the demo's saved sandbox wallet. The shopper approved this exact quote in Everyday
+ * (its hash); PayPal charges the saved sandbox buyer with no login (Orders v2 with payment_source.paypal.vault_id,
+ * intent CAPTURE), and the order counts as paid only after the capture is read back (settle). Demo mode only.
+ */
+export async function payFromDemoWallet(a: Account, orderId: string): Promise<{ status: "paid" | "waiting" | "failed"; capture_id: string | null }> {
+  const db = await getDb();
+  if (!config.demoMode) throw new GtError("The demo's saved wallet works only in demo mode.", "forbidden", 403);
+  const w = await demoWallet(db);
+  if (!walletUsable(w)) throw new GtError(`The demo's saved PayPal wallet isn't available (${w.detail ?? w.state}). Pay on PayPal's own page instead.`, "no_wallet", 409);
+  const o = (await db.query<any>("SELECT * FROM orders WHERE id = $1 AND account_id = $2", [orderId, a.id])).rows[0];
+  if (!o) throw new GtError("Order not found", "not_found", 404);
+  if (o.status !== "created") throw new GtError("This order is already paid.", "paid", 409);
+  if (o.exception) throw new GtError("A payment on this order needs the merchant to check it before anything else happens. Please don't pay again.", "exception", 409);
+  if (o.paypal_order_id) {
+    // An earlier attempt (this path or PayPal's page) may already have gone through: read it back before paying again.
+    const out = await settle(o.id, "checkout").catch(() => "waiting" as const);
+    if (out === "paid") return { status: "paid", capture_id: (await db.query<any>("SELECT capture_id FROM orders WHERE id = $1", [o.id])).rows[0]?.capture_id ?? null };
+    const still = (await db.query<any>("SELECT paypal_order_id FROM orders WHERE id = $1", [o.id])).rows[0]?.paypal_order_id;
+    if (still && o.paid_via === "demo_wallet") throw new GtError("PayPal is still confirming the earlier payment from the saved wallet. Check back shortly.", "pending", 409);
+  }
+  const q = (await db.query<any>("SELECT body FROM quotes WHERE id = $1", [o.quote_id])).rows[0];
+  const body = J<any>(q.body);
+  const attempt = o.attempt + 1;
+  const requestId = `order:${o.id}:${attempt}`;
+  const run = await startRun({ actor: "customer", subject: `pay ${o.number} ${money(o.total_cents)} from the demo's saved wallet`, entity: "order", entityId: o.id });
+  await run.step({ actor: "code", tool: "quote.lookup", args: { quote: o.quote_id }, gate: "n/a", result: { total_cents: body.total_cents, lines: body.lines.length } });
+  try {
+    await gated({ action: "order", ownerId: a.id, agentScope: "shopper", entity: "order", entityId: o.id, cents: o.total_cents, trustedCents: [body.total_cents, o.total_cents], merchantName: body.merchant?.name ?? null, customerInitiated: true }, run);
+  } catch (e) {
+    await run.end("held");
+    throw e;
+  }
+  await db.query("INSERT INTO payment_ops (id, order_id, kind, status, amount_cents, request_id, reason) VALUES ($1,$2,'order','pending',$3,$4,$5) ON CONFLICT (request_id) DO NOTHING", [newId("pop"), o.id, o.total_cents, requestId, WALLET_LABEL]);
+  let pp;
+  try {
+    pp = await paypal().createVaultedCaptureOrder(
+      { amountCents: o.total_cents, currency: "USD", customId: o.id, invoiceId: `${o.number}-${attempt}-${o.id.slice(-5)}`, description: `Everyday ${o.number}: ${body.lines.length} items from ${body.merchant.name}`, items: body.lines.map((l: any) => ({ name: l.title, sku: l.sku, quantity: l.qty, unitCents: l.unit_cents })), shippingCents: body.shipping.cents, vaultId: w.token! },
+      requestId,
+    );
+  } catch (e) {
+    await run.step({ actor: "paypal", tool: "orders.create+capture (demo wallet)", args: { request_id: requestId, cents: o.total_cents }, gate: "allowed", result: { error: (e as Error).message.slice(0, 200) }, pp_request_id: requestId });
+    await run.end("failed");
+    await db.query("UPDATE payment_ops SET error = $2, attempts = attempts + 1 WHERE request_id = $1", [requestId, (e as Error).message]);
+    if (e instanceof UnknownOutcomeError || (e instanceof PayPalError && e.status >= 500)) throw new GtError(`PayPal did not confirm the payment (${(e as Error).message.slice(0, 120)}). Trying again is safe: the same request id is reused.`, "retry", 502);
+    await db.query("UPDATE payment_ops SET status = 'failed' WHERE request_id = $1", [requestId]);
+    await db.query("UPDATE orders SET attempt = $2 WHERE id = $1", [o.id, attempt]);
+    const issue = e instanceof PayPalError ? (Array.isArray(e.details) ? (e.details as any[])[0]?.issue : null) ?? e.name_ ?? String(e.status) : "refused";
+    if (e instanceof PayPalError && /RESOURCE_NOT_FOUND|INVALID_RESOURCE_ID|PAYMENT_SOURCE|VAULT|TOKEN/i.test(`${issue} ${e.message}`)) await markWalletGone(`PayPal refused the saved wallet (${issue}).`, db);
+    await logEvent(db, a, "order", o.id, "payment.declined", `PayPal refused the payment from the demo's saved wallet (${issue}). Nothing was charged. Pay on PayPal's own page instead.`, "PayPal", { issue });
+    throw new GtError(`PayPal refused the payment from the demo's saved wallet (${issue}). Nothing was charged. Pay on PayPal's own page instead.`, "paypal", 502);
+  }
+  const capNow = pp.purchase_units?.[0]?.payments?.captures?.[0] ?? null;
+  await run.step({ actor: "paypal", tool: "orders.create+capture (demo wallet)", args: { request_id: requestId, cents: o.total_cents }, gate: "allowed", result: { paypal_order_id: pp.id, status: pp.status, capture: capNow?.id ?? null, capture_status: capNow?.status ?? null }, pp_request_id: requestId });
+  await db.query("UPDATE orders SET paypal_order_id = $2, attempt = $3, run_id = $4, paid_via = 'demo_wallet' WHERE id = $1", [o.id, pp.id, attempt, run.id]);
+  await db.query("UPDATE payment_ops SET status = 'succeeded', paypal_id = $2, paypal_status = $3, attempts = attempts + 1 WHERE request_id = $1", [requestId, pp.id, pp.status]);
+  await run.end("done");
+  // Only PayPal's read-back changes the order's state.
+  const status = await settle(o.id, "wallet");
+  const cap = (await db.query<any>("SELECT capture_id FROM orders WHERE id = $1", [o.id])).rows[0]?.capture_id ?? null;
+  return { status, capture_id: cap };
+}
+
+export const WALLET_LABEL = "Paid from the demo's saved sandbox wallet";
 
 export async function paypalReturn(a: Account, orderId: string, token: string) {
   const db = await getDb();
@@ -187,7 +265,7 @@ export async function paypalReturn(a: Account, orderId: string, token: string) {
 }
 
 /** Capture (or find the capture of) an approved order; never pays twice. */
-export async function settle(orderId: string, via: "return" | "reconcile" | "checkout"): Promise<"paid" | "waiting" | "failed"> {
+export async function settle(orderId: string, via: "return" | "reconcile" | "checkout" | "wallet"): Promise<"paid" | "waiting" | "failed"> {
   const db = await getDb();
   const o = (await db.query<any>("SELECT * FROM orders WHERE id = $1", [orderId])).rows[0];
   if (!o || o.status !== "created") return o ? "paid" : "failed";
@@ -195,7 +273,7 @@ export async function settle(orderId: string, via: "return" | "reconcile" | "che
   const pp = paypal();
   let order = await pp.getOrder(o.paypal_order_id);
   let cap: PPCapture | null = order.purchase_units?.[0]?.payments?.captures?.[0] ?? null;
-  const repaired = via !== "return";
+  const repaired = via !== "return" && via !== "wallet";
   if (!cap && order.status === "APPROVED") {
     const requestId = `capture:${o.paypal_order_id}`;
     const run = await startRun({ actor: via === "reconcile" ? "worker" : "customer", subject: `capture ${o.number} ${money(o.total_cents)} (${via})`, entity: "order", entityId: o.id });
@@ -258,7 +336,7 @@ export async function settle(orderId: string, via: "return" | "reconcile" | "che
     const fee = full.seller_receivable_breakdown?.paypal_fee ? toCents(full.seller_receivable_breakdown.paypal_fee) : null;
     const net = full.seller_receivable_breakdown?.net_amount ? toCents(full.seller_receivable_breakdown.net_amount) : gross - (fee ?? 0);
     await q.query("UPDATE orders SET status = 'paid', capture_id = $2, gross_cents = $3, fee_cents = $4, net_cents = $5, paid_at = now(), repaired = $6 WHERE id = $1", [o.id, full.id, gross, fee, net, repaired && via === "reconcile"]);
-    await q.query("INSERT INTO payment_ops (id, order_id, kind, status, amount_cents, request_id, paypal_id, paypal_status) VALUES ($1,$2,'capture','succeeded',$3,$4,$5,$6) ON CONFLICT (request_id) DO UPDATE SET status = 'succeeded', paypal_id = EXCLUDED.paypal_id, paypal_status = EXCLUDED.paypal_status", [newId("pop"), o.id, gross, `capture:${o.paypal_order_id}`, full.id, full.status]);
+    await q.query("INSERT INTO payment_ops (id, order_id, kind, status, amount_cents, request_id, paypal_id, paypal_status, reason) VALUES ($1,$2,'capture','succeeded',$3,$4,$5,$6,$7) ON CONFLICT (request_id) DO UPDATE SET status = 'succeeded', paypal_id = EXCLUDED.paypal_id, paypal_status = EXCLUDED.paypal_status, reason = COALESCE(payment_ops.reason, EXCLUDED.reason)", [newId("pop"), o.id, gross, `capture:${o.paypal_order_id}`, full.id, full.status, cur.paid_via === "demo_wallet" ? WALLET_LABEL : null]);
     // The merchant accepts the paid order; stock is taken now.
     const lines = (await q.query<any>("SELECT * FROM order_lines WHERE order_id = $1", [o.id])).rows;
     for (const l of lines) {
@@ -267,7 +345,7 @@ export async function settle(orderId: string, via: "return" | "reconcile" | "che
     }
     await q.query("UPDATE plans SET status = 'ordered' WHERE intent_id = $1 AND status = 'current'", [o.intent_id]);
     await q.query("UPDATE intents SET status = 'purchased' WHERE id = $1", [o.intent_id]);
-    await logEvent(q, a, "order", o.id, via === "reconcile" ? "payment.repaired" : "payment.captured", via === "reconcile" ? `Repaired: PayPal shows ${o.number} paid (${money(gross)}, capture ${full.id}); recorded without paying again` : `Paid ${money(gross)} on PayPal (capture ${full.id}, fee ${fee === null ? "—" : money(fee)}); ${o.number} accepted by the merchant`, "PayPal");
+    await logEvent(q, a, "order", o.id, via === "reconcile" ? "payment.repaired" : "payment.captured", via === "reconcile" ? `Repaired: PayPal shows ${o.number} paid (${money(gross)}, capture ${full.id}); recorded without paying again` : `${cur.paid_via === "demo_wallet" ? `${WALLET_LABEL}: ` : ""}Paid ${money(gross)} on PayPal (capture ${full.id}, fee ${fee === null ? "—" : money(fee)}); ${o.number} accepted by the merchant`, "PayPal");
     await notify(q, a.id, "telegram", `✅ ${o.number} paid: ${money(gross)} on PayPal. Track it in Everyday → Purchases.`);
   });
   return "paid";

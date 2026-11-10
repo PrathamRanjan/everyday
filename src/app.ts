@@ -14,6 +14,7 @@ import { passportRoutes } from "./web/passport.js";
 import { mcpRoutes } from "./web/mcp.js";
 import { installChannelHandlers } from "./channels/handlers.js";
 import { apiRoutes } from "./web/api.js";
+import { adminRoutes } from "./web/admin.js";
 import { serveApp, uiBridge } from "./web/spa.js";
 
 let handlersInstalled = false;
@@ -57,6 +58,7 @@ export function createApp() {
     }
   });
   const shell = serveApp(app, root);
+  app.use(adminRoutes());
   app.use(apiRoutes());
   app.use(mcpRoutes());
   app.use(opsRoutes());

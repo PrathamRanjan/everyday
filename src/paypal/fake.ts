@@ -211,6 +211,13 @@ export class FakePayPal implements PayPalApi {
     });
   }
 
+  async getPaymentToken(id: string) {
+    return this.run("getPaymentToken", null, () => {
+      if (!this.tokens.has(id)) throw new PayPalError("The specified resource does not exist.", 404, "RESOURCE_NOT_FOUND", "fake", null);
+      return { id, customerId: "fake-customer", email: "buyer@example.test" };
+    });
+  }
+
   async getOrder(id: string) {
     return this.run("getOrder", null, () => {
       const o = this.orders.get(id) ?? this.notFound("Order");

@@ -8,6 +8,7 @@ import { Button, Card, DemoRibbon, Divider, KV, Loaded, Note, Screen, StatePill,
 import { serverBase } from "@/lib/api";
 import { addDays, day, money, when, words } from "@/lib/format";
 import { useAct } from "@/lib/useAct";
+import { PayChoice } from "@/components/PayChoice";
 import { useApi } from "@/lib/useApi";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -25,7 +26,7 @@ interface Line {
   dates: { ordered: string | null; eta: string | null; delivered: string | null; deadline: string | null; return_days: number; protection_days: number };
 }
 interface OrderData {
-  order: { id: string; number: string; status: string; total_cents: number; refunded_cents: number; paypal_order_id: string | null; capture_id: string | null; placed_at: string; exception: string | null; intent_id: string };
+  order: { id: string; number: string; status: string; total_cents: number; refunded_cents: number; paypal_order_id: string | null; capture_id: string | null; paid_via: string | null; placed_at: string; exception: string | null; intent_id: string };
   merchant: { name: string } | null;
   intent: { id: string; text: string; deadline: string | null } | null;
   lines: Line[];
@@ -84,13 +85,14 @@ export default function Order() {
                   )}
                 </View>
                 {o.exception && <Note tone="now">{o.exception}</Note>}
+                {o.paid_via === "demo_wallet" && o.status !== "created" && <Note tone="done">Paid from the demo's saved sandbox wallet, with no PayPal login.</Note>}
                 {d.held.map((a) => (
                   <ApprovalCard key={a.id} a={a} reload={st.reload} />
                 ))}
 
                 {o.status === "created" && d.held.length === 0 && (
                   <Card tone="wait" title="Not paid yet" sub={o.paypal_order_id ? "PayPal checkout was started but not approved. Nothing has been charged." : "Pay with PayPal when you're ready."}>
-                    <Button kind="paypal" label={`Pay ${money(o.total_cents)} with PayPal`} busy={busy === "pay"} disabled={Boolean(busy)} onPress={() => void run("pay", `/orders/${o.id}/pay`, undefined, { stay: true })} />
+                    <PayChoice cents={o.total_cents} busy={busy} run={run} wallet={{ path: `/orders/${o.id}/pay-demo` }} page={{ path: `/orders/${o.id}/pay` }} />
                     {o.paypal_order_id && <Button label="I approved on PayPal: check again" kind="secondary" onPress={() => void st.reload()} />}
                   </Card>
                 )}

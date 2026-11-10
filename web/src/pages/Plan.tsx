@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft, CircleSlash, ExternalLink, Gift, Hash, HelpCircle, Package, Quote, Timer } from "lucide-react";
 import { Lifeline, type Mark } from "@/components/Lifeline";
-import { Amount, Busy, Empty, GoLink, KV, Loaded, PageHead, Panel, PayPalButton, State, TrustStrip } from "@/components/kit";
+import { Amount, Busy, Empty, GoLink, KV, Loaded, PageHead, Panel, State, TrustStrip } from "@/components/kit";
+import { PayChoice } from "@/components/PayChoice";
 import { Button } from "@/components/ui/button";
 import { useAction, useApi } from "@/lib/api";
 import { day, money, plural, words } from "@/lib/format";
@@ -348,10 +349,7 @@ export default function Plan() {
                             <p className="flex items-center gap-1 text-xs text-ink-2" data-detail>
                               <Hash className="size-3" /> <span className="id">{q.hash.slice(0, 16)}</span> · this exact total is what PayPal will show
                             </p>
-                            <PayPalButton className="w-full" busy={busy === "pay"} onClick={() => run("pay", `/quotes/${q.id}/approve`, { hash: q.hash })}>
-                              Pay {money(q.total_cents)} with PayPal
-                            </PayPalButton>
-                            <p className="text-xs text-ink-2">You'll approve on PayPal's sandbox and come straight back. Nothing is charged until you approve there.</p>
+                            <PayChoice cents={q.total_cents} busy={busy} run={run} wallet={{ path: `/quotes/${q.id}/approve-demo`, data: { hash: q.hash } }} page={{ path: `/quotes/${q.id}/approve`, data: { hash: q.hash } }} />
                           </div>
                         ) : (
                           <Button className="w-full" disabled={!p.feasible || p.questions.length > 0 || !d.open || Boolean(busy)} onClick={() => run("quote", `/plans/${i.id}/quote`, undefined, { stay: true })}>

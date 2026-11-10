@@ -38,6 +38,7 @@ import { bearerOf, whoami } from "./auth.js";
 import { partyOf, BEATS } from "./trace.js";
 import { DEMO_SCAM } from "./safety.js";
 import { newId } from "../lib/ids.js";
+import { demoWallet, walletView } from "../services/demowallet.js";
 
 type Handler = (req: Request, res: Response) => Promise<unknown>;
 const send = (fn: Handler) => (req: Request, res: Response, next: (e?: unknown) => void) =>
@@ -114,7 +115,8 @@ export function apiRoutes() {
   // ---------- Session and public ----------
   r.get("/api/ui/session", send(async (req) => {
     const w = await whoami(req);
-    const base = { demo: config.demoMode, paypal_env: config.paypal.env, live: { telegram: telegramReady(), push: pushReady(), channel3: channel3Ready(), ai: hasOpenAI(), ai_label: providerLabel(), paypal: Boolean(config.paypal.clientId) }, telegram_bot: config.channels.telegramBot };
+    const wallet = config.demoMode ? walletView(await demoWallet()) : null;
+    const base = { demo: config.demoMode, paypal_env: config.paypal.env, demo_wallet: wallet, live: { telegram: telegramReady(), push: pushReady(), channel3: channel3Ready(), ai: hasOpenAI(), ai_label: providerLabel(), paypal: Boolean(config.paypal.clientId) }, telegram_bot: config.channels.telegramBot };
     if (w?.account) {
       const a = w.account;
       const db = await getDb();
@@ -217,7 +219,7 @@ export function apiRoutes() {
   r.get("/api/ui/purchases", send(async (req) => {
     const a = await shopperOf(req);
     const db = await getDb();
-    const orders = (await db.query<any>("SELECT id, number, status, total_cents, gross_cents, refunded_cents, repaired, created_at, (SELECT MIN(wall) FROM events WHERE entity_id = orders.id) AS placed_at, capture_id, paypal_order_id FROM orders WHERE account_id = $1 ORDER BY created_at DESC", [a.id])).rows;
+    const orders = (await db.query<any>("SELECT id, number, status, total_cents, gross_cents, refunded_cents, repaired, paid_via, created_at, (SELECT MIN(wall) FROM events WHERE entity_id = orders.id) AS placed_at, capture_id, paypal_order_id FROM orders WHERE account_id = $1 ORDER BY created_at DESC", [a.id])).rows;
     const lines = (await db.query<any>("SELECT l.order_id, l.title, l.status, l.eta FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.account_id = $1 ORDER BY l.slot", [a.id])).rows;
     return { orders: orders.map((o) => ({ ...o, lines: lines.filter((l) => l.order_id === o.id) })) };
   }));
@@ -240,7 +242,7 @@ export function apiRoutes() {
     const placed = events.map((e) => String(e.wall ?? "")).filter(Boolean).sort()[0] ?? null;
     const runs = await runsFor("order", o.id, 10).catch(() => []);
     return {
-      order: { id: o.id, number: o.number, status: o.status, total_cents: o.total_cents, gross_cents: o.gross_cents, fee_cents: o.fee_cents, refunded_cents: o.refunded_cents, paypal_order_id: o.paypal_order_id, capture_id: o.capture_id, repaired: o.repaired, created_at: o.created_at, placed_at: placed ?? o.created_at, exception: o.exception ?? null, intent_id: o.intent_id },
+      order: { id: o.id, number: o.number, status: o.status, total_cents: o.total_cents, gross_cents: o.gross_cents, fee_cents: o.fee_cents, refunded_cents: o.refunded_cents, paypal_order_id: o.paypal_order_id, capture_id: o.capture_id, repaired: o.repaired, paid_via: o.paid_via ?? null, created_at: o.created_at, placed_at: placed ?? o.created_at, exception: o.exception ?? null, intent_id: o.intent_id },
       merchant,
       intent: i ?? null,
       policy,

@@ -69,7 +69,8 @@ test("phone app: demo sign-in, Today, a plan from the phone with an exact quote,
   await expect(page.getByText(/from the phone/)).toBeVisible();
   await expect(page.getByText("What Everyday understood")).toBeVisible();
   await page.getByRole("button", { name: "Get the exact quote" }).click();
-  await expect(page.getByRole("button", { name: /^Pay \$[\d.]+ with PayPal$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Pay \$[\d.]+ as the demo shopper$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pay on PayPal's own page instead" })).toBeVisible();
   await expect(page.getByText(/this exact total is what PayPal will show/)).toBeVisible();
   expect(await axe(page)).toEqual([]);
   await shoot(page, "plan");
@@ -77,7 +78,7 @@ test("phone app: demo sign-in, Today, a plan from the phone with an exact quote,
   // Pay: the server creates the PayPal order and PayPal's sandbox approval page opens (a popup in the browser
   // build; the secure in-app browser on a phone). Nothing is approved or charged here.
   const popup = page.waitForEvent("popup");
-  await page.getByRole("button", { name: /^Pay \$[\d.]+ with PayPal$/ }).click();
+  await page.getByRole("button", { name: "Pay on PayPal's own page instead" }).click();
   const paypal = await popup;
   await paypal.waitForURL(/paypal\.com/, { timeout: 30_000 });
   expect(new URL(paypal.url()).host).toMatch(/sandbox\.paypal\.com$/);
@@ -90,6 +91,10 @@ test("phone app: demo sign-in, Today, a plan from the phone with an exact quote,
   await expect(page.getByText(/PAYER_ACTION_REQUIRED/).first()).toBeVisible();
   expect(await axe(page)).toEqual([]);
   await shoot(page, "order");
+  // The same unpaid order, paid from the demo's saved sandbox wallet with no PayPal login.
+  await page.getByRole("button", { name: /^Pay \$[\d.]+ as the demo shopper$/ }).click();
+  await expect(page.getByText("Paid from the demo's saved sandbox wallet, with no PayPal login.")).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText(/^PayPal capture [A-Z0-9]{10,}$/)).toBeVisible();
   await page.goto(`${APP}/bought`);
   await expect(page.getByRole("button", { name: /^Order EV-/ }).first()).toBeVisible();
 });

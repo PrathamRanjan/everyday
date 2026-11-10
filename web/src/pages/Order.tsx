@@ -3,7 +3,8 @@ import { Link, useParams } from "react-router";
 import { ArrowLeft, ArrowLeftRight, BadgeDollarSign, MessageSquareWarning } from "lucide-react";
 import { Lifeline, Dot, type Band, type Mark } from "@/components/Lifeline";
 import { ApprovalCard, type ApprovalView } from "@/components/Approval";
-import { Amount, Busy, GoLink, KV, Loaded, PageHead, Panel, PayPalButton, State, stateOf, TrustStrip } from "@/components/kit";
+import { Amount, Busy, GoLink, KV, Loaded, PageHead, Panel, State, stateOf, TrustStrip } from "@/components/kit";
+import { PayChoice } from "@/components/PayChoice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +43,7 @@ interface Case {
   created_at: string;
 }
 interface OrderData {
-  order: { id: string; number: string; status: string; total_cents: number; gross_cents: number | null; fee_cents: number | null; refunded_cents: number; paypal_order_id: string | null; capture_id: string | null; repaired: boolean; created_at: string; placed_at: string; exception: string | null; intent_id: string };
+  order: { id: string; number: string; status: string; total_cents: number; gross_cents: number | null; fee_cents: number | null; refunded_cents: number; paypal_order_id: string | null; capture_id: string | null; repaired: boolean; paid_via: string | null; created_at: string; placed_at: string; exception: string | null; intent_id: string };
   merchant: { name: string; label: string } | null;
   intent: { id: string; text: string; deadline: string | null } | null;
   policy: { version?: string; window_days?: number; price_protection_days?: number } | null;
@@ -227,6 +228,7 @@ export default function Order() {
                   : cap
                     ? `PayPal says ${cap.paypal_status ?? "completed"}. Everyday read the capture back before recording it.`
                     : `Status: ${stateOf(o.status)[1]}.`}
+                {o.paid_via === "demo_wallet" && !unpaid && " Paid from the demo's saved sandbox wallet, with no PayPal login."}
                 {o.repaired && " This order was recovered from PayPal's own record after the return redirect was lost."}
                 {o.exception && <span className="block text-stop">{o.exception}</span>}
               </p>
@@ -242,9 +244,7 @@ export default function Order() {
             ))}
             {unpaid && (
               <div className="mb-6">
-                <PayPalButton busy={busy === "pay"} onClick={() => run("pay", `/orders/${o.id}/pay`)}>
-                  Pay {money(o.total_cents)} with PayPal
-                </PayPalButton>
+                <PayChoice className="max-w-md" cents={o.total_cents} busy={busy} run={run} wallet={{ path: `/orders/${o.id}/pay-demo` }} page={{ path: `/orders/${o.id}/pay` }} />
               </div>
             )}
 

@@ -9,6 +9,8 @@ export interface Session {
   who: Who | null;
   demo: boolean;
   paypal_env: string;
+  /** A2.1: the demo's saved sandbox wallet (demo mode only). `usable` means pay-with-no-login is offered. */
+  demo_wallet: { usable: boolean; state: string; email: string | null; checked_at: string | null; detail: string | null } | null;
   telegram_bot: string;
   live: { telegram: boolean; push: boolean; channel3: boolean; ai: boolean; ai_label: string; paypal: boolean };
 }

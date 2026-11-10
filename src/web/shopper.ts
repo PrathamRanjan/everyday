@@ -8,7 +8,7 @@ import { capture, linkCode, selectObject } from "../services/captures.js";
 import { addOwned, repairAdvice, setOwnedStatus, watchPrice } from "../services/life.js";
 import { deleteMemory, forgetFeature, undoChoice } from "../services/ml.js";
 import { claimPriceProtection } from "../services/protect.js";
-import { acceptSwap, approveQuote, checkoutLink, openCase, paypalReturn, quotePlan, requestRemedy } from "../services/orders.js";
+import { acceptSwap, approveQuote, approveQuoteFromDemoWallet, checkoutLink, openCase, payFromDemoWallet, paypalReturn, quotePlan, requestRemedy, WALLET_LABEL } from "../services/orders.js";
 import { answer, choose, createIntent } from "../services/plans.js";
 import { clientOf, keyLogin, shopper, signIn, signOut, whoami } from "./auth.js";
 import { back } from "./common.js";
@@ -73,6 +73,19 @@ export function shopperRoutes() {
   r.post("/quotes/:id/approve", shopper(async (req, res, a) => {
     const url = await approveQuote(a, req.params.id, String(req.body.hash ?? ""), { native: clientOf(req) === "mobile" });
     res.redirect(url);
+  }, true));
+
+  // A2.1: pay as the demo shopper from the saved sandbox wallet, with no PayPal login. Demo mode only.
+  const walletDone = (orderId: string, out: { status: string; capture_id: string | null }) =>
+    out.status === "paid" ? `${WALLET_LABEL}. PayPal capture ${out.capture_id} confirmed.` : out.status === "failed" ? "PayPal refused the payment; nothing was charged. Pay on PayPal's own page instead." : "Sent to PayPal from the saved wallet; confirming with PayPal.";
+  r.post("/quotes/:id/approve-demo", shopper(async (req, res, a) => {
+    const out = await approveQuoteFromDemoWallet(a, req.params.id, String(req.body.hash ?? ""));
+    const o = (await (await getDb()).query<{ id: string }>("SELECT id FROM orders WHERE quote_id = $1", [req.params.id])).rows[0];
+    back(res, `/orders/${o.id}`, walletDone(o.id, out), out.status === "failed");
+  }, true));
+  r.post("/orders/:id/pay-demo", shopper(async (req, res, a) => {
+    const out = await payFromDemoWallet(a, req.params.id);
+    back(res, `/orders/${req.params.id}`, walletDone(req.params.id, out), out.status === "failed");
   }, true));
 
   r.post("/orders/:id/pay", shopper(async (req, res, a) => {

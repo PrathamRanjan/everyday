@@ -456,6 +456,8 @@ ALTER TABLE accounts ADD COLUMN IF NOT EXISTS paypal_payer_id TEXT;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS paypal_email TEXT;
 ALTER TABLE intents ADD COLUMN IF NOT EXISTS run_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS run_id TEXT;
+-- A2.1: how the order was paid: on PayPal's own approval page, or from the demo's saved sandbox wallet.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_via TEXT;
 `;
 
 let shared: Db | null = null;
