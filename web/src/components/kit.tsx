@@ -233,7 +233,7 @@ export function Busy({ on, children }: { on: boolean; children: ReactNode }) {
 
 export function GoLink({ to, children, className }: { to: string; children: ReactNode; className?: string }) {
   return (
-    <Link to={to} className={cn("inline-flex items-center gap-1 text-sm font-semibold underline decoration-rule-2 underline-offset-4 hover:decoration-ink", className)}>
+    <Link to={to} className={cn("inline-flex min-h-11 items-center gap-1 text-sm font-semibold underline decoration-rule-2 underline-offset-4 hover:decoration-ink", className)}>
       {children}
       <ArrowRight className="size-3.5" />
     </Link>

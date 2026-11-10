@@ -52,7 +52,7 @@ export default function Console() {
               <Panel title={`Preference model (${d.report.metric})`} sub={`${d.report.data}. ${d.report.train_shoppers} training / ${d.report.test_shoppers} held-out shoppers, ${d.report.train_pairs} pairs, seeds ${d.report.seeds.join(", ")}.`} className="lg:col-span-2">
                 <ul className="space-y-2 text-sm">
                   {[["Popularity (win rate)", d.report.popularity] as const, ["Global logistic prior", d.report.global] as const, ...Object.entries(d.report.personal).map(([k, v]) => [`Personal after ${k} choices`, v] as const)].map(([l, v]) => (
-                    <li key={l} className="grid grid-cols-[12rem_1fr_4rem_4rem] items-center gap-3">
+                    <li key={l} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_2.75rem_2.75rem] items-center gap-2 sm:grid-cols-[12rem_1fr_4rem_4rem] sm:gap-3">
                       <span>{l}</span>
                       <Bar v={v.mean} />
                       <span className="num text-right">{v.mean}</span>
