@@ -10,7 +10,8 @@ import { paypal } from "../paypal/index.js";
 import { fmtWall } from "../core/time.js";
 import { link, receive, telegramUpdate, whatsappUpdate, type Party } from "../channels/index.js";
 import { pushReady, subscribe } from "../channels/push.js";
-import { MERCHANT } from "../guard/policy.js";
+import { isMerchantOwner, merchantOwner } from "../guard/policy.js";
+import { currentWs, wsOfCustomId } from "../ws.js";
 import { accountById, nowOf } from "../store.js";
 import { loadRun, recentRuns, runsFor } from "../trace.js";
 import { keyLogin, whoami } from "./auth.js";
@@ -33,11 +34,11 @@ export async function partyOf(req: Request): Promise<Who | null> {
       const a = await accountById(await getDb(), v.slice(4)).catch(() => null);
       return a ? { kind: "shopper", id: a.id, name: a.name, clock: fmtWall(nowOf(a)) } : null;
     }
-    return { kind: "merchant", id: MERCHANT, name: "merchant" };
+    return { kind: "merchant", id: merchantOwner(), name: "merchant" };
   }
   const w = await whoami(req);
   if (w?.account) return { kind: "shopper", id: w.account.id, name: w.account.name, clock: fmtWall(nowOf(w.account)) };
-  if (w?.merchant) return { kind: "merchant", id: MERCHANT, name: w.merchant.name };
+  if (w?.merchant) return { kind: "merchant", id: merchantOwner(), name: w.merchant.name };
   return config.demoMode ? { kind: "console" } : null;
 }
 
@@ -77,7 +78,7 @@ export function traceRoutes() {
     const who = await partyOf(req);
     if (!who || who.kind === "console") throw new GtError("Unauthorized", "unauthorized", 401);
     const t = await loadRun(req.params.id);
-    if (!t || !(await mayView(who, t.run))) throw new GtError("Run not found", "not_found", 404);
+    if (!t || (t.run.ws_id ?? null) !== currentWs() || !(await mayView(who, t.run))) throw new GtError("Run not found", "not_found", 404);
     return t;
   }));
   r.get("/api/v1/runs", json(async (req) => {
@@ -93,7 +94,7 @@ export function traceRoutes() {
   r.post("/channels/reply", guard(async (req, res, who) => {
     const address = String(req.body.address ?? "");
     if (!/^(shopper|merchant):/.test(address)) throw new GtError("Simulator addresses look like shopper:<account id> or merchant:merchant", "validation", 422);
-    if (!config.demoMode && who.kind !== "console" && address !== (who.kind === "shopper" ? `shopper:${who.id}` : `merchant:${MERCHANT}`)) throw new GtError("You can only reply as yourself.", "forbidden", 403);
+    if (!config.demoMode && who.kind !== "console" && address !== (who.kind === "shopper" ? `shopper:${who.id}` : `merchant:${merchantOwner()}`)) throw new GtError("You can only reply as yourself.", "forbidden", 403);
     await receive("simulator", address, String(req.body.text ?? req.body.buttonId ?? ""), req.body.buttonId ? String(req.body.buttonId) : null, req.body.replyTo ? String(req.body.replyTo) : null);
     back(res, `/channels?address=${encodeURIComponent(address)}`, "Sent");
   }));
@@ -112,9 +113,19 @@ export function traceRoutes() {
       verified = false;
     }
     const db = await getDb();
+    // A1: the event belongs to the workspace in the resource's custom_id ("<ws>:<record id>"), else the one recorded
+    // when Everyday created the PayPal object (paypal_refs, for events whose resource doesn't echo custom_id).
+    const res0 = (event.resource ?? {}) as any;
+    const custom = res0.custom_id ?? res0.purchase_units?.[0]?.custom_id ?? null;
+    const related = res0.supplementary_data?.related_ids ?? {};
+    let ws = wsOfCustomId(custom);
+    if (!ws) {
+      const ids = [res0.id, related.order_id, related.capture_id].filter(Boolean);
+      ws = ids.length ? (await db.query<{ ws_id: string | null }>("SELECT ws_id FROM paypal_refs WHERE resource_id = ANY($1::text[]) AND ws_id IS NOT NULL LIMIT 1", [ids])).rows[0]?.ws_id ?? null : null;
+    }
     await db.query(
-      "INSERT INTO webhook_events (id, event_type, resource_id, body, verified) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING",
-      [event.id, event.event_type, event.resource?.id ?? null, JSON.stringify(event), verified],
+      "INSERT INTO webhook_events (id, event_type, resource_id, body, verified, ws_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO NOTHING",
+      [event.id, event.event_type, event.resource?.id ?? null, JSON.stringify(event), verified, ws],
     );
     if (!verified) return res.status(400).json({ error: "signature verification failed" });
     res.json({ ok: true });

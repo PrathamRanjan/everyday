@@ -14,7 +14,7 @@ type Ctx = {
   problem: string | null;
   refresh: () => Promise<void>;
   setServer: (base: string) => Promise<void>;
-  signInDemo: (accountId: string) => Promise<void>;
+  signInDemo: (how: { accountId?: string; start?: boolean; join?: string }) => Promise<void>;
   signInKey: (key: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -84,9 +84,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await setItem(K_KEY, null);
         await check();
       },
-      signInDemo: async (accountId: string) => {
+      // A1: a demo sign-in opens the visitor's own private workspace: a new one, or the one a join link names.
+      signInDemo: async (how: { accountId?: string; start?: boolean; join?: string }) => {
         configure(base, "");
-        const made = await postJson<{ key: string }>("/api/ui/devices/demo", { account_id: accountId });
+        const made = await postJson<{ key: string }>("/api/ui/devices/demo", how.join ? { join: how.join } : how.start ? { start: true } : { account_id: how.accountId });
         await useKey(made.key);
       },
       signInKey: async (key: string) => {

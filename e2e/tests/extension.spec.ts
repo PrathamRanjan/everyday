@@ -35,7 +35,7 @@ test.afterAll(async () => {
 
 async function site(): Promise<Page> {
   const p = await ctx.newPage();
-  const r = await p.request.post(`${BASE}/demo/reset`, { headers: { "x-everyday-ui": "1" } });
+  const r = await p.request.post(`${BASE}/demo/start`, { form: { fresh: "1" }, headers: { "x-everyday-ui": "1", ...(process.env.EV_ADMIN_KEY ? { "x-everyday-operator": process.env.EV_ADMIN_KEY } : {}) } });
   expect(r.ok()).toBeTruthy();
   await p.goto(`${BASE}/login`);
   await p.getByRole("button", { name: /Continue as Maya/ }).click();
@@ -118,7 +118,10 @@ test("extension: a device key from Messages works without the site's sign-in and
   const made = await s.evaluate(async () => (await fetch("/api/ui/devices", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ client: "extension" }) }).then((r) => r.json())) as { id: string; key: string });
   // Sign the site out so only the key can work.
   await s.request.post(`${BASE}/logout`).catch(() => undefined);
+  // Keep only the demo-workspace cookie (A1), so signing in again below lands in the same private demo.
+  const keep = (await ctx.cookies()).filter((c) => c.name === "ev_ws");
   await ctx.clearCookies();
+  await ctx.addCookies(keep);
   const opt = await useServer(made.key);
   await expect(opt.getByRole("status")).toHaveText(/Connected as Maya, with the device key/);
 

@@ -28,13 +28,16 @@ import { backtest, suggestAutonomy } from "../guard/backtest.js";
 import { countersignThreshold, pendingApprovals } from "../guard/dryrun.js";
 import { isKilled, listKills } from "../guard/kill.js";
 import { hasPasskey } from "../guard/passkey.js";
-import { activePolicy, DEFAULT_RULES, listPolicies, MERCHANT, type Rules } from "../guard/policy.js";
+import { activePolicy, DEFAULT_RULES, isMerchantOwner, listPolicies, merchantOwner, type Rules } from "../guard/policy.js";
+import { currentWs } from "../ws.js";
+import { progressLine, showcase, startWorkspace, workspaceById, workspaceByToken } from "../services/workspaces.js";
 import { protectedMode, safetyHolds } from "../safety/index.js";
 import { scanText, TACTIC_WORDS, TACTICS } from "../safety/rules.js";
 import { telegramReady, conversation, recentMessages } from "../channels/index.js";
 import { pushReady } from "../channels/push.js";
 import { loadRun, recentRuns, runsFor } from "../trace.js";
 import { bearerOf, whoami } from "./auth.js";
+import { unlimited } from "./demo.js";
 import { partyOf, BEATS } from "./trace.js";
 import { DEMO_SCAM } from "./safety.js";
 import { newId } from "../lib/ids.js";
@@ -95,7 +98,7 @@ export function approvalView(a: any) {
     status: a.status,
     created_at: a.created_at,
     level: scam ? "hold" : "caution",
-    reasons: scam ? (p.safety_reasons as string[]) : [`It's at or above the approval limit${a.owner_id === MERCHANT ? " in the merchant's refund mandate" : " you set"}.`],
+    reasons: scam ? (p.safety_reasons as string[]) : [`It's at or above the approval limit${isMerchantOwner(a.owner_id) ? " in the merchant's refund mandate" : " you set"}.`],
     passkey: Number(p.cents ?? 0) > countersignThreshold(),
   };
 }
@@ -116,32 +119,45 @@ export function apiRoutes() {
   r.get("/api/ui/session", send(async (req) => {
     const w = await whoami(req);
     const wallet = config.demoMode ? walletView(await demoWallet()) : null;
-    const base = { demo: config.demoMode, paypal_env: config.paypal.env, demo_wallet: wallet, live: { telegram: telegramReady(), push: pushReady(), channel3: channel3Ready(), ai: hasOpenAI(), ai_label: providerLabel(), paypal: Boolean(config.paypal.clientId) }, telegram_bot: config.channels.telegramBot };
+    // A1: the visitor's own demo workspace (expiry, the seed's payment progress, the second-device link).
+    const wsId = currentWs();
+    const wsRow = wsId && config.demoMode ? await workspaceById(wsId) : null;
+    const workspace = wsRow ? { id: wsRow.id, kind: wsRow.kind, state: wsRow.seed_state, expires_at: wsRow.expires_at, progress_line: progressLine(wsRow.progress), finished: Boolean(wsRow.progress.finished), join_url: wsRow.kind === "visitor" && wsRow.join_token ? `${config.appUrl}/demo/join/${wsRow.join_token}` : null } : null;
+    const base = { demo: config.demoMode, private_demos: config.privateDemos, workspace, paypal_env: config.paypal.env, demo_wallet: wallet, live: { telegram: telegramReady(), push: pushReady(), channel3: channel3Ready(), ai: hasOpenAI(), ai_label: providerLabel(), paypal: Boolean(config.paypal.clientId) }, telegram_bot: config.channels.telegramBot };
     if (w?.account) {
       const a = w.account;
       const db = await getDb();
       const [items, held] = await Promise.all([today(db, a), pendingApprovals(a.id)]);
       return { ...base, who: { kind: "shopper", id: a.id, name: a.name, first: a.name.split(" ")[0], clock: fmtWall(nowOf(a)), today: wallIso(nowOf(a)).slice(0, 10), needs: items.length + held.length, held: held.length } };
     }
-    if (w?.merchant) return { ...base, who: { kind: "merchant", id: w.merchant.id, name: w.merchant.name, first: w.merchant.name, needs: (await pendingApprovals(MERCHANT)).length } };
+    if (w?.merchant) return { ...base, who: { kind: "merchant", id: w.merchant.id, name: w.merchant.name, first: w.merchant.name, needs: (await pendingApprovals(merchantOwner())).length } };
     return { ...base, who: null };
   }));
 
   r.get("/api/ui/personas", send(async () => {
     const db = await getDb();
     if (!config.demoMode) return { demo: false, accounts: [], merchants: [] };
-    const accounts = (await db.query<any>("SELECT id, name FROM accounts ORDER BY name").catch(() => ({ rows: [] as any[] }))).rows;
-    const merchants = (await db.query<any>("SELECT id, name FROM merchants WHERE kind = 'test_merchant' ORDER BY name").catch(() => ({ rows: [] as any[] }))).rows;
-    return { demo: true, accounts, merchants };
+    // A1: the personas of the visitor's own workspace only. With private demos on and no workspace yet, none: the
+    // page offers "Try the live demo" instead of a shared world.
+    const ws = currentWs();
+    if (config.privateDemos && !ws) return { demo: true, accounts: [], merchants: [], private_demos: true, workspace: null };
+    const accounts = (await db.query<any>("SELECT id, name FROM accounts WHERE ws_id IS NOT DISTINCT FROM $1 ORDER BY name", [ws]).catch(() => ({ rows: [] as any[] }))).rows;
+    const merchants = (await db.query<any>("SELECT id, name FROM merchants WHERE kind = 'test_merchant' AND ws_id IS NOT DISTINCT FROM $1 ORDER BY name", [ws]).catch(() => ({ rows: [] as any[] }))).rows;
+    return { demo: true, accounts, merchants, private_demos: config.privateDemos, workspace: ws };
   }));
 
-  /** The landing page's live preview: the newest real order line (or owned item) and its dates, from this instance's data. */
+  /**
+   * The landing page's live preview, read from the showcase workspace (A1.2): its newest paid order line and owned
+   * items, with their dates. Built through the same seeding path as every visitor's demo; nothing here is typed in.
+   */
   r.get("/api/ui/preview", send(async () => {
     const db = await getDb();
-    const l = (await db.query<any>("SELECT l.title, l.unit_cents, l.status, l.eta, l.delivered_at, o.created_at, o.policy, o.number, o.status AS order_status, o.capture_id, o.paypal_order_id FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.capture_id IS NOT NULL ORDER BY o.created_at DESC LIMIT 1")).rows[0];
-    const own = (await db.query<any>("SELECT title, price_cents, acquired, return_until, warranty_until, source FROM owned_items WHERE status = 'owned' AND warranty_until IS NOT NULL ORDER BY acquired DESC LIMIT 3")).rows;
-    const acc = (await db.query<any>("SELECT * FROM accounts ORDER BY created_at LIMIT 1")).rows[0];
-    return { line: l ? { title: l.title, cents: l.unit_cents, status: l.status, number: l.number, paid: Boolean(l.capture_id), capture_id: l.capture_id, dates: lineDates(l, J<any>(l.policy), null) } : null, owned: own, today: acc ? wallIso(nowOf(acc)).slice(0, 10) : wallIso(new Date()).slice(0, 10) };
+    const sc = config.privateDemos ? await showcase() : null;
+    const acc = sc?.account_id ? (await db.query<any>("SELECT * FROM accounts WHERE id = $1", [sc.account_id])).rows[0] : config.privateDemos ? null : (await db.query<any>("SELECT * FROM accounts WHERE ws_id IS NULL ORDER BY created_at LIMIT 1")).rows[0];
+    if (!acc) return { line: null, owned: [], today: wallIso(new Date()).slice(0, 10), source: "none" };
+    const l = (await db.query<any>("SELECT l.title, l.unit_cents, l.status, l.eta, l.delivered_at, o.created_at, o.policy, o.number, o.status AS order_status, o.capture_id, o.paypal_order_id FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.capture_id IS NOT NULL AND o.account_id = $1 ORDER BY o.created_at DESC LIMIT 1", [acc.id])).rows[0];
+    const own = (await db.query<any>("SELECT title, price_cents, acquired, return_until, warranty_until, source FROM owned_items WHERE status = 'owned' AND warranty_until IS NOT NULL AND account_id = $1 ORDER BY acquired DESC LIMIT 3", [acc.id])).rows;
+    return { line: l ? { title: l.title, cents: l.unit_cents, status: l.status, number: l.number, paid: Boolean(l.capture_id), capture_id: l.capture_id, dates: lineDates(l, J<any>(l.policy), null) } : null, owned: own, today: wallIso(nowOf(acc)).slice(0, 10), source: sc ? "showcase" : "demo", showcase: sc?.id ?? null };
   }));
 
   // ---------- Shopper ----------
@@ -198,7 +214,7 @@ export function apiRoutes() {
     const order = (await db.query<any>("SELECT id, number, status, total_cents FROM orders WHERE intent_id = $1 ORDER BY created_at DESC LIMIT 1", [i.id])).rows[0] ?? null;
     const recipient = (await db.query<any>("SELECT id, name, relation, is_self FROM recipients WHERE id = $1", [i.recipient_id])).rows[0];
     const reqs = J<any>(i.reqs);
-    const nl = (await db.query<any>("SELECT shipping FROM merchants WHERE kind = 'test_merchant' LIMIT 1")).rows[0];
+    const nl = (await db.query<any>("SELECT shipping FROM merchants WHERE kind = 'test_merchant' AND ws_id IS NOT DISTINCT FROM $1 LIMIT 1", [currentWs()])).rows[0];
     const capture = i.capture_id ? (await db.query<any>("SELECT id, title, url FROM captures WHERE id = $1", [i.capture_id])).rows[0] ?? null : null;
     const runs = await runsFor("intent", i.id, 5).catch(() => []);
     return {
@@ -360,8 +376,20 @@ export function apiRoutes() {
   r.post("/api/ui/devices/demo", send(async (req) => {
     demoOnly();
     const db = await getDb();
-    const a = (await db.query<{ id: string; name: string }>("SELECT id, name FROM accounts WHERE id = $1", [String(req.body?.account_id ?? "")])).rows[0];
+    // A1: the phone app's demo sign-in opens the visitor's own workspace: a new one ({start: true}), the one a join
+    // token names (the QR code on the judge page), or a persona inside the workspace this request is already in.
+    let accountId = String(req.body?.account_id ?? "");
+    if (typeof req.body?.join === "string" && req.body.join) {
+      const w = await workspaceByToken(String(req.body.join).replace(/^.*\/demo\/join\//, ""));
+      if (!w?.account_id) throw new GtError("That demo link has expired. Start a new demo.", "invalid", 400);
+      accountId = w.account_id;
+    } else if (req.body?.start === true || req.body?.start === "1" || (config.privateDemos && !accountId)) {
+      const w = await startWorkspace({ ip: req.ip ?? "unknown", unlimited: unlimited(req) });
+      accountId = w.account_id ?? "";
+    }
+    const a = (await db.query<{ id: string; name: string; ws_id: string | null }>("SELECT id, name, ws_id FROM accounts WHERE id = $1", [accountId])).rows[0];
     if (!a) throw new GtError("Choose one of the demo shoppers.", "invalid", 400);
+    if (!req.body?.join && !(req.body?.start === true || req.body?.start === "1" || (config.privateDemos && !req.body?.account_id)) && ((a.ws_id ?? null) !== currentWs() || (config.privateDemos && !a.ws_id))) throw new GtError("That shopper isn't part of your demo. Start your own demo.", "invalid", 400);
     await db.query("UPDATE device_keys SET revoked_at = now() WHERE account_id = $1 AND client = 'mobile' AND label = 'Phone app (demo sign-in)' AND revoked_at IS NULL", [a.id]);
     const key = newSecret("evd");
     const id = newId("dev");
@@ -386,14 +414,14 @@ export function apiRoutes() {
   r.get("/api/ui/channels", send(async (req) => {
     const who = await partyOf(req);
     if (!who) throw signIn();
-    const own = who.kind === "shopper" ? `shopper:${who.id}` : who.kind === "merchant" ? `merchant:${MERCHANT}` : "";
+    const own = who.kind === "shopper" ? `shopper:${who.id}` : who.kind === "merchant" ? `merchant:${merchantOwner()}` : "";
     // Reading another party's conversation is the demo simulator; outside demo mode a party sees only its own.
     const addr = typeof req.query.address === "string" && (config.demoMode || who.kind === "console") ? req.query.address : own;
     const msgs = addr ? await conversation(addr, 60) : await recentMessages(60);
     const db = await getDb();
-    const accounts = (await db.query<any>("SELECT id, name FROM accounts ORDER BY name")).rows;
-    const tg = who.kind === "console" ? false : Number((await db.query<any>("SELECT count(*)::int AS n FROM party_links WHERE channel = 'telegram' AND party_id = $1", [who.kind === "merchant" ? MERCHANT : who.id]).catch(() => ({ rows: [{ n: 0 }] }))).rows[0]?.n ?? 0) > 0;
-    return { address: addr, who: who.kind, telegram_linked: tg, telegram_ready: telegramReady(), push_ready: pushReady(), simulator: config.demoMode, addresses: config.demoMode ? [{ value: `merchant:${MERCHANT}`, label: "Northlight Supply (merchant)" }, ...accounts.map((x: any) => ({ value: `shopper:${x.id}`, label: x.name }))] : [], messages: (msgs as any[]).map((m) => ({ id: m.id, address: m.address, channel: m.channel, direction: m.direction, status: m.status, body: String(m.body), created_at: m.created_at, buttons: m.buttons ? (typeof m.buttons === "string" ? JSON.parse(m.buttons) : m.buttons) : null, flag: m.direction === "in" ? flagOf(String(m.body)) : null })) };
+    const accounts = (await db.query<any>("SELECT id, name FROM accounts WHERE ws_id IS NOT DISTINCT FROM $1 ORDER BY name", [currentWs()])).rows;
+    const tg = who.kind === "console" ? false : Number((await db.query<any>("SELECT count(*)::int AS n FROM party_links WHERE channel = 'telegram' AND party_id = $1", [who.kind === "merchant" ? merchantOwner() : who.id]).catch(() => ({ rows: [{ n: 0 }] }))).rows[0]?.n ?? 0) > 0;
+    return { address: addr, who: who.kind, telegram_linked: tg, telegram_ready: telegramReady(), push_ready: pushReady(), simulator: config.demoMode, addresses: config.demoMode ? [{ value: `merchant:${merchantOwner()}`, label: "Northlight Supply (merchant)" }, ...accounts.map((x: any) => ({ value: `shopper:${x.id}`, label: x.name }))] : [], messages: (msgs as any[]).map((m) => ({ id: m.id, address: m.address, channel: m.channel, direction: m.direction, status: m.status, body: String(m.body), created_at: m.created_at, buttons: m.buttons ? (typeof m.buttons === "string" ? JSON.parse(m.buttons) : m.buttons) : null, flag: m.direction === "in" ? flagOf(String(m.body)) : null })) };
   }));
 
   r.get("/api/ui/traces", send(async (req) => {
@@ -409,7 +437,7 @@ export function apiRoutes() {
     const who = await partyOf(req);
     if (!who) throw signIn();
     const t = await loadRun(req.params.id);
-    if (!t || !(await mayView(who, t.run))) throw new GtError("Run not found", "not_found", 404);
+    if (!t || (t.run.ws_id ?? null) !== currentWs() || !(await mayView(who, t.run))) throw new GtError("Run not found", "not_found", 404);
     return { ...t, viewer: who.kind };
   }));
 
@@ -421,14 +449,15 @@ export function apiRoutes() {
     const cases = (await db.query<any>("SELECT c.id, c.number, c.status, c.issue, c.claim, c.flags, c.requested, c.refund_cents, c.created_at, o.number AS order_number, l.title FROM cases c JOIN orders o ON o.id = c.order_id JOIN order_lines l ON l.id = c.line_id WHERE o.merchant_id = $1 ORDER BY c.created_at DESC", [m.id])).rows.map((c) => ({ ...c, flagged: J<any[]>(c.flags).length > 0, flags: undefined }));
     const cat = (await catalog(db)).products.filter((p) => p.merchant_id === m.id).map((p) => ({ id: p.id, title: p.title, sku: p.sku, stock: p.stock, price_cents: p.price_cents, category: p.category }));
     const kill = await isKilled("merchant");
-    return { merchant: m, lines, cases, catalog: cat, kill: Boolean(kill?.engaged), approvals: (await pendingApprovals(MERCHANT)).length };
+    return { merchant: m, lines, cases, catalog: cat, kill: Boolean(kill?.engaged), approvals: (await pendingApprovals(merchantOwner())).length };
   }));
 
   r.get("/api/ui/merchant/money", send(async (req) => {
     const m = await merchantOf(req);
     const db = await getDb();
-    const disputes = (await db.query<any>("SELECT d.*, o.number FROM disputes d LEFT JOIN orders o ON o.id = d.order_id ORDER BY d.synced_at DESC")).rows;
-    const trackers = (await db.query<any>("SELECT t.*, o.number FROM trackers t JOIN orders o ON o.id = t.order_id ORDER BY t.created_at DESC LIMIT 20")).rows;
+    // A1: only this shop's disputes and trackers (each workspace has its own shop row).
+    const disputes = (await db.query<any>("SELECT d.*, o.number FROM disputes d JOIN orders o ON o.id = d.order_id WHERE o.merchant_id = $1 ORDER BY d.synced_at DESC", [m.id])).rows;
+    const trackers = (await db.query<any>("SELECT t.*, o.number FROM trackers t JOIN orders o ON o.id = t.order_id WHERE o.merchant_id = $1 ORDER BY t.created_at DESC LIMIT 20", [m.id])).rows;
     const lines = (await db.query<any>("SELECT l.id, l.title, l.status, o.number FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.merchant_id = $1 AND o.capture_id IS NOT NULL AND l.status IN ('ordered','shipped') AND NOT EXISTS (SELECT 1 FROM trackers t WHERE t.line_id = l.id) ORDER BY o.created_at DESC", [m.id])).rows;
     const totals = (await db.query<any>("SELECT count(*)::int AS orders, coalesce(sum(gross_cents),0)::int AS gross, coalesce(sum(fee_cents),0)::int AS fees, coalesce(sum(refunded_cents),0)::int AS refunded FROM orders WHERE merchant_id = $1 AND capture_id IS NOT NULL", [m.id])).rows[0];
     const recon = req.query.reconcile ? await reconcileTransactions(30).catch((e) => ({ error: (e as Error).message })) : null;
@@ -437,9 +466,9 @@ export function apiRoutes() {
 
   r.get("/api/ui/merchant/approvals", send(async (req) => {
     const m = await merchantOf(req);
-    const policy = await activePolicy(MERCHANT);
+    const policy = await activePolicy(merchantOwner());
     const rules = policy?.rules ?? DEFAULT_RULES;
-    const [kill, approvals, passkey, chain, audit] = await Promise.all([isKilled("merchant"), pendingApprovals(MERCHANT), hasPasskey(MERCHANT), verifyChain(), recentAudit(25)]);
+    const [kill, approvals, passkey, chain, audit] = await Promise.all([isKilled("merchant"), pendingApprovals(merchantOwner()), hasPasskey(merchantOwner()), verifyChain(), recentAudit(25)]);
     return { merchant: m, policy: policy ? { text: policy.text, compiler: policy.compiler, unexpressed: policy.unexpressed } : null, rules: rulesView(MERCHANT_KEYS, rules), kill: kill?.engaged ? { engaged: true, reason: kill.reason } : { engaged: false, reason: null }, approvals: approvals.map(approvalView), countersign_cents: countersignThreshold(), passkey, chain: { ok: chain.ok, rows: chain.rows, head: chain.head, broken_at: chain.broken_at ?? null }, audit };
   }));
 
@@ -453,15 +482,15 @@ export function apiRoutes() {
 
   r.get("/api/ui/demo", send(async () => {
     const db = await getDb();
-    const acc = (await db.query<any>("SELECT * FROM accounts ORDER BY created_at LIMIT 1")).rows[0];
-    return { demo: config.demoMode, clock: acc ? fmtWall(nowOf(acc)) : null, loaded: Boolean(acc) };
+    const acc = (await db.query<any>("SELECT * FROM accounts WHERE ws_id IS NOT DISTINCT FROM $1 ORDER BY created_at LIMIT 1", [currentWs()])).rows[0];
+    return { demo: config.demoMode, clock: acc ? fmtWall(nowOf(acc)) : null, loaded: Boolean(acc) && (!config.privateDemos || Boolean(currentWs())), private_demos: config.privateDemos, workspace: currentWs() };
   }));
 
   r.get("/api/ui/console", send(async () => {
     demoOnly();
     const db = await getDb();
     const art = (await db.query<any>("SELECT * FROM model_artifacts WHERE kind = 'pref_prior' ORDER BY created_at DESC LIMIT 1")).rows[0];
-    const events = (await db.query<any>("SELECT e.id, e.reason, e.eligible, e.excluded_reason, e.chosen, e.a_product, e.b_product, a.title AS at, b.title AS bt FROM pref_events e JOIN products a ON a.id = e.a_product JOIN products b ON b.id = e.b_product ORDER BY e.id DESC LIMIT 20")).rows;
+    const events = (await db.query<any>("SELECT e.id, e.reason, e.eligible, e.excluded_reason, e.chosen, e.a_product, e.b_product, a.title AS at, b.title AS bt FROM pref_events e JOIN products a ON a.id = e.a_product JOIN products b ON b.id = e.b_product JOIN merchants m ON m.id = a.merchant_id WHERE m.ws_id IS NOT DISTINCT FROM $1 ORDER BY e.id DESC LIMIT 20", [currentWs()])).rows;
     const prior = art ? J<number[]>(art.weights) : [];
     return { report: art ? J<any>(art.report) : null, manifest: art ? J<any>(art.manifest) : null, weights: prior.map((w, i) => ({ feature: FEATURES[i], label: label(i), w })), events };
   }));
@@ -471,18 +500,20 @@ export function apiRoutes() {
     const db = await getDb();
     const [cap, adv, ai, chain] = await Promise.all([summarise("capture"), summarise("adversarial"), aiUsageSummary(), verifyChain()]);
     const tj = existsSync("eval/techjam.md") ? readFileSync("eval/techjam.md", "utf8") : null;
-    const real = (await db.query<any>(`SELECT
-      (SELECT count(*) FROM orders WHERE capture_id IS NOT NULL)::int AS captures,
-      (SELECT count(*) FROM payment_ops WHERE kind = 'refund' AND status = 'succeeded')::int AS refunds,
-      (SELECT count(*) FROM repeat_buys WHERE status = 'paid')::int AS repeats_paid,
-      (SELECT count(*) FROM repeat_buys WHERE status IN ('held','denied'))::int AS repeats_stopped,
-      (SELECT count(*) FROM vault_tokens WHERE status = 'active')::int AS vaults,
-      (SELECT count(*) FROM trackers)::int AS trackers,
-      (SELECT count(*) FROM disputes)::int AS disputes,
-      (SELECT count(*) FROM agent_runs)::int AS runs,
-      (SELECT count(*) FROM approvals WHERE status = 'pending')::int AS approvals_pending,
-      (SELECT count(*) FROM agent_requests)::int AS agent_requests,
-      (SELECT count(*) FROM captures WHERE reader <> 'rules')::int AS model_captures`)).rows[0];
+    // A1: this workspace's own records (each visitor's demo counts its own).
+    const real = (await db.query<any>(`WITH acc AS (SELECT id FROM accounts WHERE ws_id IS NOT DISTINCT FROM $1), ord AS (SELECT id FROM orders WHERE account_id IN (SELECT id FROM acc))
+      SELECT
+      (SELECT count(*) FROM orders WHERE capture_id IS NOT NULL AND id IN (SELECT id FROM ord))::int AS captures,
+      (SELECT count(*) FROM payment_ops WHERE kind = 'refund' AND status = 'succeeded' AND order_id IN (SELECT id FROM ord))::int AS refunds,
+      (SELECT count(*) FROM repeat_buys WHERE status = 'paid' AND account_id IN (SELECT id FROM acc))::int AS repeats_paid,
+      (SELECT count(*) FROM repeat_buys WHERE status IN ('held','denied') AND account_id IN (SELECT id FROM acc))::int AS repeats_stopped,
+      (SELECT count(*) FROM vault_tokens WHERE status = 'active' AND account_id IN (SELECT id FROM acc))::int AS vaults,
+      (SELECT count(*) FROM trackers WHERE order_id IN (SELECT id FROM ord))::int AS trackers,
+      (SELECT count(*) FROM disputes WHERE order_id IN (SELECT id FROM ord))::int AS disputes,
+      (SELECT count(*) FROM agent_runs WHERE ws_id IS NOT DISTINCT FROM $1)::int AS runs,
+      (SELECT count(*) FROM approvals WHERE status = 'pending' AND (owner_id IN (SELECT id FROM acc) OR owner_id = $2))::int AS approvals_pending,
+      (SELECT count(*) FROM agent_requests WHERE ws_id IS NOT DISTINCT FROM $1)::int AS agent_requests,
+      (SELECT count(*) FROM captures WHERE reader <> 'rules' AND account_id IN (SELECT id FROM acc))::int AS model_captures`, [currentWs(), merchantOwner()])).rows[0];
     return { real, capture: cap, adversarial: adv, ai, chain: { ok: chain.ok, rows: chain.rows, head: chain.head, broken_at: chain.broken_at ?? null }, techjam: tj, paypal: Boolean(config.paypal.clientId), provider: providerLabel(), channel3: channel3Ready(), telegram: telegramReady(), push: pushReady(), has_openai: hasOpenAI() };
   }));
 

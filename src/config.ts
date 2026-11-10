@@ -34,6 +34,13 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET || randomBytes(32).toString("hex"),
   demoMode: bool(process.env.EV_DEMO_MODE, true),
   /**
+   * A1: every demo visitor gets a private workspace (POST /demo/start). When on, the workspace-less world is not
+   * offered to visitors. Off in the unit tests, which use the workspace-less world directly.
+   */
+  privateDemos: bool(process.env.EV_PRIVATE_DEMOS, !process.env.VITEST),
+  /** The build's commit id, shown by /healthz (Render sets RENDER_GIT_COMMIT). */
+  commit: process.env.RENDER_GIT_COMMIT || process.env.EV_COMMIT || "",
+  /**
    * Web origins of the phone app's browser build (Expo's dev server) that may call the API with a device key.
    * No cookies are allowed cross-origin, so only a Bearer key can act from these origins.
    */

@@ -2,7 +2,7 @@
  * Mandates (roadmap B.6, E6). Two owners write rules in plain words:
  *   - the shopper (owner id = account id): what their agent may plan, quote and ask to buy, the one-tap repeat limit,
  *     which merchants are allowed, and whether an outside assistant may act through MCP;
- *   - the merchant (owner id = MERCHANT): refund limits for the case and price-protection flows.
+ *   - the merchant (owner id = merchantOwner(): one per demo workspace): refund limits for the case and price-protection flows.
  * Deterministic compiler first; a model may propose, the validator decides, the owner adopts the exact compiled version.
  */
 import { z } from "zod";
@@ -12,7 +12,7 @@ import { getDb } from "../db.js";
 import { newId } from "../lib/ids.js";
 import { appendAudit } from "./audit.js";
 
-export const MERCHANT = "merchant";
+export { isMerchantOwner, merchantOwner } from "../ws.js";
 
 export const RulesSchema = z.object({
   /** Largest single purchase the agent may put in front of the shopper for approval, in cents. */

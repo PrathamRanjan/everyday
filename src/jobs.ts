@@ -1,8 +1,12 @@
 import type { Db, Queryable } from "./db.js";
+import { currentWs, withWs } from "./ws.js";
 
-export type JobType = "reconcile_payments" | "verify_refunds" | "watch_prices" | "process_webhook" | "send_channel_message" | "send_push" | "release_approved" | "repeat_buy" | "sync_disputes" | "price_watch_channel3" | "check_demo_wallet";
+export type JobType = "reconcile_payments" | "verify_refunds" | "watch_prices" | "process_webhook" | "send_channel_message" | "send_push" | "release_approved" | "repeat_buy" | "sync_disputes" | "price_watch_channel3" | "check_demo_wallet" | "expire_workspaces" | "rebuild_showcase";
 
 export async function enqueue(q: Queryable, type: JobType, payload: Record<string, unknown>, runAt: Date = new Date(), dedupeKey?: string) {
+  // A1: a job runs in the demo workspace that queued it.
+  const ws = currentWs();
+  if (ws && payload._ws === undefined) payload = { ...payload, _ws: ws };
   if (dedupeKey) {
     await q.query(
       `INSERT INTO jobs_queue (type, payload, run_at, dedupe_key) VALUES ($1,$2,$3,$4)
@@ -32,7 +36,8 @@ export async function runDueJobs(db: Db, handlers: Record<JobType, Handler>, lim
     try {
       const h = handlers[job.type];
       if (!h) throw new Error(`No handler for job type ${job.type}`);
-      await h(typeof job.payload === "string" ? JSON.parse(job.payload) : job.payload);
+      const payload = typeof job.payload === "string" ? JSON.parse(job.payload) : job.payload;
+      await withWs(typeof payload?._ws === "string" ? payload._ws : null, () => h(payload));
       // A handler may re-queue its own dedupe key (e.g. "retry in 10 minutes"); that sets it back to pending, so only
       // a job still marked running is finished here.
       await db.query("UPDATE jobs_queue SET status = 'done', updated_at = now() WHERE id = $1 AND status = 'running'", [job.id]);

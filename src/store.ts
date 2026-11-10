@@ -9,6 +9,8 @@ export interface Account {
   monthly_limit_cents: number;
   sim_now: string | null;
   address: string;
+  /** A1: the demo workspace this shopper belongs to (null outside any workspace). */
+  ws_id?: string | null;
 }
 
 export const J = <T>(v: unknown): T => (typeof v === "string" ? JSON.parse(v) : (v as T));

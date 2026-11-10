@@ -9,13 +9,13 @@ import { accountById, J, nowIso, nowOf, setting } from "../store.js";
 import { handleTelegram } from "../services/captures.js";
 import { setPrice } from "../services/life.js";
 import { backorderLine, deliverLine, merchantDecide, reconcile, shipLine, verifyRefunds } from "../services/orders.js";
-import { seedAll } from "../services/seed.js";
+import { currentWs } from "../ws.js";
 import { evalRows } from "../eval/store.js";
 import { runTechjam } from "../core/techjam.js";
 import { runAdversarial } from "../eval/adversarial.js";
 import { runCaptureEval } from "../eval/capture.js";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { demoOnly, merchant, signOut } from "./auth.js";
+import { demoOnly, merchant } from "./auth.js";
 import { back } from "./common.js";
 
 export function opsRoutes() {
@@ -48,7 +48,8 @@ export function opsRoutes() {
     const db = await getDb();
     const p = (await db.query<any>("SELECT * FROM products WHERE id = $1 AND merchant_id = $2", [req.params.id, m.id])).rows[0];
     if (!p) return res.status(404).send("Not found");
-    const acc = (await db.query<any>("SELECT * FROM accounts LIMIT 1")).rows[0];
+    // The shop's own shopper in this workspace sets the demo clock the price change is recorded at.
+    const acc = (await db.query<any>("SELECT * FROM accounts WHERE ws_id IS NOT DISTINCT FROM $1 ORDER BY created_at LIMIT 1", [currentWs()])).rows[0];
     const n = await setPrice(p.id, Math.round(Number(req.body.price) * 100), acc ? nowIso(await accountById(db, acc.id)) : wallIso(new Date()));
     back(res, "/merchant#catalog", `Price recorded${n ? `; ${n} shopper(s) notified (price watches and price protection)` : ""}.`);
   }, true));
@@ -96,8 +97,8 @@ Guarantees: amounts come from the catalog and quotes, never from text; a quote h
       const r2 = await runCaptureEval();
       writeFileSync("eval/capture.md", r2.markdown);
     } else if (suite === "adversarial") {
-      const acc = (await db.query<any>("SELECT id FROM accounts ORDER BY created_at LIMIT 1")).rows[0]?.id;
-      const ord = (await db.query<any>("SELECT id FROM orders WHERE capture_id IS NOT NULL ORDER BY created_at DESC LIMIT 1")).rows[0]?.id ?? null;
+      const acc = (await db.query<any>("SELECT id FROM accounts WHERE ws_id IS NOT DISTINCT FROM $1 ORDER BY created_at LIMIT 1", [currentWs()])).rows[0]?.id;
+      const ord = (await db.query<any>("SELECT id FROM orders WHERE capture_id IS NOT NULL AND account_id = $1 ORDER BY created_at DESC LIMIT 1", [acc ?? ""])).rows[0]?.id ?? null;
       if (!acc) throw new GtError("Seed the demo first", "bad_state", 409);
       const r2 = await runAdversarial(acc, ord);
       writeFileSync("eval/adversarial.md", r2.markdown);
@@ -116,7 +117,7 @@ Guarantees: amounts come from the catalog and quotes, never from text; a quote h
 
   r.post("/console/fault", demoOnly(async (req, res) => {
     const f = String(req.body.f);
-    if (f === "drop_return") await (await getDb()).query("INSERT INTO demo_faults (method, kind) VALUES ('paypal_return','drop')");
+    if (f === "drop_return") await (await getDb()).query("INSERT INTO demo_faults (method, kind, ws_id) VALUES ('paypal_return','drop',$1)", [currentWs()]);
     if (f === "capture_lost") await armFault("captureOrder", "lose_response");
     if (f === "refund_503") await armFault("refundCapture", "fail_503");
     back(res, "/console#lab", `Armed: ${f.replace(/_/g, " ")}.`);
@@ -153,21 +154,6 @@ Guarantees: amounts come from the catalog and quotes, never from text; a quote h
     res.redirect(`/telegram?chat=${chat}`);
   }, true));
 
-  r.post("/demo/reset", demoOnly(async (_req, res) => {
-    await seedAll();
-    signOut(res);
-    back(res, "/login", "Demo loaded. Sign in as Maya.");
-  }, true));
-
-  r.post("/demo/clock", demoOnly(async (req, res) => {
-    const db = await getDb();
-    const acc = (await db.query<any>("SELECT * FROM accounts LIMIT 1")).rows[0];
-    const a = await accountById(db, acc.id);
-    const now = nowOf(a);
-    const next = req.body.step === "week" ? new Date(now.getTime() + 7 * 864e5) : addWorkDays(now, 1);
-    await db.query("UPDATE accounts SET sim_now = $2 WHERE id = $1", [a.id, wallIso(next)]);
-    back(res, "/demo", `Clock: ${fmtWall(next)}`);
-  }, true));
-
+  // A1: /demo/reset and /demo/clock act on the visitor's own workspace (web/demo.ts); the global reset is /admin.
   return r;
 }

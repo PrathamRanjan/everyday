@@ -12,6 +12,8 @@ import { newId } from "../lib/ids.js";
 import { paypal } from "../paypal/index.js";
 import { putSetting, setting } from "../store.js";
 import { checkDemoWallet, demoWallet, saveWalletToken, setWalletOff } from "../services/demowallet.js";
+import { seedAll } from "../services/seed.js";
+import { rebuildShowcase, showcase, WS_LIMIT } from "../services/workspaces.js";
 
 const COOKIE = "ev_admin";
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -69,8 +71,41 @@ export function adminRoutes() {
 <h2>Re-approve</h2><p>Only if PayPal no longer has the token. You approve on PayPal's sandbox as the demo buyer; Everyday then saves the new token here.</p>
 <form method="post" action="/admin/paypal/wallet/setup"><button>Re-approve on PayPal</button></form>
 ${req.query.ok ? `<p class="ok">${esc(req.query.ok)}</p>` : ""}${req.query.err ? `<p class="bad">${esc(req.query.err)}</p>` : ""}
+<p><a href="/admin/demo">Demo workspaces and the global reset</a></p>
 <form method="post" action="/admin/logout"><button>Sign out</button></form>`,
     );
+  });
+
+  // ---- A1: workspaces, the showcase and the global reset (never on a public page) ----
+  r.get("/admin/demo", async (req, res) => {
+    const db = await getDb();
+    const c = (await db.query<any>("SELECT count(*) FILTER (WHERE kind = 'visitor' AND expires_at > now())::int AS live, count(*) FILTER (WHERE kind = 'visitor' AND created_at > now() - interval '24 hours')::int AS day, count(*) FILTER (WHERE seed_state = 'failed')::int AS failed FROM workspaces")).rows[0];
+    const sc = await showcase();
+    page(
+      res,
+      "Demo workspaces",
+      `<h1>Demo workspaces</h1>
+<dl><dt>Live visitor demos</dt><dd>${esc(c.live)} of ${WS_LIMIT}</dd><dt>Started in 24 hours</dt><dd>${esc(c.day)}</dd><dt>Failed builds</dt><dd>${esc(c.failed)}</dd><dt>Showcase</dt><dd>${sc ? `${esc(sc.id)}, built ${esc(new Date(sc.created_at).toISOString())}` : "none yet"}</dd></dl>
+<p><form method="post" action="/admin/demo/showcase"><button>Rebuild the showcase now</button></form></p>
+<h2>Global reset</h2><p>Deletes every visitor's demo and the showcase, then rebuilds the showcase. Visitors start a new demo on their next visit.</p>
+<form method="post" action="/admin/demo/reset-all"><label><input type="checkbox" name="sure" value="1" required> I mean every visitor's demo</label> <button>Reset everything</button></form>
+${req.query.ok ? `<p class="ok">${esc(req.query.ok)}</p>` : ""}${req.query.err ? `<p class="bad">${esc(req.query.err)}</p>` : ""}
+<p><a href="/admin/paypal/wallet">The saved wallet</a></p>`,
+    );
+  });
+  r.post("/admin/demo/showcase", async (_req, res) => {
+    const ws = await rebuildShowcase();
+    res.redirect("/admin/demo?ok=" + encodeURIComponent(`Showcase rebuilt (${ws.id}); its payments finish in the background.`));
+  });
+  r.post("/admin/demo/reset-all", async (req, res) => {
+    if (req.body.sure !== "1") return res.redirect("/admin/demo?err=" + encodeURIComponent("Tick the box to confirm."));
+    // Keep the saved wallet and its check: they are operator settings, not demo data.
+    const db = await getDb();
+    const keep = (await db.query<{ key: string; value: string }>("SELECT key, value FROM settings WHERE key IN ('demo_wallet')")).rows;
+    await seedAll();
+    for (const k of keep) await putSetting(db, k.key, k.value);
+    const ws = await rebuildShowcase();
+    res.redirect("/admin/demo?ok=" + encodeURIComponent(`Everything reset; showcase ${ws.id} is building.`));
   });
   r.post("/admin/paypal/wallet/check", async (_req, res) => {
     const w = await checkDemoWallet();

@@ -9,6 +9,7 @@ import type { Queryable } from "../db.js";
 import { getDb } from "../db.js";
 import { enqueue } from "../jobs.js";
 import { newId } from "../lib/ids.js";
+import { currentWs, withWs, wsOfOwner } from "../ws.js";
 
 export type Party = "shopper" | "merchant";
 export type Channel = "telegram" | "whatsapp" | "simulator";
@@ -29,7 +30,7 @@ export const whatsappReady = () => Boolean(config.channels.whatsappToken && conf
 export async function send(opts: { channel: Channel; address: string; body: string; buttons?: Button[]; entity?: string; entityId?: string }, q?: Queryable): Promise<string> {
   const db = q ?? (await getDb());
   const id = newId("msg");
-  await db.query("INSERT INTO channel_messages (id, channel, direction, address, body, buttons, entity, entity_id, status) VALUES ($1,$2,'out',$3,$4,$5,$6,$7,'queued')", [id, opts.channel, opts.address, opts.body, opts.buttons ? JSON.stringify(opts.buttons) : null, opts.entity ?? null, opts.entityId ?? null]);
+  await db.query("INSERT INTO channel_messages (id, channel, direction, address, body, buttons, entity, entity_id, status, ws_id) VALUES ($1,$2,'out',$3,$4,$5,$6,$7,'queued',$8)", [id, opts.channel, opts.address, opts.body, opts.buttons ? JSON.stringify(opts.buttons) : null, opts.entity ?? null, opts.entityId ?? null, currentWs()]);
   await enqueue(db, "send_channel_message", { messageId: id }, new Date(), `chan:${id}`);
   return id;
 }
@@ -87,12 +88,17 @@ export function onInbound(h: InboundHandler) {
 /** Records an inbound message, resolves the party, runs the app's handler and queues its reply. */
 export async function receive(channel: Channel, address: string, text: string, buttonId: string | null, replyTo: string | null): Promise<string | null> {
   const db = await getDb();
-  const id = newId("msg");
-  await db.query("INSERT INTO channel_messages (id, channel, direction, address, body, buttons, status) VALUES ($1,$2,'in',$3,$4,$5,'received')", [id, channel, address, text, buttonId ? JSON.stringify([{ id: buttonId, label: buttonId }]) : null]);
   const party = (await db.query<{ party: string; party_id: string }>("SELECT party, party_id FROM party_links WHERE channel = $1 AND address = $2", [channel, address])).rows[0] ?? null;
-  const reply = inboundHandler ? await inboundHandler({ channel, address, text, buttonId, replyTo, party }) : null;
-  if (reply) await send({ channel, address, body: reply }, db);
-  return reply;
+  // A1: a message belongs to the workspace of the party it reaches (simulator addresses carry the party id).
+  const partyId = party?.party_id ?? (channel === "simulator" && /^(shopper|merchant):/.test(address) ? address.split(":").slice(1).join(":") : null);
+  const ws = partyId ? await wsOfOwner(db, partyId) : currentWs();
+  return withWs(ws, async () => {
+    const id = newId("msg");
+    await db.query("INSERT INTO channel_messages (id, channel, direction, address, body, buttons, status, ws_id) VALUES ($1,$2,'in',$3,$4,$5,'received',$6)", [id, channel, address, text, buttonId ? JSON.stringify([{ id: buttonId, label: buttonId }]) : null, ws]);
+    const reply = inboundHandler ? await inboundHandler({ channel, address, text, buttonId, replyTo, party }) : null;
+    if (reply) await send({ channel, address, body: reply }, db);
+    return reply;
+  });
 }
 
 export async function link(channel: Channel, address: string, party: Party, partyId: string) {
@@ -107,7 +113,7 @@ export async function conversation(address: string, limit = 50) {
 
 export async function recentMessages(limit = 100) {
   const db = await getDb();
-  return (await db.query("SELECT * FROM channel_messages ORDER BY created_at DESC LIMIT $1", [limit])).rows as any[];
+  return (await db.query("SELECT * FROM channel_messages WHERE ws_id IS NOT DISTINCT FROM $2 ORDER BY created_at DESC LIMIT $1", [limit, currentWs()])).rows as any[];
 }
 
 /** Telegram webhook body -> receive(). */

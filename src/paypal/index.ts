@@ -1,5 +1,6 @@
 import { config } from "../config.js";
 import { getDb } from "../db.js";
+import { currentWs } from "../ws.js";
 import { PayPalClient } from "./client.js";
 import { PayPalApi, PayPalError, UnknownOutcomeError } from "./types.js";
 
@@ -21,13 +22,14 @@ export const FAULTABLE = ["refundCapture", "captureOrder", "createOrder"] as con
 async function takeFault(method: string): Promise<FaultKind | null> {
   if (!config.demoMode) return null;
   const db = await getDb();
-  const r = await db.query<{ kind: FaultKind }>("DELETE FROM demo_faults WHERE id = (SELECT id FROM demo_faults WHERE method = $1 ORDER BY id LIMIT 1) RETURNING kind", [method]);
+  // A1: a fault armed in one visitor's demo fires in that demo only.
+  const r = await db.query<{ kind: FaultKind }>("DELETE FROM demo_faults WHERE id = (SELECT id FROM demo_faults WHERE method = $1 AND ws_id IS NOT DISTINCT FROM $2 ORDER BY id LIMIT 1) RETURNING kind", [method, currentWs()]);
   return r.rows[0]?.kind ?? null;
 }
 
 export async function armFault(method: string, kind: FaultKind) {
   const db = await getDb();
-  await db.query("INSERT INTO demo_faults (method, kind) VALUES ($1,$2)", [method, kind]);
+  await db.query("INSERT INTO demo_faults (method, kind, ws_id) VALUES ($1,$2,$3)", [method, kind, currentWs()]);
 }
 
 function withFaults(p: PayPalApi): PayPalApi {

@@ -142,8 +142,10 @@ export function serveApp(app: Express, root: string) {
   app.get("/", async (req, res, next) => {
     try {
       const w = await whoami(req);
-      if (w?.account) return res.redirect("/today");
-      if (w?.merchant) return res.redirect("/merchant");
+      // Keep the query (?tour=judge and friends) so a signed-in visitor opening a tour link still gets the tour.
+      const qs = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+      if (w?.account) return res.redirect(`/today${qs}`);
+      if (w?.merchant) return res.redirect(`/merchant${qs}`);
       await sendShell(req, res);
     } catch (e) {
       next(e);

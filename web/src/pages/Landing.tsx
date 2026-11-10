@@ -6,11 +6,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { PublicFooter } from "@/components/Shell";
 import { BorderBeam, NumberTicker } from "@/components/magic";
-import { Amount, State } from "@/components/kit";
-import { useApi } from "@/lib/api";
+import { Amount, Busy, State } from "@/components/kit";
+import { useAction, useApi } from "@/lib/api";
 import { addDays, day, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
-import { startTour } from "@/tours/tours";
 
 interface Preview {
   line: { title: string; cents: number; status: string; number: string; paid: boolean; capture_id: string | null; dates: { ordered: string | null; eta: string | null; delivered: string | null; return_days: number; protection_days: number } } | null;
@@ -83,7 +82,9 @@ export default function Landing() {
     document.title = "Everyday — know what you bought, and when it runs out";
   }, []);
   const who = session?.who;
-  const tryDemo = () => void startTour("judge");
+  const { run: act, busy } = useAction();
+  // A1: one tap builds the visitor's own private copy of the demo and signs them in as its Maya.
+  const tryDemo = () => void act("start", "/demo/start", {});
 
   return (
     <div className="ev-rise">
@@ -97,8 +98,8 @@ export default function Landing() {
             Show Everyday something you liked. It works out what fits your life, buys it only with your approval on PayPal, and looks after it until the return window, the price promise and the warranty run out.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Button size="lg" onClick={tryDemo} data-tour="try-demo">
-              Try the live demo <ArrowRight className="size-4" />
+            <Button size="lg" onClick={tryDemo} data-tour="try-demo" disabled={Boolean(busy)}>
+              <Busy on={busy === "start"}>{null}</Busy>Try the live demo <ArrowRight className="size-4" />
             </Button>
             {who ? (
               <Button size="lg" variant="outline" onClick={() => nav(who.kind === "merchant" ? "/merchant" : "/today")}>
@@ -106,11 +107,11 @@ export default function Landing() {
               </Button>
             ) : (
               <Button size="lg" variant="outline" asChild>
-                <Link to="/login">Choose a demo person</Link>
+                <Link to="/login">Sign in with a key</Link>
               </Button>
             )}
           </div>
-          <p className="mt-3 text-sm text-ink-2">About three minutes, guided. PayPal sandbox only; no real money.</p>
+          <p className="mt-3 text-sm text-ink-2">Your own private copy of the demo: Maya, her shop and real PayPal sandbox payments. Nobody else sees what you do in it, and it is deleted 48 hours after your last visit. No real money.</p>
         </div>
 
         <figure className="relative min-w-0 rounded-xl border border-rule bg-card p-4 shadow-[var(--shadow)] sm:p-5" aria-label="Live preview">
@@ -220,10 +221,10 @@ export default function Landing() {
       <section className="mt-20 rounded-xl bg-ink p-6 text-paper sm:p-10">
         <h2 className="text-3xl font-medium text-paper">See it with real sandbox money</h2>
         <p className="prose-w mt-2 opacity-80">A guided three-minute walk: a request becomes a checked plan, you pay on PayPal's sandbox, and the order's dates start running.</p>
-        <Button size="lg" className="mt-6 bg-paper text-ink hover:bg-paper/90" onClick={tryDemo}>
-          Try the live demo <ArrowRight className="size-4" />
+        <Button size="lg" className="mt-6 bg-paper text-ink hover:bg-paper/90" onClick={tryDemo} disabled={Boolean(busy)}>
+          <Busy on={busy === "start"}>{null}</Busy>Try the live demo <ArrowRight className="size-4" />
         </Button>
-        <p className="mt-3 text-sm opacity-70">Or add ?tour=judge to any link. Updated {day(hero.today)} (demo clock).</p>
+        <p className="mt-3 text-sm opacity-70">The preview above is read from the showcase demo, built the same way as yours. Its clock reads {day(hero.today)}.</p>
       </section>
       <PublicFooter />
     </div>

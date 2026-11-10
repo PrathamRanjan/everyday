@@ -30,13 +30,12 @@ test.afterAll(() => {
 });
 
 async function signIn(page: Page) {
-  const r = await page.request.post(`${BASE}/demo/reset`, { headers: { "x-everyday-ui": "1" } });
-  expect(r.ok()).toBeTruthy();
   await page.goto(APP);
   await expect(page.getByRole("heading", { name: "Your purchases, after the sale." })).toBeVisible();
   await page.getByRole("radio", { name: LIVE ? "Live demo" : "This computer" }).click();
   await expect(page.getByText(`Connected to ${new URL(BASE).host}`)).toBeVisible();
-  await page.getByRole("button", { name: "Continue as Maya" }).click();
+  // A1: the phone's demo sign-in starts its own private demo workspace.
+  await page.getByRole("button", { name: "Start my own demo" }).click();
   await expect(page.getByRole("heading", { name: /, Maya\.$/ })).toBeVisible();
 }
 
@@ -63,9 +62,9 @@ test("phone app: demo sign-in, Today, a plan from the phone with an exact quote,
   await shoot(page, "today");
 
   await page.getByRole("tab", { name: /Plans/ }).click();
-  await page.getByLabel("What do you need?").fill("a desk lamp under $80 by Friday");
+  await page.getByLabel("What do you need?").fill("a wireless keyboard under $80 by Friday");
   await page.getByRole("button", { name: "Plan it" }).click();
-  await expect(page.getByRole("heading", { name: /desk lamp under \$80 by Friday/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /wireless keyboard under \$80 by Friday/ })).toBeVisible();
   await expect(page.getByText(/from the phone/)).toBeVisible();
   await expect(page.getByText("What Everyday understood")).toBeVisible();
   await page.getByRole("button", { name: "Get the exact quote" }).click();
@@ -93,8 +92,8 @@ test("phone app: demo sign-in, Today, a plan from the phone with an exact quote,
   await shoot(page, "order");
   // The same unpaid order, paid from the demo's saved sandbox wallet with no PayPal login.
   await page.getByRole("button", { name: /^Pay \$[\d.]+ as the demo shopper$/ }).click();
-  await expect(page.getByText("Paid from the demo's saved sandbox wallet, with no PayPal login.")).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByText(/^PayPal capture [A-Z0-9]{10,}$/)).toBeVisible();
+  await expect(page.getByText("Paid from the demo's saved sandbox wallet, with no PayPal login.").filter({ visible: true }).first()).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText(/^PayPal capture [A-Z0-9]{10,}$/).filter({ visible: true }).first()).toBeVisible();
   await page.goto(`${APP}/bought`);
   await expect(page.getByRole("button", { name: /^Order EV-/ }).first()).toBeVisible();
 });

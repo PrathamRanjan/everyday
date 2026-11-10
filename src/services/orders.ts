@@ -12,7 +12,8 @@ import { accountById, J, logEvent, notify, nowIso, nowOf, type Account } from ".
 import { catalog } from "./catalog.js";
 import { currentPlan, intentRow, ownedOf, type Reqs, type SlotView } from "./plans.js";
 import { gate, GateDenied, HeldForApproval, preApprove, type MoneyMove } from "../guard/dryrun.js";
-import { MERCHANT } from "../guard/policy.js";
+import { merchantOwner } from "../guard/policy.js";
+import { currentWs, customIdFor, rememberPayPalRef, withWs, wsOfOrder } from "../ws.js";
 import { startRun } from "../trace.js";
 import { demoWallet, markWalletGone, walletUsable } from "./demowallet.js";
 
@@ -57,6 +58,8 @@ export async function quotePlan(a: Account, intentId: string) {
     if (!p.body.feasible) throw new GtError(p.body.gap ?? "This plan does not fit yet.", "infeasible", 409);
     const cat = await catalog(q);
     const picks = (p.body.slots as SlotView[]).filter((s) => s.pick && s.outcome === "buy").map((s) => ({ slot: s.key, p: cat.byId.get(s.pick!.id)! }));
+    if (!picks.length) throw new GtError("There is nothing to buy in this plan: every part is already covered or nothing in the catalog fits.", "nothing_to_buy", 409);
+    if (picks.some((x) => !x.p)) throw new GtError("A pick in this plan is no longer in the catalog. Refresh the plan.", "stale_pick", 409);
     if (picks.some((x) => !x.p.checkout)) throw new GtError("A pick is not available for checkout here.", "invalid");
     const merchantId = picks[0].p.merchant_id;
     const m = await merchantRow(q, merchantId);
@@ -123,7 +126,8 @@ async function orderFromQuote(a: Account, quoteId: string, hash: string) {
     const sp = await spending(q, a);
     if (body.total_cents > sp.left_cents) throw new GtError(`This would exceed your monthly limit: ${money(sp.left_cents)} left of ${money(sp.limit_cents)}. Change the limit under You, or trim the plan.`, "limit", 409);
     await q.query("UPDATE quotes SET status = 'approved', approved_at = now() WHERE id = $1", [qu.id]);
-    const n = (await q.query<{ c: number }>("SELECT count(*)::int AS c FROM orders")).rows[0].c + 1;
+    // A1: each shopper (each demo workspace) numbers its own orders.
+    const n = (await q.query<{ c: number }>("SELECT count(*)::int AS c FROM orders WHERE account_id = $1", [a.id])).rows[0].c + 1;
     const id = newId("ord");
     // The policy bound to the order is the one in the quote the shopper approved (it is part of the quote's hash).
     await q.query("INSERT INTO orders (id, number, account_id, intent_id, quote_id, merchant_id, status, total_cents, shipping_cents, policy) VALUES ($1,$2,$3,$4,$5,$6,'created',$7,$8,COALESCE($9::jsonb, (SELECT return_policy FROM merchants WHERE id = $6)))", [id, `EV-${4000 + n}`, a.id, qu.intent_id, qu.id, qu.merchant_id, body.total_cents, body.shipping.cents, body.policy ? JSON.stringify(body.policy) : null]);
@@ -173,7 +177,7 @@ export async function checkoutLink(a: Account, orderId: string, opts: CheckoutOp
   }
   await db.query("INSERT INTO payment_ops (id, order_id, kind, status, amount_cents, request_id) VALUES ($1,$2,'order','pending',$3,$4) ON CONFLICT (request_id) DO NOTHING", [newId("pop"), o.id, o.total_cents, requestId]);
   const pp = await paypal().createOrder(
-    { amountCents: o.total_cents, currency: "USD", customId: o.id, invoiceId: `${o.number}-${attempt}-${o.id.slice(-5)}`, description: `Everyday ${o.number}: ${body.lines.length} items from ${body.merchant.name}`, brand: "Everyday (test merchant)", items: body.lines.map((l: any) => ({ name: l.title, sku: l.sku, quantity: l.qty, unitCents: l.unit_cents })), shippingCents: body.shipping.cents, ...returnUrls(o.id, Boolean(opts.native)) },
+    { amountCents: o.total_cents, currency: "USD", customId: customIdFor(o.id), invoiceId: `${o.number}-${attempt}-${o.id.slice(-5)}`, description: `Everyday ${o.number}: ${body.lines.length} items from ${body.merchant.name}`, brand: "Everyday (test merchant)", items: body.lines.map((l: any) => ({ name: l.title, sku: l.sku, quantity: l.qty, unitCents: l.unit_cents })), shippingCents: body.shipping.cents, ...returnUrls(o.id, Boolean(opts.native)) },
     requestId,
   );
   await run.step({ actor: "paypal", tool: "orders.create", args: { request_id: requestId, cents: o.total_cents }, gate: "allowed", result: { paypal_order_id: pp.id, status: pp.status }, pp_request_id: requestId });
@@ -182,6 +186,7 @@ export async function checkoutLink(a: Account, orderId: string, opts: CheckoutOp
     throw new GtError("PayPal did not return an approval link.", "paypal", 502);
   }
   await db.query("UPDATE orders SET paypal_order_id = $2, attempt = $3, run_id = $4, paid_via = 'paypal_page' WHERE id = $1", [o.id, pp.id, attempt, run.id]);
+  await rememberPayPalRef(db, pp.id, "order");
   await db.query("UPDATE payment_ops SET status = 'succeeded', paypal_id = $2, paypal_status = $3, attempts = attempts + 1 WHERE request_id = $1", [requestId, pp.id, pp.status]);
   await run.end("done");
   return pp.approveUrl;
@@ -224,7 +229,7 @@ export async function payFromDemoWallet(a: Account, orderId: string): Promise<{ 
   let pp;
   try {
     pp = await paypal().createVaultedCaptureOrder(
-      { amountCents: o.total_cents, currency: "USD", customId: o.id, invoiceId: `${o.number}-${attempt}-${o.id.slice(-5)}`, description: `Everyday ${o.number}: ${body.lines.length} items from ${body.merchant.name}`, items: body.lines.map((l: any) => ({ name: l.title, sku: l.sku, quantity: l.qty, unitCents: l.unit_cents })), shippingCents: body.shipping.cents, vaultId: w.token! },
+      { amountCents: o.total_cents, currency: "USD", customId: customIdFor(o.id), invoiceId: `${o.number}-${attempt}-${o.id.slice(-5)}`, description: `Everyday ${o.number}: ${body.lines.length} items from ${body.merchant.name}`, items: body.lines.map((l: any) => ({ name: l.title, sku: l.sku, quantity: l.qty, unitCents: l.unit_cents })), shippingCents: body.shipping.cents, vaultId: w.token! },
       requestId,
     );
   } catch (e) {
@@ -242,6 +247,8 @@ export async function payFromDemoWallet(a: Account, orderId: string): Promise<{ 
   const capNow = pp.purchase_units?.[0]?.payments?.captures?.[0] ?? null;
   await run.step({ actor: "paypal", tool: "orders.create+capture (demo wallet)", args: { request_id: requestId, cents: o.total_cents }, gate: "allowed", result: { paypal_order_id: pp.id, status: pp.status, capture: capNow?.id ?? null, capture_status: capNow?.status ?? null }, pp_request_id: requestId });
   await db.query("UPDATE orders SET paypal_order_id = $2, attempt = $3, run_id = $4, paid_via = 'demo_wallet' WHERE id = $1", [o.id, pp.id, attempt, run.id]);
+  await rememberPayPalRef(db, pp.id, "order");
+  if (capNow?.id) await rememberPayPalRef(db, capNow.id, "capture");
   await db.query("UPDATE payment_ops SET status = 'succeeded', paypal_id = $2, paypal_status = $3, attempts = attempts + 1 WHERE request_id = $1", [requestId, pp.id, pp.status]);
   await run.end("done");
   // Only PayPal's read-back changes the order's state.
@@ -257,15 +264,20 @@ export async function paypalReturn(a: Account, orderId: string, token: string) {
   const o = (await db.query<any>("SELECT * FROM orders WHERE id = $1 AND account_id = $2", [orderId, a.id])).rows[0];
   if (!o) throw new GtError("Order not found", "not_found", 404);
   if (o.paypal_order_id !== token) throw new GtError("This PayPal approval does not match the order.", "mismatch", 409);
-  if (config.demoMode && (await db.query("DELETE FROM demo_faults WHERE id = (SELECT id FROM demo_faults WHERE method = 'paypal_return' ORDER BY id LIMIT 1) RETURNING id")).rows.length) {
+  if (config.demoMode && (await db.query("DELETE FROM demo_faults WHERE id = (SELECT id FROM demo_faults WHERE method = 'paypal_return' AND ws_id IS NOT DISTINCT FROM $1 ORDER BY id LIMIT 1) RETURNING id", [currentWs()])).rows.length) {
     await logEvent(db, a, "order", o.id, "demo.fault", "Demo: the PayPal return was dropped before Everyday saw it");
     return "dropped";
   }
   return settle(o.id, "return");
 }
 
-/** Capture (or find the capture of) an approved order; never pays twice. */
+/** Capture (or find the capture of) an approved order; never pays twice. Runs in the order's own demo workspace. */
 export async function settle(orderId: string, via: "return" | "reconcile" | "checkout" | "wallet"): Promise<"paid" | "waiting" | "failed"> {
+  const ws = await wsOfOrder(await getDb(), orderId);
+  return withWs(ws, () => settleIn(orderId, via));
+}
+
+async function settleIn(orderId: string, via: "return" | "reconcile" | "checkout" | "wallet"): Promise<"paid" | "waiting" | "failed"> {
   const db = await getDb();
   const o = (await db.query<any>("SELECT * FROM orders WHERE id = $1", [orderId])).rows[0];
   if (!o || o.status !== "created") return o ? "paid" : "failed";
@@ -353,15 +365,21 @@ export async function settle(orderId: string, via: "return" | "reconcile" | "che
 
 export async function reconcile() {
   const db = await getDb();
-  const rows = (await db.query<{ id: string }>("SELECT id FROM orders WHERE status = 'created' AND paypal_order_id IS NOT NULL")).rows;
+  const rows = (await db.query<{ id: string; ws_id: string | null }>("SELECT o.id, a.ws_id FROM orders o JOIN accounts a ON a.id = o.account_id WHERE o.status = 'created' AND o.paypal_order_id IS NOT NULL")).rows;
   let n = 0;
-  for (const r of rows) if ((await settle(r.id, "reconcile").catch(() => "waiting")) === "paid") n++;
+  // A1: each order is settled inside its own demo workspace.
+  for (const r of rows) if ((await withWs(r.ws_id, () => settle(r.id, "reconcile")).catch(() => "waiting")) === "paid") n++;
   return n;
 }
 
 // ---------- Refunds (no transaction is held during the PayPal call) ----------
 
 export async function refund(orderId: string, amount: number, requestId: string, note: string, caseId: string | null) {
+  const ws = await wsOfOrder(await getDb(), orderId);
+  return withWs(ws, () => refundIn(orderId, amount, requestId, note, caseId));
+}
+
+async function refundIn(orderId: string, amount: number, requestId: string, note: string, caseId: string | null) {
   const db = await getDb();
   const o = (await db.query<any>("SELECT * FROM orders WHERE id = $1", [orderId])).rows[0];
   if (!o?.capture_id) throw new GtError("This order has no PayPal payment to refund.", "no_capture", 409);
@@ -382,7 +400,7 @@ export async function refund(orderId: string, amount: number, requestId: string,
   const run = await startRun({ actor: caseId ? "owner" : "customer", subject: `refund ${money(amount)} on ${o.number}: ${note.slice(0, 60)}`, entity: "order", entityId: o.id });
   try {
     // A refund the merchant approved by hand carries a pre-approval; a swap difference is the shopper's own choice.
-    await gated({ action: "refund", ownerId: MERCHANT, agentScope: caseId ? "merchant" : "shopper", entity: caseId ? "case" : "order", entityId: caseId ?? o.id, cents: amount, trustedCents: trusted, captureId: prior ? null : o.capture_id, customerInitiated: !caseId }, run);
+    await gated({ action: "refund", ownerId: merchantOwner(), agentScope: caseId ? "merchant" : "shopper", entity: caseId ? "case" : "order", entityId: caseId ?? o.id, cents: amount, trustedCents: trusted, captureId: prior ? null : o.capture_id, customerInitiated: !caseId }, run);
   } catch (e) {
     await run.end("held");
     throw e;
@@ -452,13 +470,13 @@ export async function verifyRefunds() {
   const db = await getDb();
   await releaseRefusedCases(db);
   // A refund whose call failed or lost its response is retried with the same request id: PayPal applies it at most once.
-  for (const op of (await db.query<any>("SELECT * FROM payment_ops WHERE kind = 'refund' AND status = 'pending'")).rows) {
-    await refund(op.order_id, op.amount_cents, op.request_id, op.reason ?? "Refund", op.case_id).catch(() => null);
+  for (const op of (await db.query<any>("SELECT p.*, a.ws_id FROM payment_ops p JOIN orders o ON o.id = p.order_id JOIN accounts a ON a.id = o.account_id WHERE p.kind = 'refund' AND p.status = 'pending'")).rows) {
+    await withWs(op.ws_id, () => refund(op.order_id, op.amount_cents, op.request_id, op.reason ?? "Refund", op.case_id)).catch(() => null);
   }
-  const ops = (await db.query<any>("SELECT * FROM payment_ops WHERE kind = 'refund' AND status = 'succeeded' AND paypal_status NOT IN ('COMPLETED','FAILED','CANCELLED')")).rows;
-  for (const op of ops) {
+  const ops = (await db.query<any>("SELECT p.*, a.ws_id FROM payment_ops p JOIN orders o ON o.id = p.order_id JOIN accounts a ON a.id = o.account_id WHERE p.kind = 'refund' AND p.status = 'succeeded' AND p.paypal_status NOT IN ('COMPLETED','FAILED','CANCELLED')")).rows;
+  for (const op of ops) await withWs(op.ws_id, async () => {
     const r = await paypal().getRefund(op.paypal_id).catch(() => null);
-    if (!r || r.status === op.paypal_status) continue;
+    if (!r || r.status === op.paypal_status) return;
     await db.tx(async (q) => {
       // Conditional on the status it had: two checks at once post a completion (or a failure) once.
       const moved = (await q.query("UPDATE payment_ops SET paypal_status = $2, status = CASE WHEN $2 IN ('FAILED','CANCELLED') THEN 'failed' ELSE status END, refusal_confirmed = refusal_confirmed OR $2 IN ('FAILED','CANCELLED') WHERE id = $1 AND paypal_status = $3 RETURNING id", [op.id, r.status, op.paypal_status])).rows.length;
@@ -474,17 +492,17 @@ export async function verifyRefunds() {
         }
       }
     });
-  }
-  const done = (await db.query<any>("SELECT DISTINCT c.*, o.account_id FROM cases c JOIN orders o ON o.id = c.order_id JOIN payment_ops p ON p.case_id = c.id AND p.kind = 'refund' WHERE c.status = 'refunding' AND p.paypal_status = 'COMPLETED'")).rows;
-  for (const c of done) {
+  });
+  const done = (await db.query<any>("SELECT DISTINCT c.*, o.account_id, a.ws_id FROM cases c JOIN orders o ON o.id = c.order_id JOIN accounts a ON a.id = o.account_id JOIN payment_ops p ON p.case_id = c.id AND p.kind = 'refund' WHERE c.status = 'refunding' AND p.paypal_status = 'COMPLETED'")).rows;
+  for (const c of done) await withWs(c.ws_id, async () => {
     // Only the check that moves the case resolves it: side effects (ownership cost, messages) happen once.
     const moved = (await db.query("UPDATE cases SET status = 'resolved', resolved_at = now() WHERE id = $1 AND status = 'refunding' RETURNING id", [c.id])).rows.length;
-    if (!moved) continue;
+    if (!moved) return;
     if (c.issue === "price_drop") await db.query("UPDATE owned_items SET price_cents = price_cents - $2 WHERE order_line_id = $1", [c.line_id, Math.floor(c.refund_cents / Math.max(1, (await db.query<any>("SELECT qty FROM order_lines WHERE id = $1", [c.line_id])).rows[0]?.qty ?? 1))]);
     const a = await accountById(db, c.account_id);
     await logEvent(db, a, "order", c.order_id, "case.resolved", `${c.number}: PayPal confirms the ${money(c.refund_cents)} refund. Case resolved.`, "PayPal");
     await notify(db, a.id, "telegram", `💸 ${c.number}: PayPal confirmed your ${money(c.refund_cents)} refund.`);
-  }
+  });
 }
 
 // ---------- Merchant updates (Northlight console) ----------
@@ -663,7 +681,7 @@ export async function merchantDecide(caseId: string, approve: boolean, note: str
   await logEvent(db, a, "order", c.order_id, "case.approved", `Northlight approved ${c.number} (${c.requested})${note ? `: ${note}` : ""}`, "Northlight Supply");
   if (c.requested === "return") await db.query("UPDATE owned_items SET status = 'returned' WHERE order_line_id = $1", [c.line_id]);
   if (c.refund_cents > 0) {
-    await preApprove(MERCHANT, "case", c.id, "refund", c.refund_cents, "Northlight Supply (merchant console)");
+    await preApprove(merchantOwner(), "case", c.id, "refund", c.refund_cents, "Northlight Supply (merchant console)");
     const failed = (await db.query<{ n: number }>("SELECT count(*)::int AS n FROM payment_ops WHERE case_id = $1 AND kind = 'refund' AND status = 'failed'", [c.id])).rows[0].n;
     try {
       await refund(c.order_id, c.refund_cents, failed ? `case:${c.id}:r${failed + 1}` : `case:${c.id}`, `${c.number}: ${c.requested} remedy`, c.id);

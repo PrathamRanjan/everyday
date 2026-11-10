@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { KeyRound, Store, User } from "lucide-react";
+import { KeyRound, PlayCircle, Store, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { postAction, useApi } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { toast } from "sonner";
 
-type Personas = { demo: boolean; accounts: { id: string; name: string }[]; merchants: { id: string; name: string }[] };
+type Personas = { demo: boolean; accounts: { id: string; name: string }[]; merchants: { id: string; name: string }[]; private_demos?: boolean; workspace?: string | null };
 
 export default function Login() {
   const [q] = useSearchParams();
@@ -19,10 +19,10 @@ export default function Login() {
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [key, setKey] = useState("");
-  const go = async (k: string, data: Record<string, string>) => {
+  const go = async (k: string, data: Record<string, string>, path = "/login") => {
     setBusy(k);
     try {
-      const r = await postAction("/login", { ...data, next });
+      const r = await postAction(path, path === "/login" ? { ...data, next } : data);
       if (r.err) toast.error(r.err);
       await refresh();
       nav(r.to);
@@ -34,10 +34,26 @@ export default function Login() {
   };
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHead eyebrow="Sign in" title="Who are you today?" lede="This is a demo on the PayPal sandbox. Pick a seeded person; nothing here uses real money." />
+      <PageHead eyebrow="Sign in" title="Who are you today?" lede="This is a demo on the PayPal sandbox. Nothing here uses real money." />
       <Loaded state={st}>
         {(d) => (
           <div className="grid gap-4 sm:grid-cols-2">
+            {d.demo && d.private_demos && !d.workspace && (
+              <div className="flex flex-col gap-3 rounded-lg border border-rule bg-card p-5 sm:col-span-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-11 items-center justify-center rounded-full bg-now-bg text-now">
+                    <PlayCircle className="size-5" />
+                  </span>
+                  <div>
+                    <p className="font-display text-xl">Your own demo</p>
+                    <p className="text-sm text-ink-2">A private copy with Maya, her shop and real sandbox payments. Nobody else sees it; it's deleted 48 hours after your last visit.</p>
+                  </div>
+                </div>
+                <Button className="self-start" onClick={() => go("start", {}, "/demo/start")} disabled={Boolean(busy)}>
+                  <Busy on={busy === "start"}>{null}</Busy>Try the live demo
+                </Button>
+              </div>
+            )}
             {d.accounts.map((a) => (
               <div key={a.id} className="flex flex-col gap-3 rounded-lg border border-rule bg-card p-5">
                 <div className="flex items-center gap-3">

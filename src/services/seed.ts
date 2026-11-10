@@ -7,24 +7,32 @@ import { putSetting } from "../store.js";
 import { DISCOVERY, NORTHLIGHT, RECALLS } from "./catalog-data.js";
 import { ensurePrior } from "./ml.js";
 import { getDb } from "../db.js";
-import { compileLocal, MERCHANT, savePolicy } from "../guard/policy.js";
+import { compileLocal, merchantOwner, savePolicy } from "../guard/policy.js";
 import { seedPurchaseHistory } from "./passport.js";
+import { withWs } from "../ws.js";
 
 /** Demo mandates in the owners' own words. Compiled locally; the owner can rewrite them on /guard. */
 export const SHOPPER_MANDATE = "Never spend more than $400 on a single purchase. Ask me before any repeat buy over $30. Repeat buys are on. Assistants may plan. Assistants may ask for approval. Only buy from Northlight. Never buy headphones";
 export const MERCHANT_MANDATE = "Refund at most 60%. Ask me before refunding more than $150";
 
-/** Seeds the demo world plus the foundation: mandates and the labelled purchase history. */
-export async function seedAll(opts: { anchor?: string } = {}): Promise<Seeded> {
+/**
+ * Seeds the demo world plus the foundation: mandates and the labelled purchase history. With `ws`, builds one
+ * visitor's private workspace (A1) and touches no other rows; without it, wipes and rebuilds the workspace-less world
+ * (the unit tests, `npm run seed`, and the operator's global reset).
+ */
+export async function seedAll(opts: { anchor?: string; ws?: string | null } = {}): Promise<Seeded> {
   const db = await getDb();
-  const s = await db.tx((q) => seed(q, opts));
-  await seedPurchaseHistory(db);
-  await savePolicy(s.account, SHOPPER_MANDATE, compileLocal(SHOPPER_MANDATE), true, db);
-  await savePolicy(MERCHANT, MERCHANT_MANDATE, compileLocal(MERCHANT_MANDATE), true, db);
-  return s;
+  const ws = opts.ws ?? null;
+  return withWs(ws, async () => {
+    const s = await db.tx((q) => seed(q, opts));
+    await seedPurchaseHistory(db, ws);
+    await savePolicy(s.account, SHOPPER_MANDATE, compileLocal(SHOPPER_MANDATE), true, db);
+    await savePolicy(merchantOwner(ws), MERCHANT_MANDATE, compileLocal(MERCHANT_MANDATE), true, db);
+    return s;
+  });
 }
 
-const TABLES = ["device_keys", "agent_trace", "agent_runs", "approvals", "audit_chain", "policies", "kill_switches", "provenance", "channel_messages", "party_links", "push_subscriptions", "judge_sessions", "eval_runs", "agent_requests", "ai_calls", "purchase_history", "vault_tokens", "repeat_buys", "disputes", "trackers", "channel3_cache", "events", "inbox", "price_watches", "owned_items", "cases", "payment_ops", "order_lines", "orders", "quotes", "plans", "intents", "captures", "price_history", "products", "merchants", "pref_events", "pref_models", "profile_facts", "recipients", "link_codes", "channel_links", "accounts", "recalls", "jobs_queue", "demo_faults"];
+const TABLES = ["device_keys", "agent_trace", "agent_runs", "approvals", "audit_chain", "policies", "kill_switches", "provenance", "channel_messages", "party_links", "push_subscriptions", "judge_sessions", "eval_runs", "agent_requests", "ai_calls", "purchase_history", "vault_tokens", "repeat_buys", "disputes", "trackers", "channel3_cache", "events", "inbox", "price_watches", "owned_items", "cases", "payment_ops", "order_lines", "orders", "quotes", "plans", "intents", "captures", "price_history", "products", "merchants", "pref_events", "pref_models", "profile_facts", "recipients", "link_codes", "channel_links", "accounts", "recalls", "jobs_queue", "demo_faults", "workspaces", "paypal_refs"];
 
 export function demoAnchor(tz: string, instant = new Date()) {
   const now = wallNow(tz, instant);
@@ -41,26 +49,31 @@ export interface Seeded {
   products: Record<string, string>;
 }
 
-export async function seed(q: Queryable, opts: { anchor?: string } = {}): Promise<Seeded> {
-  for (const t of TABLES) await q.query(`DELETE FROM ${t}`);
+export async function seed(q: Queryable, opts: { anchor?: string; ws?: string | null } = {}): Promise<Seeded> {
+  const ws = opts.ws ?? null;
+  // Only the workspace-less world is wiped here; a visitor workspace is new rows beside everyone else's.
+  if (!ws) for (const t of TABLES) await q.query(`DELETE FROM ${t}`);
+  // A1/A4: the demo clock starts on a fixed weekday morning (the next Monday 09:00 in Singapore) for every
+  // workspace, so the seed reads the same whenever it is built; only the visitor's own controls move it.
   const anchor = opts.anchor ?? demoAnchor("Asia/Singapore");
   const keys: Record<string, string> = { maya: newSecret("evk"), northlight: newSecret("nlk") };
   const account = newId("acc");
-  await q.query("INSERT INTO accounts (id, name, tz, monthly_limit_cents, sim_now, key_hash, address) VALUES ($1,'Maya','Asia/Singapore',60000,$2,$3,'Room 412, Kent Ridge Hall, Singapore')", [account, anchor, hashKey(keys.maya)]);
+  await q.query("INSERT INTO accounts (id, name, tz, monthly_limit_cents, sim_now, key_hash, address, ws_id) VALUES ($1,'Maya','Asia/Singapore',60000,$2,$3,'Room 412, Kent Ridge Hall, Singapore',$4)", [account, anchor, hashKey(keys.maya), ws]);
   const self = newId("rcp");
   const brother = newId("rcp");
   await q.query("INSERT INTO recipients (id, account_id, name, relation, is_self) VALUES ($1,$2,'Maya','self',true),($3,$2,'Ari','brother',false)", [self, account, brother]);
   const nl = newId("mer");
-  await q.query("INSERT INTO merchants (id, name, kind, label, caps, shipping, return_policy, key_hash) VALUES ($1,'Northlight Supply (sandbox test merchant)','test_merchant','Buy here with PayPal',$2,$3,$4,$5)", [
+  await q.query("INSERT INTO merchants (id, name, kind, label, caps, shipping, return_policy, key_hash, ws_id) VALUES ($1,'Northlight Supply (sandbox test merchant)','test_merchant','Buy here with PayPal',$2,$3,$4,$5,$6)", [
     nl,
     JSON.stringify({ discovery: true, quote: true, checkout: true, track: true, swap: true, refund: true, train: true, cache: true }),
     JSON.stringify({ standard_cents: 1200, free_over_cents: 30000, standard_days: 2, express_cents: 1500, express_days: 1 }),
     JSON.stringify({ window_days: 30, restock_pct: 10, final_sale_when_opened: ["headphones"], partial_pct: 30, swap: true, version: "NL-returns-2026-10", price_protection_days: 14, price_protection_clause: "If Northlight's own price for the same item drops within 14 days of delivery (or before it arrives), we refund the difference to your original payment. Same item, new and in stock, Northlight's own recorded price only." }),
     hashKey(keys.northlight),
+    ws,
   ]);
   const lumen = newId("mer");
   const unverified = newId("mer");
-  await q.query("INSERT INTO merchants (id, name, kind, label, caps, shipping, return_policy) VALUES ($1,'Lumen & Oak','discovery','Continue at retailer',$3,'{}',$4),($2,'Marketplace listing','discovery','Availability needs confirmation',$3,'{}',$4)", [lumen, unverified, JSON.stringify({ discovery: true, quote: false, checkout: false, train: false, cache: false }), JSON.stringify({ window_days: 0, restock_pct: 0, final_sale_when_opened: [], partial_pct: 0, swap: false, version: "unknown" })]);
+  await q.query("INSERT INTO merchants (id, name, kind, label, caps, shipping, return_policy, ws_id) VALUES ($1,'Lumen & Oak','discovery','Continue at retailer',$3,'{}',$4,$5),($2,'Marketplace listing','discovery','Availability needs confirmation',$3,'{}',$4,$5)", [lumen, unverified, JSON.stringify({ discovery: true, quote: false, checkout: false, train: false, cache: false }), JSON.stringify({ window_days: 0, restock_pct: 0, final_sale_when_opened: [], partial_pct: 0, swap: false, version: "unknown" }), ws]);
   const products: Record<string, string> = {};
   for (const p of NORTHLIGHT) {
     const id = newId("prd");
@@ -73,13 +86,14 @@ export async function seed(q: Queryable, opts: { anchor?: string } = {}): Promis
     products[p.sku] = id;
     await q.query("INSERT INTO products (id, merchant_id, sku, title, brand, model, category, price_cents, stock, attrs, description, url, train_ok) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,false)", [id, p.merchant === "lumen" ? lumen : unverified, p.sku, p.title, p.brand, p.model, p.category, p.price * 100, p.stock, JSON.stringify(p.attrs), p.description, p.url]);
   }
-  for (const r of RECALLS) await q.query("INSERT INTO recalls (id, brand, model, title, remedy, url) VALUES ($1,$2,$3,$4,$5,$6)", [newId("rcl"), r.brand, r.model, r.title, r.remedy, r.url]);
+  // The recall feed is reference data shared by every workspace.
+  if (!(await q.query("SELECT 1 FROM recalls LIMIT 1")).rows.length) for (const r of RECALLS) await q.query("INSERT INTO recalls (id, brand, model, title, remedy, url) VALUES ($1,$2,$3,$4,$5,$6)", [newId("rcl"), r.brand, r.model, r.title, r.remedy, r.url]);
   // Maya's possessions: the monitor she mentions, and headphones that match the (demo) recall feed.
   const eightMonths = addMonths(new Date(`${anchor.slice(0, 10)}T00:00:00Z`), -8).toISOString().slice(0, 10);
   await q.query("INSERT INTO owned_items (id, account_id, recipient_id, title, brand, model, category, attrs, price_cents, acquired, warranty_until, source) VALUES ($1,$2,$3,'Dell P2422H 24\" monitor','Dell','P2422H','monitor',$4,18900,$5,$6,'added by Maya')", [newId("own"), account, self, JSON.stringify({ inputs: ["hdmi", "dp"], vesa_mount: 100 }), eightMonths, addMonths(new Date(`${eightMonths}T00:00:00Z`), 36).toISOString().slice(0, 10)]);
   await q.query("INSERT INTO owned_items (id, account_id, recipient_id, title, brand, model, category, attrs, price_cents, acquired, warranty_until, source) VALUES ($1,$2,$3,'Hush ANC Headphones','Hush','H-ANC','headphones','{}',9900,$4,$5,'receipt import')", [newId("own"), account, self, eightMonths, addMonths(new Date(`${eightMonths}T00:00:00Z`), 12).toISOString().slice(0, 10)]);
   await ensurePrior(q);
   const out: Seeded = { keys, account, self, brother, merchant: nl, products };
-  await putSetting(q, "demo", JSON.stringify(out));
+  if (!ws) await putSetting(q, "demo", JSON.stringify(out));
   return out;
 }

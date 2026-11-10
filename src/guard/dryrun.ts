@@ -16,7 +16,8 @@ import type { Run } from "../trace.js";
 import { notifyParty } from "../channels/index.js";
 import { appendAudit } from "./audit.js";
 import { isKilled } from "./kill.js";
-import { categoryBlocked, MERCHANT, rulesFor } from "./policy.js";
+import { categoryBlocked, rulesFor } from "./policy.js";
+import { isMerchantOwner, wsOfOwner } from "../ws.js";
 import { moneyArgumentOk } from "./provenance.js";
 
 export type MoneyAction = "order" | "capture" | "refund" | "repeat_buy" | "tracking" | "evidence";
@@ -66,8 +67,10 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
     return { gate, reason, checks };
   };
 
-  const ownerScope = m.ownerId === MERCHANT ? MERCHANT : `account:${m.ownerId}`;
-  const killed = (await isKilled(ownerScope, db)) ?? (m.agentScope !== ownerScope ? await isKilled(m.agentScope, db) : null);
+  // A1: the switches of the workspace the owner belongs to (a visitor's "stop everything" stops their demo only).
+  const ws = await wsOfOwner(db, m.ownerId);
+  const ownerScope = isMerchantOwner(m.ownerId) ? "merchant" : `account:${m.ownerId}`;
+  const killed = (await isKilled(ownerScope, db, ws)) ?? (m.agentScope !== ownerScope ? await isKilled(m.agentScope, db, ws) : null);
   if (killed) return refuse(`kill switch engaged (${killed.scope})${killed.reason ? `: ${killed.reason}` : ""}`, "denied");
   checks.push("kill switch clear");
 
@@ -93,7 +96,7 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
     }
     if (m.action === "repeat_buy" && !rules.one_tap_repeat) return refuse("one-tap repeat buys are off in the mandate: the shopper approves each purchase on PayPal", "denied");
   }
-  if (m.action === "refund" && m.ownerId === MERCHANT) {
+  if (m.action === "refund" && isMerchantOwner(m.ownerId)) {
     // What was paid for the thing being refunded: a line, a case's line, a dispute's order, or the order itself.
     const orderId = m.entity === "dispute" ? (await db.query<{ order_id: string }>("SELECT order_id FROM disputes WHERE id = $1", [m.entityId])).rows[0]?.order_id : m.entity === "case" ? (await db.query<{ order_id: string }>("SELECT order_id FROM cases WHERE id = $1", [m.entityId])).rows[0]?.order_id : m.entityId;
     const lineId = m.entity === "case" ? (await db.query<{ line_id: string }>("SELECT line_id FROM cases WHERE id = $1", [m.entityId])).rows[0]?.line_id : m.entityId;
@@ -126,7 +129,7 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
   // Scam check (SAFETY_ACCESSIBILITY_SPEC §4): rules plus the risk model on the shopper's own records. A hold here is a
   // pause for a person even when the shopper clicked buy; the text model in the browser never reaches this gate.
   let safety: Awaited<ReturnType<typeof assessPurchase>> | null = null;
-  if ((m.action === "order" || m.action === "repeat_buy") && m.ownerId !== MERCHANT) {
+  if ((m.action === "order" || m.action === "repeat_buy") && !isMerchantOwner(m.ownerId)) {
     const merchantId = m.entity === "order" ? (await db.query<{ merchant_id: string }>("SELECT merchant_id FROM orders WHERE id = $1", [m.entityId])).rows[0]?.merchant_id ?? null : null;
     safety = await assessPurchase(m.ownerId, merchantId, m.cents, db);
     checks.push(`scam check: ${safety.summary}`);
@@ -142,7 +145,7 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
     if (!existing) {
       await appendAudit("money.held", m.entity, m.entityId, { ...payload, approval_id: approvalId }, db);
       const big = m.cents > config.guard.countersignAboveCents;
-      const party = m.ownerId === MERCHANT ? "merchant" : "shopper";
+      const party = isMerchantOwner(m.ownerId) ? "merchant" : "shopper";
       await notifyParty(party, m.ownerId, `${safetyHold ? `Everyday paused a ${m.action.replace("_", " ")} of $${(m.cents / 100).toFixed(2)} for a scam check: ${safety!.reasons.slice(0, 2).join(" ")}` : `Everyday wants to ${m.action.replace("_", " ")} $${(m.cents / 100).toFixed(2)} on ${m.entity} ${m.entityId}. It is at or above your approval threshold.`}${big ? ` Above ${(config.guard.countersignAboveCents / 100).toFixed(2)} it needs your passkey.` : ""}`, big ? [{ id: `decline:${approvalId}`, label: "Decline" }] : [{ id: `approve:${approvalId}`, label: "Approve" }, { id: `decline:${approvalId}`, label: "Decline" }], "approval", approvalId, db).catch(() => undefined);
     }
     return { gate: "held", approvalId, reason: safetyHold ? `Paused by the scam check: ${safety!.reasons[0] ?? "this payment matches a scam pattern"}` : `${m.action} ${m.cents} cents is at or above the mandate's approval threshold ${rules.approve_above_cents}`, checks };

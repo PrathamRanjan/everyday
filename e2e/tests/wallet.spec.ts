@@ -9,7 +9,7 @@ test("no-login payment: the demo shopper pays from the saved sandbox wallet and 
   await resetDemo(page);
   await signIn(page, "shopper");
   await page.goto("/plans");
-  await page.getByLabel("What do you need?").fill("a desk lamp under $80 by Friday");
+  await page.getByLabel("What do you need?").fill("a wireless keyboard under $80 by Friday");
   await page.getByRole("button", { name: "Plan it" }).click();
   await page.waitForURL(/\/plans\/int_/);
   await page.getByRole("button", { name: "Get the exact quote" }).click();

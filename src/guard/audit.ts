@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 import type { Queryable } from "../db.js";
 import { getDb } from "../db.js";
+import { currentWs } from "../ws.js";
 
 const GENESIS = "0".repeat(64);
 
@@ -27,7 +28,8 @@ export async function appendAudit(kind: string, entity: string, entityId: string
   const last = (await db.query<{ hash: string }>("SELECT hash FROM audit_chain ORDER BY seq DESC LIMIT 1")).rows[0];
   const prev = last?.hash ?? GENESIS;
   const hash = rowHash(prev, kind, entity, entityId, payload);
-  const r = await db.query<{ seq: number }>("INSERT INTO audit_chain (kind, entity, entity_id, payload, prev_hash, hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING seq", [kind, entity, entityId, JSON.stringify(payload), prev, hash]);
+  // One chain for the whole app (an edit anywhere breaks it); each row also says which demo workspace it is from.
+  const r = await db.query<{ seq: number }>("INSERT INTO audit_chain (kind, entity, entity_id, payload, prev_hash, hash, ws_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING seq", [kind, entity, entityId, JSON.stringify(payload), prev, hash, currentWs()]);
   return { seq: Number(r.rows[0].seq), hash };
 }
 
@@ -46,5 +48,5 @@ export async function verifyChain(q?: Queryable): Promise<{ ok: boolean; rows: n
 
 export async function recentAudit(limit = 100) {
   const db = await getDb();
-  return (await db.query("SELECT * FROM audit_chain ORDER BY seq DESC LIMIT $1", [limit])).rows as any[];
+  return (await db.query("SELECT * FROM audit_chain WHERE ws_id IS NOT DISTINCT FROM $2 ORDER BY seq DESC LIMIT $1", [limit, currentWs()])).rows as any[];
 }

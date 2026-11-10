@@ -11,6 +11,7 @@ import { claimPriceProtection } from "../services/protect.js";
 import { acceptSwap, approveQuote, approveQuoteFromDemoWallet, checkoutLink, openCase, payFromDemoWallet, paypalReturn, quotePlan, requestRemedy, WALLET_LABEL } from "../services/orders.js";
 import { answer, choose, createIntent } from "../services/plans.js";
 import { clientOf, keyLogin, shopper, signIn, signOut, whoami } from "./auth.js";
+import { currentWs, merchantOwner } from "../ws.js";
 import { back } from "./common.js";
 import { money } from "../lib/money.js";
 import { readForm } from "./upload.js";
@@ -22,6 +23,12 @@ export function shopperRoutes() {
   r.post("/login", async (req, res) => {
     const v = req.body.as && config.demoMode ? String(req.body.as) : req.body.key ? await keyLogin(String(req.body.key)) : null;
     if (!v) return back(res, "/login", "That key is not valid.", true);
+    // A1: a demo persona can be chosen only inside the visitor's own workspace (Maya or her shop, never another's).
+    if (req.body.as) {
+      const id = v.slice(4);
+      const owner = (await (await getDb()).query<{ ws_id: string | null }>(v.startsWith("mer:") ? "SELECT ws_id FROM merchants WHERE id = $1" : "SELECT ws_id FROM accounts WHERE id = $1", [id])).rows[0];
+      if (!owner || (owner.ws_id ?? null) !== currentWs() || (config.privateDemos && !owner.ws_id)) return back(res, "/login", config.privateDemos ? "Start your own demo first: tap “Try the live demo”." : "That persona isn't part of this demo.", true);
+    }
     signIn(res, v);
     const next = String(req.body.next ?? "");
     res.redirect(next.startsWith("/") && !next.startsWith("//") ? next : v.startsWith("mer:") ? "/merchant" : "/today");
@@ -189,7 +196,7 @@ export function shopperRoutes() {
       if (w?.account) return res.redirect(303, `https://t.me/${config.channels.telegramBot}?start=everyday-${await linkCode(w.account)}`);
       if (w?.merchant) {
         const code = `m${randomBytes(9).toString("hex")}`;
-        await (await getDb()).query("INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [`tglink:${code}`, JSON.stringify({ party: "merchant", exp: Date.now() + 15 * 60_000 })]);
+        await (await getDb()).query("INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [`tglink:${code}`, JSON.stringify({ party: "merchant", owner: merchantOwner(), exp: Date.now() + 15 * 60_000 })]);
         return res.redirect(303, `https://t.me/${config.channels.telegramBot}?start=everyday-${code}`);
       }
       res.redirect("/login?next=/you");

@@ -458,6 +458,37 @@ ALTER TABLE intents ADD COLUMN IF NOT EXISTS run_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS run_id TEXT;
 -- A2.1: how the order was paid: on PayPal's own approval page, or from the demo's saved sandbox wallet.
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_via TEXT;
+-- ---------- A1: a private demo workspace for every visitor ----------
+-- A workspace is a shopper account plus its own copy of the shops and catalog (stock and prices change in a demo).
+-- Rows with ws_id NULL are the workspace-less world of the unit tests and 'npm run seed'.
+CREATE TABLE IF NOT EXISTS workspaces (
+  id TEXT PRIMARY KEY, account_id TEXT, merchant_id TEXT, kind TEXT NOT NULL DEFAULT 'visitor' CHECK (kind IN ('visitor','showcase')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(), last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(), expires_at TIMESTAMPTZ NOT NULL DEFAULT now() + interval '48 hours',
+  ip_hash TEXT, seed_version INTEGER NOT NULL DEFAULT 1, seed_state TEXT NOT NULL DEFAULT 'seeding' CHECK (seed_state IN ('seeding','ready','failed')),
+  seed_detail TEXT, seeded JSONB, join_token TEXT UNIQUE, checklist JSONB NOT NULL DEFAULT '{}', progress JSONB NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS workspaces_ip ON workspaces(ip_hash, created_at);
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS ws_id TEXT;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS ws_id TEXT;
+CREATE INDEX IF NOT EXISTS accounts_ws ON accounts(ws_id);
+CREATE INDEX IF NOT EXISTS merchants_ws ON merchants(ws_id);
+-- Tables that hang off neither an account nor a merchant carry the workspace themselves.
+ALTER TABLE demo_faults ADD COLUMN IF NOT EXISTS ws_id TEXT;
+ALTER TABLE purchase_history ADD COLUMN IF NOT EXISTS ws_id TEXT;
+ALTER TABLE audit_chain ADD COLUMN IF NOT EXISTS ws_id TEXT;
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS ws_id TEXT;
+ALTER TABLE agent_requests ADD COLUMN IF NOT EXISTS ws_id TEXT;
+ALTER TABLE channel_messages ADD COLUMN IF NOT EXISTS ws_id TEXT;
+ALTER TABLE webhook_events ADD COLUMN IF NOT EXISTS ws_id TEXT;
+CREATE INDEX IF NOT EXISTS agent_runs_ws ON agent_runs(ws_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS audit_chain_ws ON audit_chain(ws_id, seq DESC);
+-- Every shop in every workspace sells the same SKUs; each workspace numbers its own orders from EV-4001.
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_sku_key;
+CREATE UNIQUE INDEX IF NOT EXISTS products_merchant_sku ON products(merchant_id, sku);
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_number_key;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_account_number ON orders(account_id, number);
+-- Which workspace a PayPal object belongs to, written when the object is created (for events that don't echo custom_id).
+CREATE TABLE IF NOT EXISTS paypal_refs (resource_id TEXT PRIMARY KEY, ws_id TEXT, kind TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 `;
 
 let shared: Db | null = null;

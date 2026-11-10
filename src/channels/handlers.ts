@@ -9,7 +9,8 @@ import { config } from "../config.js";
 import { getDb } from "../db.js";
 import { enqueue } from "../jobs.js";
 import { countersignThreshold, decideApproval } from "../guard/dryrun.js";
-import { MERCHANT } from "../guard/policy.js";
+import { isMerchantOwner, merchantOwner } from "../guard/policy.js";
+import { currentWs } from "../ws.js";
 import { link, onInbound, type Party } from "./index.js";
 
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
@@ -22,9 +23,10 @@ export function installChannelHandlers() {
     if (st && m.channel !== "simulator") {
       const row = (await db.query<{ value: string }>("SELECT value FROM settings WHERE key = $1", [`tglink:${st[1]}`])).rows[0];
       await db.query("DELETE FROM settings WHERE key = $1", [`tglink:${st[1]}`]);
-      const v = row ? (JSON.parse(row.value) as { party: string; exp: number }) : null;
+      const v = row ? (JSON.parse(row.value) as { party: string; owner?: string; exp: number }) : null;
       if (!v || v.exp < Date.now()) return "That connect link has expired. In the merchant console, open Messages and tap Connect Telegram again.";
-      await link(m.channel, m.address, "merchant", MERCHANT);
+      // A1: the chat links to the shop of the demo workspace that made the link.
+      await link(m.channel, m.address, "merchant", v.owner && isMerchantOwner(v.owner) ? v.owner : merchantOwner());
       return "Connected as Northlight Supply. Refund approvals and case updates will come here with buttons. Send 'pending' any time.";
     }
     const linkMatch = text.match(/^\/?link\s+(shopper|merchant):(\S+)$/i);
@@ -32,14 +34,14 @@ export function installChannelHandlers() {
     if (linkMatch) {
       const party = linkMatch[1].toLowerCase() as Party;
       const id = linkMatch[2];
-      const exists = party === "merchant" ? id === MERCHANT || (await db.query("SELECT 1 FROM merchants WHERE id = $1", [id])).rows.length > 0 : (await db.query("SELECT 1 FROM accounts WHERE id = $1", [id])).rows.length > 0;
+      const exists = party === "merchant" ? isMerchantOwner(id) || (await db.query("SELECT 1 FROM merchants WHERE id = $1", [id])).rows.length > 0 : (await db.query("SELECT 1 FROM accounts WHERE id = $1", [id])).rows.length > 0;
       if (!exists) return "That id does not exist. Copy it from the Channels page while signed in.";
-      await link(m.channel, m.address, party, party === "merchant" ? MERCHANT : id);
+      await link(m.channel, m.address, party, party === "merchant" ? (isMerchantOwner(id) ? id : merchantOwner()) : id);
       return `Linked. You will get ${party === "merchant" ? "refund approval requests and case updates" : "approval requests, price-protection and recall alerts, and order updates"} here.`;
     }
     const party = m.party ?? (m.channel === "simulator" && /^(shopper|merchant):/.test(m.address) ? { party: m.address.split(":")[0], party_id: m.address.split(":").slice(1).join(":") } : null);
     if (!party) return "This chat isn't connected yet. In Everyday, open You and tap Connect Telegram.";
-    const ownerId = party.party === "merchant" ? MERCHANT : party.party_id;
+    const ownerId = party.party === "merchant" ? (isMerchantOwner(party.party_id) ? party.party_id : merchantOwner()) : party.party_id;
 
     const cmd = (m.buttonId ?? text).match(/^(approve|decline):(\S+)$/i);
     if (cmd) {
@@ -73,11 +75,11 @@ export function installChannelHandlers() {
       return "Reply 'pending' for approvals waiting on you, 'orders' for your purchases, 'watch' for price watches, or 'stop' to freeze all buying.";
     }
     if (/^(cases|open)$/i.test(text)) {
-      const rows = (await db.query<any>("SELECT number, issue, status, refund_cents FROM cases WHERE status IN ('awaiting_merchant','refunding') ORDER BY created_at LIMIT 10")).rows;
+      const rows = (await db.query<any>("SELECT c.number, c.issue, c.status, c.refund_cents FROM cases c JOIN orders o ON o.id = c.order_id JOIN accounts a ON a.id = o.account_id WHERE c.status IN ('awaiting_merchant','refunding') AND a.ws_id IS NOT DISTINCT FROM $1 ORDER BY c.created_at LIMIT 10", [currentWs()])).rows;
       return rows.length ? rows.map((c: any) => `${c.number}: ${c.issue}, ${String(c.status).replace(/_/g, " ")}${c.refund_cents ? `, ${usd(c.refund_cents)}` : ""}`).join("\n") : "No open cases.";
     }
     if (/^(disputes)$/i.test(text)) {
-      const rows = (await db.query<any>("SELECT paypal_id, status, amount_cents FROM disputes ORDER BY synced_at DESC LIMIT 10")).rows;
+      const rows = (await db.query<any>("SELECT d.paypal_id, d.status, d.amount_cents FROM disputes d JOIN orders o ON o.id = d.order_id JOIN accounts a ON a.id = o.account_id WHERE a.ws_id IS NOT DISTINCT FROM $1 ORDER BY d.synced_at DESC LIMIT 10", [currentWs()])).rows;
       return rows.length ? rows.map((d: any) => `${d.paypal_id}: ${d.status}${d.amount_cents ? `, ${usd(d.amount_cents)}` : ""}`).join("\n") : "No disputes on file.";
     }
     return "Reply 'pending' for refunds waiting on you, 'cases' for open cases, or 'disputes'.";

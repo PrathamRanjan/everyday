@@ -5,6 +5,7 @@
  */
 import type { Queryable } from "../db.js";
 import { getDb } from "../db.js";
+import { currentWs } from "../ws.js";
 import { categoryBlocked, RulesSchema, type Rules } from "./policy.js";
 
 export interface BacktestRow {
@@ -33,7 +34,7 @@ export interface Backtest {
 
 export async function backtest(rules: Rules, days = 365, q?: Queryable): Promise<Backtest> {
   const db = q ?? (await getDb());
-  const hist = (await db.query<any>("SELECT * FROM purchase_history WHERE at > now() - ($1 || ' days')::interval ORDER BY at", [String(days)])).rows;
+  const hist = (await db.query<any>("SELECT * FROM purchase_history WHERE at > now() - ($1 || ' days')::interval AND ws_id IS NOT DISTINCT FROM $2 ORDER BY at", [String(days), currentWs()])).rows;
   const out: Backtest = { days, purchases: hist.length, run: 0, wait: 0, deny: 0, auto_cents: 0, held_cents: 0, recovered_cents: 0, rows: [] };
   for (const h of hist) {
     const price = Number(h.price_cents);
@@ -76,8 +77,8 @@ export async function suggestAutonomy(ownerId: string, rules: Rules, q?: Queryab
     const suggested = Math.min(p80, ceiling);
     if (suggested > rules.approve_above_cents) out.push({ field: "approve_above_cents", current: rules.approve_above_cents, suggested, basis: `${approved.length} repeat buys approved by hand; 80% were at or below this${declined.length ? "; never above the smallest you declined" : ""}` });
   }
-  const repeats = (await db.query<{ n: string }>("SELECT count(*) AS n FROM purchase_history WHERE repeat AND approved_by_hand")).rows[0];
-  const disputed = (await db.query<{ n: string }>("SELECT count(*) AS n FROM cases WHERE status IN ('awaiting_merchant','refunding')")).rows[0];
+  const repeats = (await db.query<{ n: string }>("SELECT count(*) AS n FROM purchase_history WHERE repeat AND approved_by_hand AND ws_id IS NOT DISTINCT FROM $1", [currentWs()])).rows[0];
+  const disputed = (await db.query<{ n: string }>("SELECT count(*) AS n FROM cases c JOIN orders o ON o.id = c.order_id JOIN accounts a ON a.id = o.account_id WHERE c.status IN ('awaiting_merchant','refunding') AND a.ws_id IS NOT DISTINCT FROM $1", [currentWs()])).rows[0];
   if (Number(repeats?.n ?? 0) >= 6 && Number(disputed?.n ?? 0) === 0 && !rules.one_tap_repeat) out.push({ field: "one_tap_repeat", current: false, suggested: true, basis: `${repeats.n} repeat buys approved by hand with no open case` });
   return out;
 }

@@ -14,7 +14,7 @@ import { applySuggestions, backtest } from "../guard/backtest.js";
 import { countersignThreshold, decideApproval, payloadHash } from "../guard/dryrun.js";
 import { setKill } from "../guard/kill.js";
 import { finishRegistration, newChallenge, verifyAssertion } from "../guard/passkey.js";
-import { activatePolicy, activePolicy, compilePolicy, DEFAULT_RULES, MERCHANT, RulesSchema, savePolicy } from "../guard/policy.js";
+import { activatePolicy, activePolicy, compilePolicy, DEFAULT_RULES, merchantOwner, RulesSchema, savePolicy } from "../guard/policy.js";
 import { recentRuns } from "../trace.js";
 import { merchant, shopper, whoami } from "./auth.js";
 import { back, json, nextOf } from "./common.js";
@@ -101,7 +101,7 @@ export function guardRoutes() {
   const ownerOf = async (req: Request): Promise<{ id: string; name: string }> => {
     const w = await whoami(req);
     if (w?.account) return { id: w.account.id, name: w.account.name };
-    if (w?.merchant) return { id: MERCHANT, name: w.merchant.name };
+    if (w?.merchant) return { id: merchantOwner(), name: w.merchant.name };
     throw new GtError("Sign in", "unauthorized", 401);
   };
   r.post(["/guard/passkey/register/start", "/merchant/approvals/passkey/register/start"], json(async (req) => {
@@ -148,7 +148,7 @@ export function guardRoutes() {
     const text = String(req.body.text ?? "").slice(0, 1000);
     if (!text.trim()) throw new GtError("Write the mandate first", "validation", 422);
     const compiled = await compilePolicy(text);
-    await savePolicy(MERCHANT, text, compiled, true);
+    await savePolicy(merchantOwner(), text, compiled, true);
     back(res, "/merchant/approvals", `Mandate adopted (${compiled.compiler})${compiled.unexpressed.length ? `; could not express: ${compiled.unexpressed.join("; ")}` : ""}`);
   }, true));
   r.post("/merchant/approvals/kill", merchant(async (req, res, m) => {
@@ -159,19 +159,19 @@ export function guardRoutes() {
   r.post("/merchant/approvals/:id/click", merchant(async (req, res) => {
     const approve = String(req.body.approve) === "1";
     const db = await getDb();
-    const ap = (await db.query<any>("SELECT * FROM approvals WHERE id = $1 AND owner_id = $2", [req.params.id, MERCHANT])).rows[0];
+    const ap = (await db.query<any>("SELECT * FROM approvals WHERE id = $1 AND owner_id = $2", [req.params.id, merchantOwner()])).rows[0];
     if (!ap) throw new GtError("Approval not found", "not_found", 404);
     if (approve && ap.payload.cents > countersignThreshold()) throw new GtError("This amount needs your passkey", "passkey_required", 403);
-    const payload = await decideApproval(ap.id, MERCHANT, approve, "click");
+    const payload = await decideApproval(ap.id, merchantOwner(), approve, "click");
     if (payload && approve) await release(ap.id);
     back(res, "/merchant/approvals", approve ? "Approved; the refund is back in the queue" : "Declined");
   }, true));
   r.post("/merchant/approvals/:id/:choice(approve|decline)", merchant(async (req, res) => {
     const approve = req.params.choice === "approve";
-    const ap = (await (await getDb()).query<any>("SELECT * FROM approvals WHERE id = $1 AND owner_id = $2", [req.params.id, MERCHANT])).rows[0];
+    const ap = (await (await getDb()).query<any>("SELECT * FROM approvals WHERE id = $1 AND owner_id = $2", [req.params.id, merchantOwner()])).rows[0];
     if (!ap) throw new GtError("Approval not found", "not_found", 404);
     if (approve && ap.payload.cents > countersignThreshold()) throw new GtError("This amount needs your passkey", "passkey_required", 403);
-    const payload = await decideApproval(ap.id, MERCHANT, approve, "click");
+    const payload = await decideApproval(ap.id, merchantOwner(), approve, "click");
     if (payload && approve) await release(ap.id);
     back(res, nextOf(req.body?.next, "/merchant/approvals"), approve ? "Approved; the refund is back in the queue." : "Declined. Nothing moves.");
   }, true));

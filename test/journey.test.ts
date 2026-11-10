@@ -7,7 +7,7 @@ import { setPayPal } from "../src/paypal/index.js";
 import { seed, type Seeded } from "../src/services/seed.js";
 import { Client } from "./client.js";
 import { serveTracked } from "./journey-coverage.js";
-import { FOUNDATION_ROUTES } from "./foundation-routes.js";
+import { ELSEWHERE, FOUNDATION_ROUTES } from "./foundation-routes.js";
 import { DEMO_SCAM } from "../src/web/safety.js";
 
 // Acceptance journey: the shopper (app and Telegram) and the merchant end to end over HTTP: capture,
@@ -245,6 +245,6 @@ describe("Everyday acceptance journey", () => {
     expect((await nl.post("/logout")).status).toBe(302);
 
     expect(srv.failures).toEqual([]);
-    expect(srv.missed(FOUNDATION_ROUTES)).toEqual([]);
+    expect(srv.missed({ ...FOUNDATION_ROUTES, ...ELSEWHERE })).toEqual([]);
   });
 });

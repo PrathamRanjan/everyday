@@ -1,8 +1,10 @@
 import { Link } from "react-router";
-import { ArrowRight, Clock, PlayCircle, RotateCcw, Store, User } from "lucide-react";
+import { ArrowRight, Clock, Link2, PlayCircle, RotateCcw, Store, User } from "lucide-react";
 import { Busy, Loaded, PageHead, Panel } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { useAction, useApi } from "@/lib/api";
+import { useSession } from "@/lib/session";
+import { day } from "@/lib/format";
 import { startTour } from "@/tours/tours";
 
 interface JudgeData { beats: { title: string; body: string; href: string }[]; session: string }
@@ -45,15 +47,24 @@ export function Judge() {
 }
 
 export default function Demo() {
-  const st = useApi<{ demo: boolean; clock: string | null; loaded: boolean }>("/api/ui/demo");
+  const st = useApi<{ demo: boolean; clock: string | null; loaded: boolean; private_demos?: boolean; workspace?: string | null }>("/api/ui/demo");
   const p = useApi<{ demo: boolean; accounts: { id: string; name: string }[]; merchants: { id: string; name: string }[] }>("/api/ui/personas");
   const { run, busy } = useAction(st.reload);
+  const { session } = useSession();
+  const ws = session?.workspace ?? null;
   return (
     <Loaded state={st}>
       {(d) => (
         <div className="ev-rise">
-          <PageHead eyebrow="Demo controls" title="Run the demo" lede={d.demo ? "Move the demo clock, reset the seeded data, or jump in as a person." : "Demo mode is off on this server."} />
-          {d.demo && (
+          <PageHead eyebrow="Demo controls" title="Run the demo" lede={d.demo ? "Your own demo: move its clock, start it again, or switch between Maya and her shop." : "Demo mode is off on this server."} />
+          {d.demo && d.private_demos && !d.workspace && (
+            <Panel title="You don't have a demo yet" sub="Each visitor gets a private copy. Nobody else sees what you do in yours.">
+              <Button disabled={Boolean(busy)} onClick={() => run("start", "/demo/start", {})}>
+                <Busy on={busy === "start"}>{null}</Busy>Try the live demo
+              </Button>
+            </Panel>
+          )}
+          {d.demo && (!d.private_demos || d.workspace) && (
             <div className="grid gap-6 md:grid-cols-2">
               <Panel title={<span className="inline-flex items-center gap-2"><Clock className="size-5" />Demo clock</span>} sub="Deliveries, return windows and price promises run on this clock.">
                 <p className="num font-display text-3xl">{d.clock ?? "—"}</p>
@@ -66,17 +77,27 @@ export default function Demo() {
                   </Button>
                 </div>
               </Panel>
-              <Panel title={<span className="inline-flex items-center gap-2"><RotateCcw className="size-5" />Reset</span>} sub="Reloads the seeded people, catalog and history, and signs everyone out. Sandbox orders already in PayPal stay in PayPal.">
+              <Panel title={<span className="inline-flex items-center gap-2"><RotateCcw className="size-5" />Start my demo again</span>} sub="Rebuilds only your own demo: Maya, her shop, the catalog and the seed's sandbox payments. Nobody else's demo changes. Sandbox orders already in PayPal stay in PayPal.">
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   disabled={Boolean(busy)}
                   onClick={() => {
-                    if (confirm("Reset the demo data for everyone using this demo?")) void run("reset", "/demo/reset");
+                    if (confirm("Rebuild your own demo from the start? Only yours changes.")) void run("reset", "/demo/reset");
                   }}
                 >
-                  <Busy on={busy === "reset"}>{null}</Busy>Reset demo data
+                  <Busy on={busy === "reset"}>{null}</Busy>Reset my demo
                 </Button>
               </Panel>
+              {ws && (
+                <Panel title={<span className="inline-flex items-center gap-2"><Link2 className="size-5" />This demo</span>} sub={`Private to you. Deleted if unused until ${day(String(ws.expires_at).slice(0, 10))}.`} className="md:col-span-2">
+                  {ws.progress_line && <p className="text-sm" role="status">{ws.progress_line}</p>}
+                  {ws.join_url && (
+                    <p className="mt-2 text-sm text-ink-2">
+                      Open the same demo on your phone: <span className="num break-all text-ink">{ws.join_url}</span>
+                    </p>
+                  )}
+                </Panel>
+              )}
               <Panel title="Jump in" className="md:col-span-2">
                 <div className="flex flex-wrap gap-2">
                   {p.data?.accounts.map((a) => (

@@ -6,6 +6,7 @@
 import type { Queryable } from "./db.js";
 import { getDb } from "./db.js";
 import { newId } from "./lib/ids.js";
+import { currentWs } from "./ws.js";
 
 export type Actor = "model" | "code" | "paypal" | "agent" | "owner" | "staff" | "customer" | "worker" | "guard";
 
@@ -72,7 +73,7 @@ export class Run {
 export async function startRun(input: { actor: Actor; agentId?: string | null; subject: string; entity?: string; entityId?: string }, q?: Queryable): Promise<Run> {
   const db = q ?? (await getDb());
   const id = newId("run");
-  await db.query("INSERT INTO agent_runs (id, actor, agent_id, subject, entity, entity_id) VALUES ($1,$2,$3,$4,$5,$6)", [id, input.actor, input.agentId ?? null, input.subject, input.entity ?? null, input.entityId ?? null]);
+  await db.query("INSERT INTO agent_runs (id, actor, agent_id, subject, entity, entity_id, ws_id) VALUES ($1,$2,$3,$4,$5,$6,$7)", [id, input.actor, input.agentId ?? null, input.subject, input.entity ?? null, input.entityId ?? null, currentWs()]);
   return new Run(id, db);
 }
 
@@ -96,8 +97,8 @@ export async function recentRuns(limit = 50) {
       `SELECT r.*, (SELECT count(*) FROM agent_trace t WHERE t.run_id = r.id) AS steps,
               (SELECT count(*) FROM agent_trace t WHERE t.run_id = r.id AND t.actor = 'paypal') AS paypal_calls,
               (SELECT count(*) FROM agent_trace t WHERE t.run_id = r.id AND t.gate IN ('denied','held','dry_run_refused')) AS blocked
-       FROM agent_runs r ORDER BY started_at DESC LIMIT $1`,
-      [limit],
+       FROM agent_runs r WHERE r.ws_id IS NOT DISTINCT FROM $2 ORDER BY started_at DESC LIMIT $1`,
+      [limit, currentWs()],
     )
   ).rows as any[];
 }

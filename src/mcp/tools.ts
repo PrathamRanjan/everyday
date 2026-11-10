@@ -16,7 +16,8 @@ import { getDb } from "../db.js";
 import { newId } from "../lib/ids.js";
 import { GtError } from "../lib/util.js";
 import { isKilled } from "../guard/kill.js";
-import { activePolicy, DEFAULT_RULES, rulesFor } from "../guard/policy.js";
+import { activePolicy, DEFAULT_RULES, merchantOwner, rulesFor } from "../guard/policy.js";
+import { currentWs } from "../ws.js";
 import { accountById, type Account } from "../store.js";
 import { owned } from "../services/life.js";
 import { approveQuote, quotePlan, spending } from "../services/orders.js";
@@ -56,7 +57,7 @@ async function run(account: Account, agentId: string, tool: string, args: Record
       }
     }
     const id = newId("req");
-    await db.query("INSERT INTO agent_requests (id, principal, agent_id, tool, args, idempotency_key) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING", [id, principal, agentId, tool, JSON.stringify(args), key]);
+    await db.query("INSERT INTO agent_requests (id, principal, agent_id, tool, args, idempotency_key, ws_id) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING", [id, principal, agentId, tool, JSON.stringify(args), key, currentWs()]);
     try {
       const out = await fn();
       await db.query("UPDATE agent_requests SET ok = true, result = $2 WHERE id = $1", [id, JSON.stringify(out)]);
@@ -208,10 +209,10 @@ async function runMerchant(merchant: { id: string; name: string }, agentId: stri
   try {
     rateLimit(`${principal}:${agentId}`);
     const db = await getDb();
-    const killed = (await isKilled(`merchant:${merchant.id}`, db)) ?? (await isKilled(`agent:${agentId}`, db));
+    const killed = (await isKilled("merchant", db)) ?? (await isKilled(`agent:${agentId}`, db));
     if (killed?.engaged) throw new GtError(`Kill switch engaged (${killed.scope})${killed.reason ? `: ${killed.reason}` : ""}.`, "killed", 423);
     const id = newId("req");
-    await db.query("INSERT INTO agent_requests (id, principal, agent_id, tool, args) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING", [id, principal, agentId, tool, JSON.stringify(args)]);
+    await db.query("INSERT INTO agent_requests (id, principal, agent_id, tool, args, ws_id) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING", [id, principal, agentId, tool, JSON.stringify(args), currentWs()]);
     try {
       const out = await fn();
       await db.query("UPDATE agent_requests SET ok = true, result = $2 WHERE id = $1", [id, JSON.stringify(out)]);
@@ -270,7 +271,7 @@ export function buildMerchantServer(merchant: { id: string; name: string }, agen
     async (args) =>
       runMerchant(merchant, agentId, "list_approvals", args, async () => {
         const db = await getDb();
-        const rows = (await db.query<any>("SELECT id, action, status, method, created_at, decided_at FROM approvals WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 50", [merchant.id])).rows;
+        const rows = (await db.query<any>("SELECT id, action, status, method, created_at, decided_at FROM approvals WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 50", [merchantOwner()])).rows;
         return { approvals: rows, note: "Deciding an approval needs the merchant's click or passkey; this agent cannot do it." };
       }),
   );
@@ -280,7 +281,7 @@ export function buildMerchantServer(merchant: { id: string; name: string }, agen
     async (args) =>
       runMerchant(merchant, agentId, "list_disputes", args, async () => {
         const db = await getDb();
-        const rows = (await db.query<any>("SELECT d.id, d.paypal_id, d.order_id, d.status, d.reason, d.amount_cents, d.evidence_sent_at, d.due_at FROM disputes d LEFT JOIN orders o ON o.id = d.order_id WHERE o.merchant_id = $1 OR d.order_id IS NULL ORDER BY d.synced_at DESC LIMIT 50", [merchant.id])).rows;
+        const rows = (await db.query<any>("SELECT d.id, d.paypal_id, d.order_id, d.status, d.reason, d.amount_cents, d.evidence_sent_at, d.due_at FROM disputes d JOIN orders o ON o.id = d.order_id WHERE o.merchant_id = $1 ORDER BY d.synced_at DESC LIMIT 50", [merchant.id])).rows;
         return { disputes: rows.map((d: any) => ({ ...d, amount: money(d.amount_cents), amount_cents: undefined })) };
       }),
   );

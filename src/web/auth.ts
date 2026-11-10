@@ -7,8 +7,10 @@ import { accountById, type Account } from "../store.js";
 import { back } from "./common.js";
 
 export const COOKIE = "ev_who";
+/** A1: the visitor's own demo workspace (signed id). Stays when they switch between Maya and the shop. */
+export const WS_COOKIE = "ev_ws";
 
-type Who = { account?: Account; merchant?: { id: string; name: string }; via?: "cookie" | "key" } | null;
+type Who = { account?: Account; merchant?: { id: string; name: string; ws_id?: string | null }; via?: "cookie" | "key" } | null;
 
 /** The device key in `Authorization: Bearer ...`, if any. Not a cookie, so a page on another site can't send it. */
 export const bearerOf = (req: Request) => req.get("authorization")?.match(/^Bearer\s+(\S{8,200})$/i)?.[1] ?? null;
@@ -23,6 +25,13 @@ export async function whoami(req: Request): Promise<Who> {
 }
 
 async function resolveWho(req: Request): Promise<Who> {
+  const w = await resolveWhoAny(req);
+  // A1: with private demos on, the shared workspace-less demo world is not reachable by visitors.
+  if (config.demoMode && config.privateDemos && w && !(w.account?.ws_id ?? w.merchant?.ws_id)) return null;
+  return w;
+}
+
+async function resolveWhoAny(req: Request): Promise<Who> {
   const key = bearerOf(req);
   if (key) {
     const db = await getDb();
@@ -44,7 +53,7 @@ async function resolveWho(req: Request): Promise<Who> {
   const db = await getDb();
   if (v.startsWith("acc:")) return { account: await accountById(db, v.slice(4)).catch(() => undefined), via: "cookie" };
   if (v.startsWith("mer:")) {
-    const m = (await db.query<any>("SELECT id, name FROM merchants WHERE id = $1", [v.slice(4)])).rows[0];
+    const m = (await db.query<any>("SELECT id, name, ws_id FROM merchants WHERE id = $1", [v.slice(4)])).rows[0];
     return m ? { merchant: m, via: "cookie" } : null;
   }
   return null;
@@ -70,6 +79,27 @@ export function signIn(res: Response, value: string) {
 }
 export function signOut(res: Response) {
   res.clearCookie(COOKIE, { path: "/" });
+}
+
+export function setWsCookie(res: Response, ws: string) {
+  res.cookie(WS_COOKIE, sign(ws), { httpOnly: true, sameSite: "lax", secure: config.appUrl.startsWith("https://"), maxAge: 30 * 864e5, path: "/" });
+}
+
+/**
+ * The demo workspace a request acts in: the signed-in shopper's or shop's own, else the visitor's workspace cookie.
+ * A merchant key (the read-only merchant MCP) resolves to its shop's workspace.
+ */
+export async function wsOfRequest(req: Request): Promise<string | null> {
+  const w = await whoami(req).catch(() => null);
+  if (w?.account) return w.account.ws_id ?? null;
+  if (w?.merchant) return w.merchant.ws_id ?? null;
+  const key = bearerOf(req);
+  if (key) {
+    const v = await keyLogin(key).catch(() => null);
+    if (v?.startsWith("mer:")) return (await (await getDb()).query<{ ws_id: string | null }>("SELECT ws_id FROM merchants WHERE id = $1", [v.slice(4)])).rows[0]?.ws_id ?? null;
+  }
+  const c = unsign(req.cookies?.[WS_COOKIE]);
+  return c && /^ws_[a-z0-9]+$/.test(c) ? c : null;
 }
 
 function wrap<T>(load: (req: Request) => Promise<T | null>, onMissing: string, fn: (req: Request, res: Response, who: T) => Promise<unknown>, post: boolean) {

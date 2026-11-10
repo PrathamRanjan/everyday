@@ -6,7 +6,7 @@ import { getJson, hostOf, SERVERS } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 
-type Personas = { demo: boolean; accounts: { id: string; name: string }[] };
+type Personas = { demo: boolean; accounts: { id: string; name: string }[]; private_demos?: boolean };
 type Where = "live" | "local" | "other";
 
 /**
@@ -23,6 +23,7 @@ export default function SignIn() {
   const [people, setPeople] = useState<Personas | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [key, setKey] = useState("");
+  const [join, setJoin] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,10 +95,17 @@ export default function SignIn() {
           </Txt>
         </Card>
 
-        {people?.demo && people.accounts.length > 0 && (
+        {people?.demo && people.private_demos && (
+          <Card title="Try the live demo" sub="Your own private copy: Maya, her shop and real sandbox payments. Nobody else sees it; it's deleted 48 hours after your last visit. Signing in makes a key for this phone.">
+            <Button label="Start my own demo" busy={busy === "start"} disabled={Boolean(busy)} onPress={() => void go("start", () => s.signInDemo({ start: true }))} />
+            <Field label="Or open the demo you started on the website" value={join} onChangeText={setJoin} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="…/demo/join/…" hint="On the website: Demo → This demo → the phone link." />
+            <Button label="Open that demo" kind="secondary" busy={busy === "join"} disabled={!join.trim() || Boolean(busy)} onPress={() => void go("join", () => s.signInDemo({ join: join.trim() }))} />
+          </Card>
+        )}
+        {people?.demo && !people.private_demos && people.accounts.length > 0 && (
           <Card title="Try the demo" sub="Sandbox PayPal and test money. Signing in makes a key for this phone; you can disconnect it from Messages on the website.">
             {people.accounts.map((a) => (
-              <Button key={a.id} label={`Continue as ${a.name.split(" ")[0]}`} busy={busy === a.id} disabled={Boolean(busy)} onPress={() => void go(a.id, () => s.signInDemo(a.id))} />
+              <Button key={a.id} label={`Continue as ${a.name.split(" ")[0]}`} busy={busy === a.id} disabled={Boolean(busy)} onPress={() => void go(a.id, () => s.signInDemo({ accountId: a.id }))} />
             ))}
           </Card>
         )}

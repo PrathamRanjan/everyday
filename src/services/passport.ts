@@ -21,6 +21,7 @@ import { gate, GateDenied, HeldForApproval, preApprove } from "../guard/dryrun.j
 import { appendAudit } from "../guard/audit.js";
 import { startRun } from "../trace.js";
 import { catalog } from "./catalog.js";
+import { currentWs, customIdFor, withWs } from "../ws.js";
 
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
@@ -47,16 +48,17 @@ const HIST: { daysAgo: number; category: string; merchant: string; price: number
   { daysAgo: 14, category: "lamp", merchant: "Northlight Supply", price: 49, refund: 49, kind: "case_refund", note: "Halden lamp arrived cracked; refunded" },
 ];
 
-export async function seedPurchaseHistory(q: Queryable) {
-  await q.query("DELETE FROM purchase_history");
+export async function seedPurchaseHistory(q: Queryable, ws: string | null = currentWs()) {
+  await q.query("DELETE FROM purchase_history WHERE ws_id IS NOT DISTINCT FROM $1", [ws]);
   for (const h of HIST) {
-    await q.query("INSERT INTO purchase_history (id, at, category, merchant, price_cents, refund_cents, refund_kind, approved_by_hand, repeat, note) VALUES ($1, now() - ($2 || ' days')::interval, $3, $4, $5, $6, $7, true, $8, $9)", [newId("ph"), String(h.daysAgo), h.category, h.merchant, h.price * 100, (h.refund ?? 0) * 100, h.kind ?? null, Boolean(h.repeat), h.note]);
+    await q.query("INSERT INTO purchase_history (id, at, category, merchant, price_cents, refund_cents, refund_kind, approved_by_hand, repeat, note, ws_id) VALUES ($1, now() - ($2 || ' days')::interval, $3, $4, $5, $6, $7, true, $8, $9, $10)", [newId("ph"), String(h.daysAgo), h.category, h.merchant, h.price * 100, (h.refund ?? 0) * 100, h.kind ?? null, Boolean(h.repeat), h.note, ws]);
   }
 }
 
 export async function passportSummary(q: Queryable, a: Account) {
-  const hist = (await q.query<any>("SELECT * FROM purchase_history ORDER BY at DESC")).rows;
-  const recovered = (await q.query<any>("SELECT refund_kind AS kind, count(*)::int AS n, sum(refund_cents)::int AS cents FROM purchase_history WHERE refund_cents > 0 GROUP BY refund_kind ORDER BY cents DESC")).rows;
+  const ws = a.ws_id ?? null;
+  const hist = (await q.query<any>("SELECT * FROM purchase_history WHERE ws_id IS NOT DISTINCT FROM $1 ORDER BY at DESC", [ws])).rows;
+  const recovered = (await q.query<any>("SELECT refund_kind AS kind, count(*)::int AS n, sum(refund_cents)::int AS cents FROM purchase_history WHERE refund_cents > 0 AND ws_id IS NOT DISTINCT FROM $1 GROUP BY refund_kind ORDER BY cents DESC", [ws])).rows;
   const live = (await q.query<any>(`SELECT
       (SELECT coalesce(sum(refunded_cents),0)::int FROM orders WHERE account_id = $1) AS refunded_live,
       (SELECT coalesce(sum(gross_cents),0)::int FROM orders WHERE account_id = $1 AND status NOT IN ('created','cancelled')) AS paid_live,
@@ -164,7 +166,7 @@ export async function runRepeatBuy(repeatId: string, agentScope = "worker"): Pro
     throw e;
   }
   try {
-    const order = await paypal().createVaultedCaptureOrder({ amountCents: rb.amount_cents, currency: "USD", customId: rb.id, invoiceId: `RPT-${rb.id.slice(-8)}`, description: `Everyday repeat buy: ${rb.qty} × ${p.title}`, vaultId: v.payment_token, items: [{ name: p.title, sku: p.sku, quantity: rb.qty, unitCents: p.price_cents }] }, rb.request_id);
+    const order = await paypal().createVaultedCaptureOrder({ amountCents: rb.amount_cents, currency: "USD", customId: customIdFor(rb.id), invoiceId: `RPT-${rb.id.slice(-8)}`, description: `Everyday repeat buy: ${rb.qty} × ${p.title}`, vaultId: v.payment_token, items: [{ name: p.title, sku: p.sku, quantity: rb.qty, unitCents: p.price_cents }] }, rb.request_id);
     const cap = firstCapture(order);
     await run.step({ actor: "paypal", tool: "orders.create+capture (vault)", args: { request_id: rb.request_id, cents: rb.amount_cents }, gate: "allowed", result: { paypal_order_id: order.id, status: order.status, capture: cap?.id ?? null, capture_status: cap?.status ?? null }, pp_request_id: rb.request_id });
     if (!cap || cap.status !== "COMPLETED") {
@@ -245,12 +247,12 @@ export async function syncDisputes(): Promise<number> {
   let n = 0;
   for (const d of list) {
     const capId = d.disputed_transactions?.[0]?.seller_transaction_id ?? null;
-    const o = capId ? (await db.query<any>("SELECT id, account_id, number FROM orders WHERE capture_id = $1", [capId])).rows[0] : null;
+    const o = capId ? (await db.query<any>("SELECT o.id, o.account_id, o.number, a.ws_id FROM orders o JOIN accounts a ON a.id = o.account_id WHERE o.capture_id = $1", [capId])).rows[0] : null;
     const r = await db.query("INSERT INTO disputes (id, paypal_id, capture_id, order_id, status, reason, amount_cents, due_at, synced_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now()) ON CONFLICT (paypal_id) DO UPDATE SET status = EXCLUDED.status, due_at = EXCLUDED.due_at, synced_at = now() RETURNING (xmax = 0) AS inserted", [newId("dsp"), d.dispute_id, capId, o?.id ?? null, d.status, d.reason ?? null, d.dispute_amount ? toCents(d.dispute_amount) : null, d.seller_response_due_date ? new Date(d.seller_response_due_date) : null]);
     n++;
     if ((r.rows[0] as any)?.inserted && o) {
       const a = await accountById(db, o.account_id);
-      await logEvent(db, a, "order", o.id, "dispute.opened", `PayPal dispute ${d.dispute_id} (${d.reason ?? "no reason"}) on ${o.number}; evidence pack ready for the merchant`, "PayPal");
+      await withWs(o.ws_id, () => logEvent(db, a, "order", o.id, "dispute.opened", `PayPal dispute ${d.dispute_id} (${d.reason ?? "no reason"}) on ${o.number}; evidence pack ready for the merchant`, "PayPal"));
     }
   }
   return n;
@@ -336,9 +338,13 @@ export async function reconcileTransactions(days = 30) {
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400_000);
   const txs = await paypal().searchTransactions({ startDate: start, endDate: end });
-  const ours = (await db.query<any>("SELECT o.number, o.capture_id, o.gross_cents, o.refunded_cents FROM orders o WHERE o.capture_id IS NOT NULL")).rows;
-  const byCap = new Map(ours.map((o: any) => [o.capture_id, o]));
-  const rows = txs.map((t) => {
+  // A1: the sandbox merchant account is shared by every demo workspace; this workspace's view leaves out
+  // transactions that belong to another visitor's orders.
+  const ours = (await db.query<any>("SELECT o.number, o.capture_id, o.gross_cents, o.refunded_cents, a.ws_id FROM orders o JOIN accounts a ON a.id = o.account_id WHERE o.capture_id IS NOT NULL")).rows;
+  const here = currentWs();
+  const elsewhere = new Set(ours.filter((o: any) => (o.ws_id ?? null) !== here).map((o: any) => o.capture_id));
+  const byCap = new Map(ours.filter((o: any) => (o.ws_id ?? null) === here).map((o: any) => [o.capture_id, o]));
+  const rows = txs.filter((t) => !elsewhere.has(t.transaction_info.transaction_id)).map((t) => {
     const info = t.transaction_info;
     const cents = Math.round(Number(info.transaction_amount?.value ?? 0) * 100);
     const match = byCap.get(info.transaction_id);

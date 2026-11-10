@@ -170,11 +170,9 @@ export async function startTour(kind: TourKind) {
   if (kind === "judge") {
     const s = await getJson<{ who: { kind: string } | null }>("/api/ui/session").catch(() => null);
     if (s?.who?.kind !== "shopper") {
-      const p = await getJson<{ accounts: { id: string }[] }>("/api/ui/personas").catch(() => null);
-      if (p?.accounts[0]) {
-        await postAction("/login", { as: `acc:${p.accounts[0].id}`, next: "/judge" }).catch(() => undefined);
-        window.dispatchEvent(new Event("ev:changed"));
-      }
+      // A1: the tour runs in the visitor's own demo workspace (made now if they have none).
+      await postAction("/demo/start", {}).catch(() => undefined);
+      window.dispatchEvent(new Event("ev:changed"));
     }
   }
   const s: State = { kind, i: 0, started: Date.now() };

@@ -12,6 +12,9 @@ export interface Session {
   /** A2.1: the demo's saved sandbox wallet (demo mode only). `usable` means pay-with-no-login is offered. */
   demo_wallet: { usable: boolean; state: string; email: string | null; checked_at: string | null; detail: string | null } | null;
   telegram_bot: string;
+  /** A1: every visitor gets a private demo workspace (POST /demo/start). */
+  private_demos: boolean;
+  workspace: { id: string; kind: string; state: string; expires_at: string; progress_line: string | null; finished: boolean; join_url: string | null } | null;
   live: { telegram: boolean; push: boolean; channel3: boolean; ai: boolean; ai_label: string; paypal: boolean };
 }
 
@@ -44,6 +47,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("ev:changed", changed);
     };
   }, [refresh]);
+  // A1: while the seed's sandbox payments are still going, check back every few seconds so the progress line moves.
+  const seeding = Boolean(session?.workspace && !session.workspace.finished);
+  useEffect(() => {
+    if (!seeding) return;
+    const t = setInterval(() => void refresh(), 4000);
+    return () => clearInterval(t);
+  }, [seeding, refresh]);
   return <Ctx.Provider value={{ session, refresh, offline }}>{children}</Ctx.Provider>;
 }
 

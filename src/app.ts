@@ -15,6 +15,10 @@ import { mcpRoutes } from "./web/mcp.js";
 import { installChannelHandlers } from "./channels/handlers.js";
 import { apiRoutes } from "./web/api.js";
 import { adminRoutes } from "./web/admin.js";
+import { demoRoutes } from "./web/demo.js";
+import { wsOfRequest } from "./web/auth.js";
+import { withWs } from "./ws.js";
+import { touchWorkspace } from "./services/workspaces.js";
 import { serveApp, uiBridge } from "./web/spa.js";
 
 let handlersInstalled = false;
@@ -57,8 +61,19 @@ export function createApp() {
       res.status(500).json({ ok: false, error: (e as Error).message });
     }
   });
+  // A1: every request below acts inside the visitor's own demo workspace (or the workspace-less world).
+  app.use((req, res, next) => {
+    wsOfRequest(req).then(
+      (ws) => {
+        if (ws) void touchWorkspace(ws).catch(() => undefined);
+        withWs(ws, next);
+      },
+      next,
+    );
+  });
   const shell = serveApp(app, root);
   app.use(adminRoutes());
+  app.use(demoRoutes());
   app.use(apiRoutes());
   app.use(mcpRoutes());
   app.use(opsRoutes());

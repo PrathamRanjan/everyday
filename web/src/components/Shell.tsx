@@ -101,7 +101,7 @@ function DemoRibbon() {
       toast.success(r.ok ?? "Done");
       await refresh();
       window.dispatchEvent(new Event("ev:changed"));
-      if (k === "reset") nav("/login");
+      if (k === "reset") nav("/today");
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -121,6 +121,9 @@ function DemoRibbon() {
             · demo clock <b className="font-semibold text-ink">{clock}</b>
           </span>
         )}
+        {session?.workspace?.progress_line && !session.workspace.finished && (
+          <span role="status" aria-live="polite">· {session.workspace.progress_line}</span>
+        )}
         <span className="ml-auto flex items-center gap-1">
           {clock && (
             <>
@@ -132,16 +135,22 @@ function DemoRibbon() {
               </button>
             </>
           )}
-          <button
-            className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50"
-            disabled={Boolean(busy)}
-            onClick={() => {
-              if (confirm("Reset the demo? This reloads the seeded data for everyone using this demo and signs you out.")) void act("reset", "/demo/reset");
-            }}
-          >
-            <RotateCcw className="mr-1 inline size-3" />
-            Reset demo
-          </button>
+          {session?.workspace ? (
+            <button
+              className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50"
+              disabled={Boolean(busy)}
+              onClick={() => {
+                if (confirm("Rebuild your own demo from the start? Only yours changes; nobody else's demo is touched.")) void act("reset", "/demo/reset");
+              }}
+            >
+              <RotateCcw className="mr-1 inline size-3" />
+              Reset my demo
+            </button>
+          ) : session?.private_demos ? (
+            <button className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => void act("start", "/demo/start", {}).then(() => nav("/today"))}>
+              Try the live demo
+            </button>
+          ) : null}
         </span>
       </div>
     </div>
