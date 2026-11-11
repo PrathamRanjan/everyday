@@ -80,7 +80,7 @@ export async function proofData() {
   // The robot judge: the newer of the run stored on this site (nightly, POST /admin/robot-judge) and the committed file.
   const fileRun = readJson("robot-judge.json");
   const kept = await (await getDb()).query<{ value: string }>("SELECT value FROM settings WHERE key = 'robot_judge'").then((r) => (r.rows[0] ? JSON.parse(r.rows[0].value) : null), () => null);
-  const pick = kept && (!fileRun || String(kept.run_on) > String(fileRun.run_on)) ? { ...kept, stored: "This run was sent to the site by the nightly job." } : fileRun ? { ...fileRun, stored: "This run is the one committed with this build (eval/robot-judge.json)." } : null;
+  const pick = kept && (!fileRun || String(kept.run_on) > String(fileRun.run_on)) ? { ...kept, stored: "This run was sent to the site by the robot judge job (nightly, or run by hand with the operator key)." } : fileRun ? { ...fileRun, stored: "This run is the one committed with this build (eval/robot-judge.json)." } : null;
   const robot = pick;
   return {
     built_from: "Committed result files in eval/, written by the scripts that ran each check (npm run eval:*, npm run calibrate).",

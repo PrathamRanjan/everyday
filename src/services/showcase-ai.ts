@@ -1,7 +1,8 @@
 /**
  * A3.2: after the showcase is rebuilt, it is asked a few real questions, so /ai shows real model calls (request
  * reading, the second scam reader and the assistant with its PayPal MCP reads) and /paypal shows a live MCP read.
- * Three small calls a night. Without a model key nothing runs and /ai says so.
+ * Three small calls a night, plus one real sandbox refund (the seeded price drop, claimed and approved by the shop)
+ * so /paypal shows a refund id and PayPal's read-back. Without a model key nothing runs and /ai says so.
  */
 import { hasOpenAI } from "../ai/provider.js";
 import { getDb } from "../db.js";
@@ -35,6 +36,16 @@ export async function showcaseAi(wsId: string): Promise<{ done: string[]; failed
     const { ask } = await import("../ai/agent.js");
     await step("request", () => createIntent(a, { text: SHOWCASE_QUESTIONS.request, channel: "app" }));
     await step("message", () => readMessage(SHOWCASE_QUESTIONS.message, { purpose: "scam_check" }));
+    // The money-back path, for real: the seeded lamp is $7 cheaper inside the shop's promise. Claim it and approve
+    // it as the shop, so /paypal shows a real sandbox refund and PayPal's read-back. Code works out the amount.
+    await step("refund", async () => {
+      const { protectionsFor, claimPriceProtection } = await import("./protect.js");
+      const { merchantDecide } = await import("./orders.js");
+      const p = (await protectionsFor(db, a)).find((x) => x.eligible);
+      if (!p) throw new Error("no price drop inside the promise");
+      const c = await claimPriceProtection(a, p.line_id);
+      await merchantDecide(c.id, true, "The shop's price promise covers this drop.");
+    });
     await step("ask", () => ask(a, SHOWCASE_QUESTIONS.ask, () => undefined));
   });
   if (out.failed.length) console.error("[everyday] showcase AI", out.failed.join("; "));

@@ -211,6 +211,6 @@ describe("private demo workspaces", () => {
     expect(stored.json).toMatchObject({ stored: true, ok: true });
     const proof = (await new Client(base).get("/api/public/proof")).json.robot_judge;
     expect(proof).toMatchObject({ run_on: "2099-01-01T00:00:00.000Z", ok: true });
-    expect(proof.stored).toMatch(/nightly job/);
+    expect(proof.stored).toMatch(/robot judge job/);
   }, 60_000);
 });
