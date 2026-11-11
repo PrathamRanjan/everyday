@@ -237,6 +237,14 @@ export async function intentRow(q: Queryable, account: Account, id: string) {
 
 // ---------- Plans ----------
 
+/** True when an item's data shows a stated quality: its finish, material or style, or the word in its title or description. */
+export function meetsWord(w: string, item: { attrs?: any; title: string; description?: string | null }): boolean {
+  const a = item.attrs ?? {};
+  return a.finish === w || a.material === w || (w === "oak" && (a.finish === "wood" || a.material === "wood")) || (a.style ?? []).includes(w) || new RegExp(`\\b${w.replace(/[^a-z -]/g, "")}\\b`, "i").test(`${item.title} ${item.description ?? ""}`);
+}
+const dollarsOf = (c: number) => `$${(c / 100).toFixed(2)}`;
+const orList = (ws: string[]) => (ws.length < 2 ? ws.join("") : `${ws.slice(0, -1).join(", ")} or ${ws[ws.length - 1]}`);
+
 export interface SlotView {
   key: string;
   label: string;
@@ -274,13 +282,17 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
     const rank = new Map(cat.index.fused(query, 60).map((r, k) => [r.id, k]));
     const view: SlotView = { key: s.key, label: s.label, required: s.required, outcome: "none", note: s.outcome ?? null, pick: null, alternatives: [], excluded: [], unknown: [], discovery: [] };
     const ownedHere = owned.find((o) => o.category === s.category);
+    // E1/A5.4: the qualities the person asked for that apply to this slot. With one kind of item asked for, all of them;
+    // in a bigger plan, those some product of this kind can show (so "wireless" doesn't stop an owned monitor counting).
+    const musts = (reqs.must_have ?? reqs.style_words).filter((w) => slots.length === 1 || inCat.some((p) => meetsWord(w, p)));
+    const ownedLacks = ownedHere ? musts.filter((w) => !meetsWord(w, { attrs: ownedHere.attrs, title: ownedHere.title, description: cat.products.find((p) => p.title === ownedHere.title)?.description ?? null })) : [];
     if (s.outcome) {
       view.outcome = "not_needed";
       views.push(view);
       continue;
     }
-    if (ownedHere && !ctx.replace_categories.has(s.category)) {
-      // You already have one: it fills this slot rather than blocking the plan.
+    if (ownedHere && !ctx.replace_categories.has(s.category) && !ownedLacks.length) {
+      // You already have one that is everything you asked for: it fills this slot rather than blocking the plan.
       view.outcome = "use_owned";
       view.note = `${owns} ${ownedHere.title}; it fills this slot.`;
       views.push(view);
@@ -312,7 +324,9 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
         (view as any)._exact = { ...(view as any)._exact, [p.id]: exact };
       }
     }
-    if (ownedHere && !ctx.replace_categories.has(s.category)) view.note = `${owns} ${ownedHere.title}.`;
+    if (ownedHere && !ctx.replace_categories.has(s.category)) view.note = ownedLacks.length ? `${owns} ${ownedHere.title}, but nothing Everyday knows about it shows it is ${orList(ownedLacks)}, as you asked, so it doesn't fill this slot.` : `${owns} ${ownedHere.title}.`;
+    (view as any)._musts = musts;
+    (view as any)._inCat = inCat;
     views.push(view);
   }
   const daysAvailable = i.deadline ? Math.max(0, Math.floor(workHoursBetween(now, wall(`${i.deadline}T17:00`)) / 8)) : null;
@@ -321,6 +335,11 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
   const owning = new Set(views.filter((v) => v.outcome === "use_owned").map((v) => v.key));
   const inPlan = slots.filter((s) => !s.outcome && !owning.has(s.key) && (s.required || addons.has(s.key)));
   const result = planBundle({ slots: inPlan.map((s) => ({ key: s.key, label: s.label, required: (s.required || addons.has(s.key)) && !(blockingQuestions && s.category === "dock") })), cands, budget_cents: i.budget_cents ?? 10_000_000, days_available: daysAvailable, shipping });
+  // E1: a plan with nothing to buy is not a plan to pay for (it would have been $0 of items plus shipping).
+  if (!inPlan.length) {
+    const why = views.filter((v) => v.outcome === "use_owned").map((v) => v.note).filter(Boolean);
+    Object.assign(result, { feasible: false, picks: {}, items_cents: 0, shipping_cents: 0, total_cents: 0, gap: `There is nothing to buy in this plan. ${why.join(" ") || "Every part is already covered."}`.trim() });
+  }
   const headroom = (i.budget_cents ?? 10_000_000) - result.total_cents;
   for (const v of views) {
     const c = result.picks[v.key];
@@ -339,6 +358,31 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
         v.pick = { id: p.id, title: p.title, price_cents: p.price_cents, merchant: p.merchant_name, label: p.merchant_label, reasons: why[p.id] ?? [], exact: false, delay_days: fit.delay_days };
       }
     } else if (v.outcome === "none") v.outcome = v.required ? "none" : "skip";
+    const musts: string[] = (v as any)._musts ?? [];
+    const inCatV: Product[] = (v as any)._inCat ?? [];
+    // A5.4: every stated quality is applied or said to be unconfirmed for the pick, never dropped.
+    if (c && musts.length) {
+      const p = cat.byId.get(c.id)!;
+      const unconfirmed = musts.filter((w) => !meetsWord(w, p));
+      (v as any).unconfirmed = unconfirmed;
+      if (unconfirmed.length && !v.note) v.note = `Not confirmed for ${p.title}: ${unconfirmed.join(", ")}. The shop's details don't say; check before you pay.`;
+    }
+    // E1: a required part with nothing that fits says why, item by item.
+    if (v.outcome === "none" && v.required && !c) {
+      const budget = i.budget_cents;
+      const reasons = inCatV.filter((p) => p.checkout).slice(0, 4).map((p) => {
+        const r: string[] = [];
+        const ex = v.excluded.find((x) => x.id === p.id);
+        if (ex) r.push(...ex.reasons);
+        const un = v.unknown.find((x) => x.id === p.id);
+        if (un) r.push(`can't check ${un.unknown.join(", ")}`);
+        if (budget && p.price_cents > budget) r.push(`over your ${dollarsOf(budget)} budget`);
+        const lacks = musts.filter((w) => !meetsWord(w, p));
+        if (lacks.length) r.push(`not shown to be ${orList(lacks)}`);
+        return `${p.title} (${dollarsOf(p.price_cents)}): ${r.length ? r.join("; ") : "doesn't fit the budget or dates with the rest of the plan"}`;
+      });
+      v.note = [v.note, `Nothing in the catalog fits${reasons.length ? `; here is why. ${reasons.join(". ")}.` : `: the catalog has no ${v.label.toLowerCase()}.`}`].filter(Boolean).join(" ");
+    }
     // What the total would be with each alternative swapped in, so "over budget" is said, not implied.
     const swapTotal = (price: number) => {
       if (!c || !result.feasible) return null;
@@ -359,7 +403,10 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
     }
     delete (v as any)._why;
     delete (v as any)._exact;
+    delete (v as any)._musts;
+    delete (v as any)._inCat;
   }
+  if (!result.feasible && result.gap && inPlan.length && views.some((v) => v.required && v.outcome === "none")) result.gap = `Nothing in the catalog fits; here is why. ${result.gap}`;
   const arrival = result.feasible ? wallIso(addWorkDays(now, result.days)).slice(0, 10) : null;
   const prev = (await q.query<any>("SELECT * FROM plans WHERE intent_id = $1 AND status = 'current'", [i.id])).rows[0];
   const version = ((await q.query<{ v: number }>("SELECT COALESCE(MAX(version),0)::int AS v FROM plans WHERE intent_id = $1", [i.id])).rows[0].v ?? 0) + 1;

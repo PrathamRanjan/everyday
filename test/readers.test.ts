@@ -140,3 +140,34 @@ describe("public cover reader", () => {
     expect(seen.some((u) => u.includes("169.254"))).toBe(false);
   });
 });
+
+describe("E1: owned items and empty plans (review 10 Nov)", () => {
+  const earbuds = "sweat-proof wireless earbuds for running, under $80, need them by next Friday";
+  const read = () => ({ ...empty, wants: [{ category: "headphones", quote: "earbuds" }], deadline: { day: "friday", quote: "by next Friday" }, must_have: [{ word: "sweat-proof", quote: "sweat-proof" }, { word: "wireless", quote: "wireless" }, { word: "running", quote: "for running" }] });
+
+  it("an owned item that isn't shown to meet every must-have doesn't fill the slot, and nothing that doesn't fit is quoted", async () => {
+    fakeModel(read);
+    const a = await accountById(db, s.account);
+    expect((await db.query<any>("SELECT title FROM owned_items WHERE account_id = $1 AND category = 'headphones'", [a.id])).rows[0]?.title).toBe("Hush ANC Headphones");
+    const id = await createIntent(a, { text: earbuds, channel: "app" });
+    const p = (await currentPlan(db, id))!.body;
+    const slot = p.slots.find((v: any) => v.key === "headphones");
+    expect(slot.outcome).not.toBe("use_owned");
+    // "wireless" is applied: the Hush's own description says so. The other two can't be shown, so it doesn't count.
+    expect(slot.note).toMatch(/You own Hush ANC Headphones, but nothing Everyday knows about it shows it is sweat-proof or running, as you asked, so it doesn't fill this slot\./);
+    expect(slot.note).toMatch(/Nothing in the catalog fits; here is why\. Hush ANC Headphones \(\$99\.00\): you already own Hush ANC Headphones; over your \$80\.00 budget; not shown to be sweat-proof or running\./);
+    expect(p.feasible).toBe(false);
+    expect(p.gap).toMatch(/^Nothing in the catalog fits; here is why\./);
+    const { quotePlan } = await import("../src/services/orders.js");
+    await expect(quotePlan(a, id)).rejects.toThrow();
+  });
+
+  it("a pick says which stated qualities it can't confirm, instead of dropping them (A5.4)", async () => {
+    fakeModel(() => ({ ...empty, wants: [{ category: "keyboard", quote: "keyboard" }], must_have: [{ word: "wireless", quote: "wireless" }, { word: "backlit", quote: "backlit" }] }));
+    const a = await accountById(db, s.account);
+    const id = await createIntent(a, { text: "a backlit wireless keyboard under $100", channel: "app" });
+    const slot = (await currentPlan(db, id))!.body.slots.find((v: any) => v.key === "keyboard");
+    expect(slot.outcome).toBe("buy");
+    expect(slot.note).toMatch(/^Not confirmed for .+: backlit\. The shop's details don't say; check before you pay\.$/);
+  });
+});

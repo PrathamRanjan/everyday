@@ -8,6 +8,7 @@ import { FakePayPal } from "../src/paypal/fake.js";
 import { PayPalError, setPayPal } from "../src/paypal/index.js";
 import { reconcile, verifyRefunds } from "../src/services/orders.js";
 import * as plansSvc from "../src/services/plans.js";
+import { quotePlan } from "../src/services/orders.js";
 import * as mlSvc from "../src/services/ml.js";
 import { catalog as catalogOf } from "../src/services/catalog.js";
 import { addOwned } from "../src/services/life.js";
@@ -561,9 +562,15 @@ describe("Everyday flows", () => {
     await plansSvc.answer(a, id, "laptop_port", "usb-c-dp");
     const p = await plansSvc.currentPlan(db, id);
     const chair = p!.body.slots.find((v: any) => v.key === "chair");
-    expect(p!.body.feasible).toBe(true);
     expect(chair.outcome).toBe("use_owned");
     expect(chair.note).toMatch(/Existing chair/);
+    // E1: when the owned chair was the only part, the plan used to be "$0.00 of items plus shipping" with a quote
+    // button. A plan with nothing to buy now says so and can't be quoted.
+    if (!p!.body.slots.some((v: any) => v.outcome === "buy")) {
+      expect(p!.body).toMatchObject({ feasible: false, total_cents: 0, shipping_cents: 0 });
+      expect(p!.body.gap).toMatch(/^There is nothing to buy in this plan\. You own Existing chair/);
+      await expect(quotePlan(a, id)).rejects.toThrow(/nothing to buy/);
+    } else expect(p!.body.feasible).toBe(true);
   });
 
   it("spending limit, discovery-only items, memory deletion and isolation", async () => {
