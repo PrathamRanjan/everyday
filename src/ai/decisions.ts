@@ -13,7 +13,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { config } from "../config.js";
 import { getDb, type Queryable } from "../db.js";
 import { currentWs } from "../ws.js";
-import { AiFailed, hasOpenAI, NoModelError, providerFetch } from "./provider.js";
+import { AiFailed, hasOpenAI, NoModelError, providerFetch, summaryOf } from "./provider.js";
 
 export type InputPart = { type: "input_text"; text: string } | { type: "input_image"; image_url: string } | { type: "input_json"; data: unknown };
 export type Question =
@@ -81,18 +81,19 @@ export async function decide(input: string | InputPart[], questions: Question[],
   // A question the reply left out is not decided either.
   for (const q of questions) if (!answers[q.name] && !error) answers[q.name] = { refused: true };
   const tokensIn = Number(data?.usage?.input_tokens ?? 0);
-  const callId = await log({ purpose: meta.purpose, inputHash, ok: !error, error, latency, tokensIn, output: error ? null : { questions: questions.map((q) => q.name), answers }, runId: meta.runId ?? null });
+  const summary = summaryOf(typeof input === "string" ? input : input.map((p) => (p.type === "input_text" ? p.text : p.type === "input_image" ? "[photo]" : "[data]")).join(" "));
+  const callId = await log({ summary, purpose: meta.purpose, inputHash, ok: !error, error, latency, tokensIn, output: error ? null : { questions: questions.map((q) => q.name), answers }, runId: meta.runId ?? null });
   if (error) throw new AiFailed(`${meta.purpose}: ${error}`);
   return { answers, model: data?.model ?? DECISIONS_MODEL, latency_ms: latency, call_id: callId, tokens_in: tokensIn };
 }
 
-async function log(r: { purpose: string; inputHash: string; ok: boolean; error: string | null; latency: number; tokensIn: number; output: unknown; runId: string | null }): Promise<number | null> {
+async function log(r: { summary: string; purpose: string; inputHash: string; ok: boolean; error: string | null; latency: number; tokensIn: number; output: unknown; runId: string | null }): Promise<number | null> {
   try {
     const db = await getDb();
     const row = await db.query<{ id: number }>(
-      `INSERT INTO ai_calls (purpose, model, via, input_hash, tokens_in, tokens_out, cost_usd, latency_ms, ok, error, output, run_id, ws_id)
-       VALUES ($1,$2,'decisions',$3,$4,0,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-      [r.purpose, DECISIONS_MODEL, r.inputHash, r.tokensIn, (r.tokensIn * PRICE_IN_PER_M) / 1e6, r.latency, r.ok, r.error, r.output ? JSON.stringify(r.output) : null, r.runId, currentWs()],
+      `INSERT INTO ai_calls (purpose, model, via, input_hash, tokens_in, tokens_out, cost_usd, latency_ms, ok, error, output, run_id, ws_id, input_summary)
+       VALUES ($1,$2,'decisions',$3,$4,0,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+      [r.purpose, DECISIONS_MODEL, r.inputHash, r.tokensIn, (r.tokensIn * PRICE_IN_PER_M) / 1e6, r.latency, r.ok, r.error, r.output ? JSON.stringify(r.output) : null, r.runId, currentWs(), r.summary],
     );
     return row.rows[0]?.id ?? null;
   } catch {

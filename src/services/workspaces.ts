@@ -100,7 +100,12 @@ export async function startWorkspace(opts: { ip: string; kind?: "visitor" | "sho
   const token = randomBytes(18).toString("base64url");
   await db.query("INSERT INTO workspaces (id, kind, ip_hash, seed_version, seed_state, join_token, expires_at) VALUES ($1,$2,$3,$4,'seeding',$5, now() + ($6 || ' hours')::interval)", [id, kind, h, SEED_VERSION, token, String(kind === "showcase" ? 24 * 365 : WS_IDLE_HOURS)]);
   await buildRows(id);
-  const run = seedMoney(id).catch((e) => console.error("[everyday] workspace seed", id, (e as Error).message));
+  const run = seedMoney(id)
+    .then(async () => {
+      // A3.2: the showcase is asked a few real questions so /ai and /paypal have real rows.
+      if (kind === "showcase") await (await import("./showcase-ai.js")).showcaseAi(id);
+    })
+    .catch((e) => console.error("[everyday] workspace seed", id, (e as Error).message));
   if (opts.background === false) await run;
   return (await workspaceById(id))!;
 }
@@ -238,6 +243,8 @@ async function deleteRows(db: Awaited<ReturnType<typeof getDb>>, id: string) {
       ["DELETE FROM purchase_history WHERE ws_id = $1", [id]],
       ["DELETE FROM agent_requests WHERE ws_id = $1", [id]],
       ["DELETE FROM paypal_refs WHERE ws_id = $1", [id]],
+      ["DELETE FROM ai_calls WHERE ws_id = $1", [id]],
+      ["DELETE FROM ws_checklist WHERE ws_id = $1", [id]],
       ["DELETE FROM kill_switches WHERE starts_with(scope, $1)", [`${id}|`]],
       [`DELETE FROM approvals WHERE owner_id = ${A}`, [owners]],
       [`DELETE FROM policies WHERE owner_id = ${A}`, [owners]],

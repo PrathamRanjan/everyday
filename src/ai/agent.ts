@@ -21,7 +21,8 @@ import { callPayPalTool, paypalMcpReady, type ReadTool } from "../paypal/mcp.js"
 import type { Account } from "../store.js";
 import { nowIso } from "../store.js";
 import { startRun, type Run } from "../trace.js";
-import { AI_FAILED_SENTENCE, AiFailed, hasOpenAI, NoModelError, providerFetch } from "./provider.js";
+import { createHash } from "node:crypto";
+import { AI_FAILED_SENTENCE, AiFailed, estimateCost, hasOpenAI, NoModelError, providerFetch, recordAiCall, summaryOf } from "./provider.js";
 
 export const MAX_STEPS = 8;
 export const MAX_MS = 45_000;
@@ -256,6 +257,12 @@ export async function ask(a: Account, question: string, emit: (e: AgentEvent) =>
         } else throw e;
       }
       await run.step({ actor: "model", tool: "responses", args: { model, turn }, result: { output: (r.output ?? []).map((o: any) => o.type) }, duration_ms: Date.now() - tm });
+      {
+        const tin = Number(r.usage?.input_tokens ?? 0);
+        const tout = Number(r.usage?.output_tokens ?? 0);
+        const used = r.model ?? model;
+        await recordAiCall({ purpose: "shopper_question", model: used, via: "responses", inputHash: createHash("sha256").update(`${run.id}|${turn}`).digest("hex"), outputHash: "", tokensIn: tin, tokensOut: tout, costUsd: estimateCost(used, tin, tout), latencyMs: Date.now() - tm, ok: true, error: null, output: { turn, tool_calls: (r.output ?? []).filter((o: any) => o.type === "function_call").map((o: any) => o.name) }, runId: run.id, summary: summaryOf(turn === 1 ? question : `${question} (turn ${turn})`) });
+      }
       prev = r.id;
       const calls = (r.output ?? []).filter((o: any) => o.type === "function_call");
       if (!calls.length) {

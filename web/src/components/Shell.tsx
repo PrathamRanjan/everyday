@@ -292,6 +292,8 @@ export function Shell({ children }: { children: ReactNode }) {
         <main id="main" tabIndex={-1} className={cn("min-w-0 py-6 outline-none sm:py-8", who && "pb-28 lg:pb-10")}>
           {children}
         </main>
+        {/* A7: the one live region every payment result and status change is announced through. */}
+        <div id="ev-announce" role="status" aria-live="polite" aria-atomic="true" className="sr-only" />
       </div>
 
       {who && (

@@ -9,7 +9,7 @@ import { when } from "@/lib/format";
 interface Device {
   id: string;
   label: string;
-  client: "mobile" | "extension";
+  client: "mobile" | "extension" | "agent";
   created_at: string;
   last_used_at: string | null;
   revoked: boolean;

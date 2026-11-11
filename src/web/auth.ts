@@ -35,7 +35,7 @@ async function resolveWhoAny(req: Request): Promise<Who> {
   const key = bearerOf(req);
   if (key) {
     const db = await getDb();
-    const d = (await db.query<{ id: string; account_id: string }>("SELECT id, account_id FROM device_keys WHERE key_hash = $1 AND revoked_at IS NULL", [hashKey(key)])).rows[0];
+    const d = (await db.query<{ id: string; account_id: string }>("SELECT id, account_id FROM device_keys WHERE key_hash = $1 AND revoked_at IS NULL AND client <> 'agent'", [hashKey(key)])).rows[0];
     if (d) {
       void db.query("UPDATE device_keys SET last_used_at = now() WHERE id = $1", [d.id]).catch(() => undefined);
       const account = await accountById(db, d.account_id).catch(() => undefined);

@@ -1,3 +1,4 @@
+import { announce } from "@/lib/announce";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -117,6 +118,7 @@ export function useAction(reload?: () => Promise<void> | void) {
         }
         if (out.err) toast.error(out.err);
         else if (out.ok || opts.success) toast.success(out.ok ?? opts.success!);
+        announce(out.err ?? out.ok ?? opts.success);
         const [path2, hash] = out.to.split("#");
         const here = loc.pathname + loc.search;
         if (!opts.stay && path2 && path2 !== here && path2 !== loc.pathname) nav(out.to);
@@ -128,6 +130,7 @@ export function useAction(reload?: () => Promise<void> | void) {
         return out;
       } catch (e) {
         toast.error((e as Error).message);
+        announce((e as Error).message);
         return null;
       } finally {
         setBusy(null);

@@ -5,13 +5,13 @@ Protocol reimplemented in TypeScript from the published description; no TechJam 
 | System | Cases | HitRate@10 | MRR | Conversion (target at rank 1) | Correct abstain | False abstain | Avg turns | TechnicalScore |
 |---|---|---|---|---|---|---|---|---|
 | baseline (BM25, one turn, never asks) | 120 | 68% | 0.55 | 48% | 0% | 0% | 1.00 | 0.497 |
-| everyday (hybrid + reply tree + reranker + abstain) | 120 | 82% | 0.68 | 61% | 0% | 11% | 2.64 | 0.521 |
+| everyday (hybrid + reply tree + reranker + abstain) | 120 | 84% | 0.71 | 63% | 0% | 9% | 2.42 | 0.553 |
 
 ## By scenario kind (Everyday / baseline)
 
-- exact: 48 · hit@10 100% · MRR 0.98 · converted/abstained 96% / 48 · hit@10 100% · MRR 0.99 · converted/abstained 98%
-- vague: 48 · hit@10 73% · MRR 0.51 · converted/abstained 40% / 48 · hit@10 46% · MRR 0.25 · converted/abstained 15%
-- ambiguous: 18 · hit@10 61% · MRR 0.34 · converted/abstained 22% / 18 · hit@10 39% · MRR 0.16 · converted/abstained 6%
+- exact: 48 · hit@10 100% · MRR 0.95 · converted/abstained 92% / 48 · hit@10 100% · MRR 0.99 · converted/abstained 98%
+- vague: 48 · hit@10 73% · MRR 0.57 · converted/abstained 48% / 48 · hit@10 46% · MRR 0.25 · converted/abstained 15%
+- ambiguous: 18 · hit@10 72% · MRR 0.42 · converted/abstained 28% / 18 · hit@10 39% · MRR 0.16 · converted/abstained 6%
 - out of catalog: 6 · hit@10 0% · MRR 0.00 · converted/abstained 0% / 6 · hit@10 0% · MRR 0.00 · converted/abstained 0%
 
 ## Limits

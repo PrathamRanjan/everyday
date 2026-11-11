@@ -1,3 +1,4 @@
+import { Announce } from "@/lib/announce";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft, ArrowLeftRight, BadgeDollarSign, MessageSquareWarning } from "lucide-react";
@@ -204,6 +205,7 @@ export default function Order() {
         const choose = d.cases.filter((c) => c.status === "choose");
         return (
           <div className="ev-rise">
+            <Announce text={`Order ${o.number}: ${o.status.replace(/_/g, " ")}${o.refunded_cents ? `, ${money(o.refunded_cents)} refunded` : ""}`} />
             <Link to="/purchases" className="mb-4 inline-flex min-h-11 items-center gap-1 text-sm text-ink-2 hover:text-ink">
               <ArrowLeft className="size-4" /> Bought
             </Link>

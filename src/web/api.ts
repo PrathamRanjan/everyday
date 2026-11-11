@@ -361,9 +361,10 @@ export function apiRoutes() {
   r.get("/api/ui/devices", send(async (req) => ({ devices: await deviceRows((await shopperOf(req)).id) })));
   r.post("/api/ui/devices", send(async (req) => {
     const a = await cookieShopper(req);
-    const client = req.body?.client === "mobile" ? "mobile" : req.body?.client === "extension" ? "extension" : null;
-    if (!client) throw new GtError("Say which device: the phone app or the browser extension.", "invalid", 400);
-    const label = String(req.body?.label ?? "").trim().slice(0, 60) || (client === "mobile" ? "Phone app" : "Browser extension");
+    // "agent": a key for an outside assistant on /mcp only (A3.2 /agents). It never signs in to the website's API.
+    const client = req.body?.client === "mobile" ? "mobile" : req.body?.client === "extension" ? "extension" : req.body?.client === "agent" ? "agent" : null;
+    if (!client) throw new GtError("Say which device: the phone app, the browser extension or an outside assistant.", "invalid", 400);
+    const label = String(req.body?.label ?? "").trim().slice(0, 60) || (client === "mobile" ? "Phone app" : client === "extension" ? "Browser extension" : "Outside assistant (MCP)");
     const db = await getDb();
     const live = (await db.query<{ c: number }>("SELECT count(*)::int AS c FROM device_keys WHERE account_id = $1 AND revoked_at IS NULL", [a.id])).rows[0].c;
     if (live >= 10) throw new GtError("You have 10 connected devices. Disconnect one first.", "limit", 409);

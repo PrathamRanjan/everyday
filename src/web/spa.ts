@@ -20,13 +20,15 @@ export const PAGES: RegExp[] = [
   /^\/login$/, /^\/today$/, /^\/discover$/, /^\/captures\/[\w-]+$/, /^\/plans$/, /^\/plans\/[\w-]+$/, /^\/purchases$/, /^\/orders\/[\w-]+$/,
   /^\/you$/, /^\/things$/, /^\/guard$/, /^\/passport$/, /^\/safety$/, /^\/safety\/model-card$/, /^\/channels$/, /^\/traces$/, /^\/trace\/[\w-]+$/,
   /^\/merchant$/, /^\/merchant\/money$/, /^\/merchant\/approvals$/, /^\/judge$/, /^\/demo$/, /^\/console$/, /^\/console\/evidence$/, /^\/console\/eval$/, /^\/telegram$/,
+  /^\/ask$/, /^\/proof$/, /^\/ai$/, /^\/paypal$/, /^\/who-can-move-money$/, /^\/accessibility$/, /^\/agents$/,
 ];
 
 /** Which page module renders each path, so the shell can preload that chunk instead of waiting for the main script. */
 const PAGE_MODULE: [RegExp, string][] = [
   [/^\/login$/, "Login"], [/^\/today$/, "Today"], [/^\/discover$/, "Discover"], [/^\/captures\//, "Capture"], [/^\/plans$/, "Plans"], [/^\/plans\//, "Plan"],
   [/^\/purchases$/, "Purchases"], [/^\/orders\//, "Order"], [/^\/(you|things)$/, "You"], [/^\/guard$/, "Guard"], [/^\/passport$/, "Passport"], [/^\/safety/, "Safety"],
-  [/^\/channels$/, "Channels"], [/^\/trace/, "Traces"], [/^\/merchant/, "Merchant"], [/^\/(judge|demo)$/, "Demo"], [/^\/(console|telegram)/, "Console"],
+  [/^\/channels$/, "Channels"], [/^\/trace/, "Traces"], [/^\/merchant/, "Merchant"], [/^\/(judge|demo)$/, "Demo"], [/^\/(console|telegram)/, "Console"], [/^\/ask$/, "Ask"],
+  [/^\/(proof|ai|paypal|who-can-move-money|accessibility|agents)$/, "Public"],
 ];
 
 /** The first read each page makes, fetched alongside the scripts. Same URL, mode and credentials as the app's fetch. */
@@ -34,6 +36,7 @@ const PAGE_DATA: Record<string, string> = {
   "/today": "/api/ui/today", "/login": "/api/ui/personas", "/judge": "/api/ui/judge", "/plans": "/api/ui/plans", "/purchases": "/api/ui/purchases",
   "/you": "/api/ui/you", "/safety": "/api/ui/safety", "/traces": "/api/ui/traces", "/merchant": "/api/ui/merchant", "/merchant/approvals": "/api/ui/merchant/approvals",
   "/console": "/api/ui/console", "/console/evidence": "/api/ui/evidence", "/demo": "/api/ui/demo",
+  "/proof": "/api/public/proof", "/ai": "/api/public/ai", "/paypal": "/api/public/paypal", "/who-can-move-money": "/api/public/roles", "/accessibility": "/api/public/accessibility", "/agents": "/api/public/agents",
 };
 const dataLink = (u: string) => `<link rel="preload" as="fetch" crossorigin="anonymous" href="${u}">`;
 

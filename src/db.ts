@@ -494,6 +494,8 @@ ALTER TABLE quotes ADD COLUMN IF NOT EXISTS expires_wall TEXT;
 -- A3.2/A5.2: which workspace a model call belongs to (the /ai page reads the showcase's), and Decisions thresholds.
 ALTER TABLE ai_calls ADD COLUMN IF NOT EXISTS ws_id TEXT;
 CREATE INDEX IF NOT EXISTS ai_calls_ws ON ai_calls(ws_id, id DESC);
+-- A3.2: /ai shows what each call was about (the first words of the text it read), in the workspace it belongs to.
+ALTER TABLE ai_calls ADD COLUMN IF NOT EXISTS input_summary TEXT;
 CREATE TABLE IF NOT EXISTS decision_thresholds (
   name TEXT PRIMARY KEY, clear_below DOUBLE PRECISION NOT NULL, hold_above DOUBLE PRECISION NOT NULL, calibrated_on TEXT,
   n INTEGER NOT NULL DEFAULT 0, precision_at_hold DOUBLE PRECISION, recall_at_hold DOUBLE PRECISION, set_at TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -134,7 +134,11 @@ function everydaySystem(products: ProductDef[]) {
   };
   return {
     name: "everyday (hybrid + reply tree + reranker + abstain)",
-    turn(query: string, asked: number): Turn {
+    turn(query: string, askedBefore: string[] = []): Turn {
+      const asked = askedBefore.length;
+      // Never the same question twice: an answer like "no preference" leaves the query without the word, and the
+      // shopper has already said it.
+      const fresh = (q: string) => !askedBefore.includes(q);
       const fused = h.fused(query, 10);
       const ranked = rerank(fused.map((x) => x.id), query);
       const top = ranked.slice(0, 6).map((s) => bySku.get(s)!);
@@ -145,12 +149,13 @@ function everydaySystem(products: ProductDef[]) {
       if (cats.size >= 2 && !mentionsCategory(query)) {
         const [a, b] = [...cats];
         const pair = AMBIGUOUS.find((x) => x.categories.includes(a) && x.categories.includes(b));
-        return { question: pair?.question ?? `Is it a ${CATEGORY_LABEL[a].toLowerCase()} or a ${CATEGORY_LABEL[b].toLowerCase()} you need?`, ranked, abstain: false };
+        const q = pair?.question ?? `Is it a ${CATEGORY_LABEL[a].toLowerCase()} or a ${CATEGORY_LABEL[b].toLowerCase()} you need?`;
+        if (fresh(q)) return { question: q, ranked, abstain: false };
       }
       const finishes = new Set(top.map((p) => p.attrs.finish).filter(Boolean));
-      if (finishes.size >= 2 && !/wood|oak|black|white|grey|silver|brass|colour/.test(query)) return { question: "Any finish or colour in mind (wood, black, white, grey)?", ranked, abstain: false };
+      if (finishes.size >= 2 && !/wood|oak|black|white|grey|silver|brass|colour/.test(query) && fresh("Any finish or colour in mind (wood, black, white, grey)?")) return { question: "Any finish or colour in mind (wood, black, white, grey)?", ranked, abstain: false };
       const wireless = new Set(top.map((p) => p.attrs.wireless).filter((v) => v !== undefined));
-      if (wireless.size >= 2 && !/wireless|wired|cable/.test(query)) return { question: "Wireless, or is a cable fine?", ranked, abstain: false };
+      if (wireless.size >= 2 && !/wireless|wired|cable/.test(query) && fresh("Wireless, or is a cable fine?")) return { question: "Wireless, or is a cable fine?", ranked, abstain: false };
       return { question: null, ranked, abstain: false };
     },
   };
@@ -187,7 +192,7 @@ export interface SystemReport {
   rows: CaseResult[];
 }
 
-function runSystem(name: string, turnFn: (query: string, asked: number) => Turn, cases: Scenario[], maxTurns = 3): SystemReport {
+function runSystem(name: string, turnFn: (query: string, asked: string[]) => Turn, cases: Scenario[], maxTurns = 3): SystemReport {
   const rows: CaseResult[] = [];
   for (const s of cases) {
     let query = s.opening;
@@ -196,7 +201,7 @@ function runSystem(name: string, turnFn: (query: string, asked: number) => Turn,
     let last: Turn = { question: null, ranked: [], abstain: false };
     for (let t = 0; t < maxTurns; t++) {
       turns++;
-      last = turnFn(query, asked.length);
+      last = turnFn(query, [...asked]);
       if (last.abstain) break;
       if (last.question && s.target) {
         asked.push(last.question);

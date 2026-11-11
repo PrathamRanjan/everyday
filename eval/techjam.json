@@ -1,0 +1,3675 @@
+{
+  "suite": "techjam",
+  "run_on": "2026-11-11T14:33:01.275Z",
+  "provider": "no model (retrieval, reply tree and reranker in code)",
+  "seeds": [
+    11,
+    23,
+    37
+  ],
+  "systems": [
+    {
+      "system": "baseline (BM25, one turn, never asks)",
+      "cases": 120,
+      "hit_rate_10": 0.6754385964912281,
+      "mrr": 0.5459899749373435,
+      "conversion": 0.4824561403508772,
+      "correct_abstain": 0,
+      "false_abstain": 0,
+      "avg_turns": 1,
+      "technical_score": 0.4966917293233083
+    },
+    {
+      "system": "everyday (hybrid + reply tree + reranker + abstain)",
+      "cases": 120,
+      "hit_rate_10": 0.8421052631578947,
+      "mrr": 0.7056390977443608,
+      "conversion": 0.631578947368421,
+      "correct_abstain": 0,
+      "false_abstain": 0.08771929824561403,
+      "avg_turns": 2.4166666666666665,
+      "technical_score": 0.5531390977443609
+    }
+  ],
+  "cases": [
+    {
+      "id": "s11-0",
+      "kind": "exact",
+      "query": "Glide glide wireless mouse",
+      "target": "NL-MOUSE-GLIDE",
+      "everyday": {
+        "id": "s11-0",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-0",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-1",
+      "kind": "exact",
+      "query": "Quiet quiet keys wireless keyboard",
+      "target": "NL-KB-QUIET",
+      "everyday": {
+        "id": "s11-1",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-1",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-2",
+      "kind": "exact",
+      "query": "Lift clamp arm mini",
+      "target": "NL-ARM-MINI",
+      "everyday": {
+        "id": "s11-2",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-2",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-3",
+      "kind": "exact",
+      "query": "Brite brite clamp lamp",
+      "target": "NL-LAMP-BRITE",
+      "everyday": {
+        "id": "s11-3",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-3",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-4",
+      "kind": "exact",
+      "query": "I want the QK-2",
+      "target": "NL-KB-QUIET",
+      "everyday": {
+        "id": "s11-4",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Quiet keyboard or quiet mouse?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-4",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-5",
+      "kind": "exact",
+      "query": "Link usb-a display adapter (hdmi)",
+      "target": "NL-ADAPT-USBA",
+      "everyday": {
+        "id": "s11-5",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-5",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-6",
+      "kind": "exact",
+      "query": "Link linkdock pro usb-c (hdmi + displayport)",
+      "target": "NL-DOCK-PRO",
+      "everyday": {
+        "id": "s11-6",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a monitor you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-6",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-7",
+      "kind": "exact",
+      "query": "I want the SK-1",
+      "target": "NL-KB-SLIM",
+      "everyday": {
+        "id": "s11-7",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Quiet keyboard or quiet mouse?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-7",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-8",
+      "kind": "exact",
+      "query": "I want the EM-500",
+      "target": "NL-CHAIR-ERGO",
+      "everyday": {
+        "id": "s11-8",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-8",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-9",
+      "kind": "exact",
+      "query": "I want the LD-7",
+      "target": "NL-DOCK-7IN1",
+      "everyday": {
+        "id": "s11-9",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-9",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-10",
+      "kind": "exact",
+      "query": "I want the SM-Oak",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s11-10",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-10",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-11",
+      "kind": "exact",
+      "query": "Halden silent mouse",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s11-11",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-11",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-12",
+      "kind": "exact",
+      "query": "Link linkdock pro usb-c (hdmi + displayport)",
+      "target": "NL-DOCK-PRO",
+      "everyday": {
+        "id": "s11-12",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a monitor you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-12",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-13",
+      "kind": "exact",
+      "query": "Lift lift monitor arm",
+      "target": "NL-ARM-LIFT",
+      "everyday": {
+        "id": "s11-13",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-13",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-14",
+      "kind": "exact",
+      "query": "Nordic saddle stool",
+      "target": "NL-STOOL-SADDLE",
+      "everyday": {
+        "id": "s11-14",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a chair or a desk mat you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-14",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-15",
+      "kind": "exact",
+      "query": "I want the NW-1",
+      "target": "NL-CHAIR-NORDIC",
+      "everyday": {
+        "id": "s11-15",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-15",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-16",
+      "kind": "vague",
+      "query": "protect the desk surface and make it look tidy",
+      "target": "NL-MAT-CORK",
+      "everyday": {
+        "id": "s11-16",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-16",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-17",
+      "kind": "vague",
+      "query": "something comfortable to sit on for eight hours",
+      "target": "NL-CHAIR-AERO",
+      "everyday": {
+        "id": "s11-17",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s11-17",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-18",
+      "kind": "vague",
+      "query": "a screen around 24 inches with displayport",
+      "target": "NL-MON-VIEW27",
+      "everyday": {
+        "id": "s11-18",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-18",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-19",
+      "kind": "vague",
+      "query": "a seat that supports my lower back",
+      "target": "NL-STOOL-SADDLE",
+      "everyday": {
+        "id": "s11-19",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.2,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-19",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-20",
+      "kind": "vague",
+      "query": "my wrist aches when I use the laptop trackpad",
+      "target": "NL-MOUSE-GLIDE",
+      "everyday": {
+        "id": "s11-20",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-20",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-21",
+      "kind": "vague",
+      "query": "a camera for meetings",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s11-21",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s11-21",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-22",
+      "kind": "vague",
+      "query": "one cable for monitor and power",
+      "target": "NL-DOCK-PRO",
+      "everyday": {
+        "id": "s11-22",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-22",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-23",
+      "kind": "vague",
+      "query": "something to light my desk at night without being harsh",
+      "target": "NL-LAMP-ORBIT",
+      "everyday": {
+        "id": "s11-23",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-23",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-24",
+      "kind": "vague",
+      "query": "keys for my desk that match a wooden setup",
+      "target": "NL-KB-SLIM",
+      "everyday": {
+        "id": "s11-24",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.2,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-24",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-25",
+      "kind": "vague",
+      "query": "a quieter way to type that my flatmate won't hear",
+      "target": "NL-KB-RETRO",
+      "everyday": {
+        "id": "s11-25",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s11-25",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-26",
+      "kind": "vague",
+      "query": "a light for late study sessions",
+      "target": "NL-LAMP-PIXEL",
+      "everyday": {
+        "id": "s11-26",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-26",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-27",
+      "kind": "vague",
+      "query": "something soft under the keyboard",
+      "target": "NL-MAT-FELT",
+      "everyday": {
+        "id": "s11-27",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-27",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-28",
+      "kind": "vague",
+      "query": "my wrist aches when I use the laptop trackpad",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s11-28",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-28",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-29",
+      "kind": "vague",
+      "query": "something comfortable to sit on for eight hours",
+      "target": "NL-CHAIR-BASIC",
+      "everyday": {
+        "id": "s11-29",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s11-29",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-30",
+      "kind": "vague",
+      "query": "something comfortable to sit on for eight hours",
+      "target": "NL-CHAIR-NORDIC",
+      "everyday": {
+        "id": "s11-30",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s11-30",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-31",
+      "kind": "vague",
+      "query": "listen to music without cables",
+      "target": "NL-HP-QUIET",
+      "everyday": {
+        "id": "s11-31",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-31",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-32",
+      "kind": "ambiguous",
+      "query": "a quiet one please",
+      "target": "NL-MOUSE-BASIC",
+      "everyday": {
+        "id": "s11-32",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-32",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-33",
+      "kind": "ambiguous",
+      "query": "a quiet one please",
+      "target": "NL-KB-SLIM",
+      "everyday": {
+        "id": "s11-33",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.14285714285714285,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-33",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-34",
+      "kind": "ambiguous",
+      "query": "something for my desk in oak",
+      "target": "NL-KB-RETRO",
+      "everyday": {
+        "id": "s11-34",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s11-34",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-35",
+      "kind": "ambiguous",
+      "query": "a quiet one please",
+      "target": "NL-KB-QUIET",
+      "everyday": {
+        "id": "s11-35",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-35",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-36",
+      "kind": "ambiguous",
+      "query": "something ergonomic",
+      "target": "NL-MOUSE-BASIC",
+      "everyday": {
+        "id": "s11-36",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-36",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-37",
+      "kind": "ambiguous",
+      "query": "something for my desk in oak",
+      "target": "NL-KB-SLIM",
+      "everyday": {
+        "id": "s11-37",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s11-37",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-38",
+      "kind": "out_of_catalog",
+      "query": "an office plant that survives neglect",
+      "target": null,
+      "everyday": {
+        "id": "s11-38",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a chair or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-38",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s11-39",
+      "kind": "out_of_catalog",
+      "query": "an office plant that survives neglect",
+      "target": null,
+      "everyday": {
+        "id": "s11-39",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a chair or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s11-39",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-0",
+      "kind": "exact",
+      "query": "I want the OA-3",
+      "target": "NL-LAMP-ORBIT",
+      "everyday": {
+        "id": "s23-0",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a desk lamp or a dock you need?",
+          "Is it a desk lamp or a mouse you need?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-0",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-1",
+      "kind": "exact",
+      "query": "I want the RM-87",
+      "target": "NL-KB-RETRO",
+      "everyday": {
+        "id": "s23-1",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Quiet keyboard or quiet mouse?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-1",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-2",
+      "kind": "exact",
+      "query": "I want the SS-2",
+      "target": "NL-STOOL-SADDLE",
+      "everyday": {
+        "id": "s23-2",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-2",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-3",
+      "kind": "exact",
+      "query": "Glide glide wireless mouse",
+      "target": "NL-MOUSE-GLIDE",
+      "everyday": {
+        "id": "s23-3",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-3",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-4",
+      "kind": "exact",
+      "query": "I want the LA-S",
+      "target": "NL-ARM-LIFT",
+      "everyday": {
+        "id": "s23-4",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a monitor arm or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-4",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-5",
+      "kind": "exact",
+      "query": "I want the OK-1",
+      "target": "NL-KB-OAK",
+      "everyday": {
+        "id": "s23-5",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Quiet keyboard or quiet mouse?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-5",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-6",
+      "kind": "exact",
+      "query": "Orbit orbit arc lamp",
+      "target": "NL-LAMP-ORBIT",
+      "everyday": {
+        "id": "s23-6",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-6",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-7",
+      "kind": "exact",
+      "query": "I want the CA-M",
+      "target": "NL-ARM-MINI",
+      "everyday": {
+        "id": "s23-7",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a monitor arm or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-7",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-8",
+      "kind": "exact",
+      "query": "I want the P2422H",
+      "target": "NL-MON-P2422H",
+      "everyday": {
+        "id": "s23-8",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a monitor or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-8",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-9",
+      "kind": "exact",
+      "query": "Bolt bolt thunderbolt 4 dock",
+      "target": "NL-DOCK-TB4",
+      "everyday": {
+        "id": "s23-9",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s23-9",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-10",
+      "kind": "exact",
+      "query": "I want the H-ANC",
+      "target": "NL-HP-QUIET",
+      "everyday": {
+        "id": "s23-10",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a headphones or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-10",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-11",
+      "kind": "exact",
+      "query": "I want the CA-M",
+      "target": "NL-ARM-MINI",
+      "everyday": {
+        "id": "s23-11",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a monitor arm or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-11",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-12",
+      "kind": "exact",
+      "query": "Ergo ergo mesh chair",
+      "target": "NL-CHAIR-ERGO",
+      "everyday": {
+        "id": "s23-12",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-12",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-13",
+      "kind": "exact",
+      "query": "Tilt tilt task lamp",
+      "target": "NL-LAMP-TILT",
+      "everyday": {
+        "id": "s23-13",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-13",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-14",
+      "kind": "exact",
+      "query": "Link linkhub 4-in-1 usb-c hub",
+      "target": "NL-HUB-4IN1",
+      "everyday": {
+        "id": "s23-14",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-14",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-15",
+      "kind": "exact",
+      "query": "Clear clearcam hd webcam",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s23-15",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-15",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-16",
+      "kind": "vague",
+      "query": "a camera for meetings",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s23-16",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s23-16",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-17",
+      "kind": "vague",
+      "query": "I look terrible on video calls",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s23-17",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-17",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-18",
+      "kind": "vague",
+      "query": "a pointer that does not click loudly",
+      "target": "NL-MOUSE-BASIC",
+      "everyday": {
+        "id": "s23-18",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a desk mat you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-18",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-19",
+      "kind": "vague",
+      "query": "listen to music without cables",
+      "target": "NL-HP-QUIET",
+      "everyday": {
+        "id": "s23-19",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-19",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-20",
+      "kind": "vague",
+      "query": "my wrist aches when I use the laptop trackpad",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s23-20",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-20",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-21",
+      "kind": "vague",
+      "query": "my wrist aches when I use the laptop trackpad",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s23-21",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-21",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-22",
+      "kind": "vague",
+      "query": "a mount for a vesa 100 screen",
+      "target": "NL-ARM-OAK",
+      "everyday": {
+        "id": "s23-22",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-22",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-23",
+      "kind": "vague",
+      "query": "a light for late study sessions",
+      "target": "NL-LAMP-ORBIT",
+      "everyday": {
+        "id": "s23-23",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-23",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-24",
+      "kind": "vague",
+      "query": "protect the desk surface and make it look tidy",
+      "target": "NL-MAT-FELT",
+      "everyday": {
+        "id": "s23-24",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-24",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-25",
+      "kind": "vague",
+      "query": "something to light my desk at night without being harsh",
+      "target": "NL-LAMP-HALDEN-OAK",
+      "everyday": {
+        "id": "s23-25",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-25",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.2,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-26",
+      "kind": "vague",
+      "query": "hold my monitor at eye level",
+      "target": "NL-ARM-LIFT",
+      "everyday": {
+        "id": "s23-26",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-26",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.2,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-27",
+      "kind": "vague",
+      "query": "block out the office noise",
+      "target": "NL-HP-QUIET",
+      "everyday": {
+        "id": "s23-27",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a chair or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-27",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-28",
+      "kind": "vague",
+      "query": "something comfortable to sit on for eight hours",
+      "target": "NL-CHAIR-AERO",
+      "everyday": {
+        "id": "s23-28",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s23-28",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-29",
+      "kind": "vague",
+      "query": "a pointer that does not click loudly",
+      "target": "NL-MOUSE-GLIDE",
+      "everyday": {
+        "id": "s23-29",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a desk mat you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-29",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-30",
+      "kind": "vague",
+      "query": "a mat for the desk in a natural material",
+      "target": "NL-MAT-CORK",
+      "everyday": {
+        "id": "s23-30",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-30",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-31",
+      "kind": "vague",
+      "query": "a light for late study sessions",
+      "target": "NL-LAMP-HALDEN-OAK",
+      "everyday": {
+        "id": "s23-31",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-31",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.16666666666666666,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-32",
+      "kind": "ambiguous",
+      "query": "something ergonomic",
+      "target": "NL-CHAIR-NORDIC",
+      "everyday": {
+        "id": "s23-32",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-32",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-33",
+      "kind": "ambiguous",
+      "query": "an arm for the desk",
+      "target": "NL-ARM-MINI",
+      "everyday": {
+        "id": "s23-33",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-33",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-34",
+      "kind": "ambiguous",
+      "query": "a black compact one for the laptop",
+      "target": "NL-DOCK-TB4",
+      "everyday": {
+        "id": "s23-34",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a chair you need?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-34",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-35",
+      "kind": "ambiguous",
+      "query": "a quiet one please",
+      "target": "NL-KB-OAK",
+      "everyday": {
+        "id": "s23-35",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-35",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-36",
+      "kind": "ambiguous",
+      "query": "a quiet one please",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s23-36",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-36",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-37",
+      "kind": "ambiguous",
+      "query": "something ergonomic",
+      "target": "NL-MOUSE-GLIDE",
+      "everyday": {
+        "id": "s23-37",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.2,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-37",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-38",
+      "kind": "out_of_catalog",
+      "query": "a standing desk frame",
+      "target": null,
+      "everyday": {
+        "id": "s23-38",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-38",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s23-39",
+      "kind": "out_of_catalog",
+      "query": "a laptop sleeve in felt",
+      "target": null,
+      "everyday": {
+        "id": "s23-39",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a desk mat or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s23-39",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-0",
+      "kind": "exact",
+      "query": "Ergo ergo vertical mouse",
+      "target": "NL-MOUSE-VERT",
+      "everyday": {
+        "id": "s37-0",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-0",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-1",
+      "kind": "exact",
+      "query": "Halden halden led desk lamp",
+      "target": "NL-LAMP-HALDEN-OAK",
+      "everyday": {
+        "id": "s37-1",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-1",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-2",
+      "kind": "exact",
+      "query": "Ergo ergo mesh chair",
+      "target": "NL-CHAIR-ERGO",
+      "everyday": {
+        "id": "s37-2",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-2",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-3",
+      "kind": "exact",
+      "query": "Ergo ergo mesh chair",
+      "target": "NL-CHAIR-ERGO",
+      "everyday": {
+        "id": "s37-3",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-3",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-4",
+      "kind": "exact",
+      "query": "I want the RM-87",
+      "target": "NL-KB-RETRO",
+      "everyday": {
+        "id": "s37-4",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Quiet keyboard or quiet mouse?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-4",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-5",
+      "kind": "exact",
+      "query": "Halden silent mouse",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s37-5",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-5",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-6",
+      "kind": "exact",
+      "query": "Ergo ergo mesh chair lite",
+      "target": "NL-CHAIR-ERGO-LITE",
+      "everyday": {
+        "id": "s37-6",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-6",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-7",
+      "kind": "exact",
+      "query": "Halden cork desk mat",
+      "target": "NL-MAT-CORK",
+      "everyday": {
+        "id": "s37-7",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-7",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-8",
+      "kind": "exact",
+      "query": "I want the CC-1080",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s37-8",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a webcam or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-8",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-9",
+      "kind": "exact",
+      "query": "Quiet quiet keys wireless keyboard",
+      "target": "NL-KB-QUIET",
+      "everyday": {
+        "id": "s37-9",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-9",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-10",
+      "kind": "exact",
+      "query": "I want the OA-3",
+      "target": "NL-LAMP-ORBIT",
+      "everyday": {
+        "id": "s37-10",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a desk lamp or a dock you need?",
+          "Is it a desk lamp or a mouse you need?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-10",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-11",
+      "kind": "exact",
+      "query": "Tilt tilt task lamp",
+      "target": "NL-LAMP-TILT",
+      "everyday": {
+        "id": "s37-11",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-11",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-12",
+      "kind": "exact",
+      "query": "Aero aero pro chair",
+      "target": "NL-CHAIR-AERO",
+      "everyday": {
+        "id": "s37-12",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-12",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-13",
+      "kind": "exact",
+      "query": "Aero aero pro chair",
+      "target": "NL-CHAIR-AERO",
+      "everyday": {
+        "id": "s37-13",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-13",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-14",
+      "kind": "exact",
+      "query": "Link usb-a display adapter (hdmi)",
+      "target": "NL-ADAPT-USBA",
+      "everyday": {
+        "id": "s37-14",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-14",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-15",
+      "kind": "exact",
+      "query": "I want the CC-1080",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s37-15",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a webcam or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-15",
+        "kind": "exact",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-16",
+      "kind": "vague",
+      "query": "my wrist aches when I use the laptop trackpad",
+      "target": "NL-MOUSE-BASIC",
+      "everyday": {
+        "id": "s37-16",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-16",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-17",
+      "kind": "vague",
+      "query": "block out the office noise",
+      "target": "NL-HP-QUIET",
+      "everyday": {
+        "id": "s37-17",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a chair or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-17",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-18",
+      "kind": "vague",
+      "query": "one cable for monitor and power",
+      "target": "NL-DOCK-PRO",
+      "everyday": {
+        "id": "s37-18",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-18",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-19",
+      "kind": "vague",
+      "query": "my wrist aches when I use the laptop trackpad",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s37-19",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-19",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-20",
+      "kind": "vague",
+      "query": "my laptop only has one usb-c port and I need a monitor and charging",
+      "target": "NL-DOCK-TB4",
+      "everyday": {
+        "id": "s37-20",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-20",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.14285714285714285,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-21",
+      "kind": "vague",
+      "query": "a screen around 24 inches with displayport",
+      "target": "NL-MON-BUDGET",
+      "everyday": {
+        "id": "s37-21",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-21",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-22",
+      "kind": "vague",
+      "query": "something to light my desk at night without being harsh",
+      "target": "NL-LAMP-HALDEN-BLK",
+      "everyday": {
+        "id": "s37-22",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-22",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-23",
+      "kind": "vague",
+      "query": "a camera for meetings",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s37-23",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": true,
+        "correct_abstain": false,
+        "asked": []
+      },
+      "baseline": {
+        "id": "s37-23",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-24",
+      "kind": "vague",
+      "query": "something soft under the keyboard",
+      "target": "NL-MAT-CORK",
+      "everyday": {
+        "id": "s37-24",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.2,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-24",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-25",
+      "kind": "vague",
+      "query": "a pointer that does not click loudly",
+      "target": "NL-MOUSE-VERT",
+      "everyday": {
+        "id": "s37-25",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a desk mat you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-25",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-26",
+      "kind": "vague",
+      "query": "lift my screen off the desk to free space",
+      "target": "NL-ARM-LIFT",
+      "everyday": {
+        "id": "s37-26",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-26",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 1,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-27",
+      "kind": "vague",
+      "query": "a light for late study sessions",
+      "target": "NL-LAMP-PIXEL",
+      "everyday": {
+        "id": "s37-27",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 1,
+        "turns": 2,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-27",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-28",
+      "kind": "vague",
+      "query": "a pointer that does not click loudly",
+      "target": "NL-MOUSE-OAK",
+      "everyday": {
+        "id": "s37-28",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a mouse or a desk mat you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-28",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-29",
+      "kind": "vague",
+      "query": "listen to music without cables",
+      "target": "NL-HP-QUIET",
+      "everyday": {
+        "id": "s37-29",
+        "kind": "vague",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-29",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-30",
+      "kind": "vague",
+      "query": "my back hurts after long days at the desk",
+      "target": "NL-CHAIR-ERGO-LITE",
+      "everyday": {
+        "id": "s37-30",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-30",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-31",
+      "kind": "vague",
+      "query": "I look terrible on video calls",
+      "target": "NL-CAM-HD",
+      "everyday": {
+        "id": "s37-31",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a dock or a mouse you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-31",
+        "kind": "vague",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-32",
+      "kind": "ambiguous",
+      "query": "an arm for the desk",
+      "target": "NL-ARM-OAK",
+      "everyday": {
+        "id": "s37-32",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-32",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.2,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-33",
+      "kind": "ambiguous",
+      "query": "something ergonomic",
+      "target": "NL-CHAIR-ERGO",
+      "everyday": {
+        "id": "s37-33",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 1,
+        "turns": 3,
+        "converted": true,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "For sitting (a chair) or for your hand (a mouse)?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-33",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-34",
+      "kind": "ambiguous",
+      "query": "an arm for the desk",
+      "target": "NL-ARM-LIFT",
+      "everyday": {
+        "id": "s37-34",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.5,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-34",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.25,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-35",
+      "kind": "ambiguous",
+      "query": "a quiet one please",
+      "target": "NL-KB-RETRO",
+      "everyday": {
+        "id": "s37-35",
+        "kind": "ambiguous",
+        "hit10": true,
+        "rr": 0.3333333333333333,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a headphones you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-35",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-36",
+      "kind": "ambiguous",
+      "query": "a black compact one for the laptop",
+      "target": "NL-KB-RETRO",
+      "everyday": {
+        "id": "s37-36",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a chair you need?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-36",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-37",
+      "kind": "ambiguous",
+      "query": "a black compact one for the laptop",
+      "target": "NL-HUB-4IN1",
+      "everyday": {
+        "id": "s37-37",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a keyboard or a chair you need?",
+          "Wireless, or is a cable fine?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-37",
+        "kind": "ambiguous",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-38",
+      "kind": "out_of_catalog",
+      "query": "a standing desk frame",
+      "target": null,
+      "everyday": {
+        "id": "s37-38",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 2,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-38",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    },
+    {
+      "id": "s37-39",
+      "kind": "out_of_catalog",
+      "query": "a 3d printer for the office",
+      "target": null,
+      "everyday": {
+        "id": "s37-39",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 3,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": [
+          "Is it a chair or a dock you need?",
+          "Any finish or colour in mind (wood, black, white, grey)?"
+        ]
+      },
+      "baseline": {
+        "id": "s37-39",
+        "kind": "out_of_catalog",
+        "hit10": false,
+        "rr": 0,
+        "turns": 1,
+        "converted": false,
+        "abstained": false,
+        "correct_abstain": false,
+        "asked": []
+      }
+    }
+  ]
+}

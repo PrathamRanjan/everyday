@@ -7,6 +7,7 @@ import { Router } from "express";
 import { getDb } from "../db.js";
 import { accountById } from "../store.js";
 import { keyLogin } from "./auth.js";
+import { hashKey } from "../lib/util.js";
 import { agentIdOf, serveMcp } from "../mcp/http.js";
 import { buildMerchantServer, buildShopperServer } from "../mcp/tools.js";
 
@@ -19,8 +20,17 @@ export function mcpRoutes() {
   const r = Router();
   r.all("/mcp", async (req, res) => {
     const key = bearer(req);
-    const v = key ? await keyLogin(key) : null;
-    if (!v) return res.status(401).json({ error: "unauthorized", message: "Bearer <Everyday access key> required. Keys are shown on /demo in demo mode." });
+    let v = key ? await keyLogin(key) : null;
+    if (!v && key) {
+      // A shopper's assistant key, made on /agents (device_keys client 'agent'); revocable, and /mcp only.
+      const db = await getDb();
+      const d = (await db.query<{ id: string; account_id: string }>("SELECT id, account_id FROM device_keys WHERE key_hash = $1 AND revoked_at IS NULL AND client = 'agent'", [hashKey(key)])).rows[0];
+      if (d) {
+        void db.query("UPDATE device_keys SET last_used_at = now() WHERE id = $1", [d.id]).catch(() => undefined);
+        v = `acc:${d.account_id}`;
+      }
+    }
+    if (!v) return res.status(401).json({ error: "unauthorized", message: "Bearer <Everyday assistant key> required. Make one on /agents while signed in to your demo." });
     if (!v.startsWith("acc:")) return res.status(403).json({ error: "forbidden", message: "The shopping agent needs a shopper's key, not the merchant's." });
     const account = await accountById(await getDb(), v.slice(4)).catch(() => null);
     if (!account) return res.status(401).json({ error: "unauthorized", message: "Unknown shopper." });
@@ -31,7 +41,7 @@ export function mcpRoutes() {
   r.all("/merchant/mcp", async (req, res) => {
     const key = bearer(req);
     const v = key ? await keyLogin(key) : null;
-    if (!v) return res.status(401).json({ error: "unauthorized", message: "Bearer <Everyday merchant key> required. Keys are shown on /demo in demo mode." });
+    if (!v) return res.status(401).json({ error: "unauthorized", message: "Bearer <Everyday merchant key> required. Merchant keys are printed by the seed script and are not handed out on the site." });
     if (!v.startsWith("mer:")) return res.status(403).json({ error: "forbidden", message: "This endpoint needs the merchant's key, not a shopper's." });
     const m = (await (await getDb()).query<any>("SELECT id, name FROM merchants WHERE id = $1", [v.slice(4)])).rows[0];
     if (!m) return res.status(401).json({ error: "unauthorized", message: "Unknown merchant." });

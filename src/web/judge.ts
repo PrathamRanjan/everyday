@@ -46,9 +46,9 @@ export const PATHS: { id: string; title: string; minutes: number; no_login: bool
     no_login: true,
     why: "A sentence becomes a checked plan: code applies the budget, the date, what you own and every quality you asked for, then you pay from the demo's saved sandbox wallet.",
     steps: [
-      { key: "plan_made", label: STEPS.plan_made, how: "The sentence is typed for you. Press Make a plan.", href: "/plans?text=a%20wireless%20keyboard%20under%20%2480" },
+      { key: "plan_made", label: STEPS.plan_made, how: "The sentence is typed for you. Press Plan it.", href: "/plans?text=a%20wireless%20keyboard%20under%20%2480" },
       { key: "plan_quoted", label: STEPS.plan_quoted, how: "On the plan, press Get the exact quote.", href: "/plans" },
-      { key: "paid_demo_wallet", label: STEPS.paid_demo_wallet, how: "Press Pay as the demo shopper. PayPal captures it from a saved sandbox wallet; no login.", href: "/plans" },
+      { key: "paid_demo_wallet", label: STEPS.paid_demo_wallet, how: "Press Pay … as the demo shopper. PayPal captures it from a saved sandbox wallet; no login.", href: "/plans" },
     ],
   },
   {

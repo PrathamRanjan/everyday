@@ -34,6 +34,12 @@ const Console = p(() => import("@/pages/Console"));
 const Evidence = p(() => import("@/pages/Console"), "Evidence");
 const Eval = p(() => import("@/pages/Console"), "Eval");
 const Telegram = p(() => import("@/pages/Console"), "Telegram");
+const Proof = p(() => import("@/pages/Public"));
+const AiCalls = p(() => import("@/pages/Public"), "AiCalls");
+const PayPalApis = p(() => import("@/pages/Public"), "PayPalApis");
+const Roles = p(() => import("@/pages/Public"), "Roles");
+const Accessibility = p(() => import("@/pages/Public"), "Accessibility");
+const Agents = p(() => import("@/pages/Public"), "Agents");
 const NotFound = p(() => import("@/pages/NotFound"));
 
 export function App() {
@@ -79,6 +85,12 @@ export function App() {
             <Route path="/merchant/approvals" element={<MerchantApprovals />} />
             <Route path="/judge" element={<Judge />} />
             <Route path="/ask" element={<Ask />} />
+            <Route path="/proof" element={<Proof />} />
+            <Route path="/ai" element={<AiCalls />} />
+            <Route path="/paypal" element={<PayPalApis />} />
+            <Route path="/who-can-move-money" element={<Roles />} />
+            <Route path="/accessibility" element={<Accessibility />} />
+            <Route path="/agents" element={<Agents />} />
             <Route path="/demo" element={<DemoPage />} />
             <Route path="/console" element={<Console />} />
             <Route path="/console/evidence" element={<Evidence />} />

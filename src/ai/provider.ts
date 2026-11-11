@@ -211,13 +211,24 @@ async function openaiStructured(model: string, call: StructuredCall<unknown>, sc
   throw last;
 }
 
-async function audit(row: { purpose: string; model: string; via: string; inputHash: string; outputHash: string; tokensIn: number; tokensOut: number; costUsd: number; latencyMs: number; ok: boolean; error: string | null; output: unknown; runId: string | null }): Promise<number | null> {
+/** The first words of what a call read, kept with the call so /ai can say what it was about. */
+export const summaryOf = (s: string, n = 140) => {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length > n ? `${t.slice(0, n - 1)}…` : t;
+};
+const partsSummary = (parts: Part[]) => summaryOf(`${parts.some((p) => p.type === "image") ? "[photo] " : ""}${parts.filter((p): p is TextPart => p.type === "text").map((p) => p.text).join(" ")}`);
+
+export async function recordAiCall(row: { purpose: string; model: string; via: string; inputHash: string; outputHash: string; tokensIn: number; tokensOut: number; costUsd: number; latencyMs: number; ok: boolean; error: string | null; output: unknown; runId: string | null; summary?: string | null }): Promise<number | null> {
+  return audit(row);
+}
+
+async function audit(row: { purpose: string; model: string; via: string; inputHash: string; outputHash: string; tokensIn: number; tokensOut: number; costUsd: number; latencyMs: number; ok: boolean; error: string | null; output: unknown; runId: string | null; summary?: string | null }): Promise<number | null> {
   try {
     const db = await getDb();
     const r = await db.query<{ id: number }>(
-      `INSERT INTO ai_calls (purpose, model, via, input_hash, output_hash, tokens_in, tokens_out, cost_usd, latency_ms, ok, error, output, run_id, ws_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
-      [row.purpose, row.model, row.via, row.inputHash, row.outputHash, row.tokensIn, row.tokensOut, row.costUsd, row.latencyMs, row.ok, row.error, row.ok ? JSON.stringify(row.output) : null, row.runId, currentWs()],
+      `INSERT INTO ai_calls (purpose, model, via, input_hash, output_hash, tokens_in, tokens_out, cost_usd, latency_ms, ok, error, output, run_id, ws_id, input_summary)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+      [row.purpose, row.model, row.via, row.inputHash, row.outputHash, row.tokensIn, row.tokensOut, row.costUsd, row.latencyMs, row.ok, row.error, row.ok ? JSON.stringify(row.output) : null, row.runId, currentWs(), row.summary ?? null],
     );
     return r.rows[0]?.id ?? null;
   } catch {
@@ -251,13 +262,13 @@ export async function structured<T>(call: StructuredCall<T>): Promise<CallResult
       }
       const latencyMs = Date.now() - t0;
       const costUsd = estimateCost(r.model, r.tokensIn, r.tokensOut);
-      const auditId = await audit({ purpose: call.purpose, model: r.model, via, inputHash, outputHash: createHash("sha256").update(JSON.stringify(r.raw)).digest("hex"), tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd, latencyMs, ok: true, error: null, output: r.raw, runId: call.runId ?? null });
+      const auditId = await audit({ purpose: call.purpose, model: r.model, via, inputHash, outputHash: createHash("sha256").update(JSON.stringify(r.raw)).digest("hex"), tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd, latencyMs, ok: true, error: null, output: r.raw, runId: call.runId ?? null, summary: partsSummary(call.parts) });
       return { output, model: r.model, via, inputHash, tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd, latencyMs, auditId };
     } catch (e) {
       const msg = (e as Error).message.slice(0, 300);
       broken = e instanceof BadOutput ? e.text : undefined;
       errors.push(`${model} (${via}): ${msg}`);
-      await audit({ purpose: call.purpose, model, via, inputHash, outputHash: "", tokensIn: 0, tokensOut: 0, costUsd: 0, latencyMs: Date.now() - t0, ok: false, error: msg, output: null, runId: call.runId ?? null });
+      await audit({ purpose: call.purpose, model, via, inputHash, outputHash: "", tokensIn: 0, tokensOut: 0, costUsd: 0, latencyMs: Date.now() - t0, ok: false, error: msg, output: null, runId: call.runId ?? null, summary: partsSummary(call.parts) });
       return null;
     }
   };

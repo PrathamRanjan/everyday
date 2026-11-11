@@ -9,6 +9,7 @@ import { opsRoutes } from "./web/ops.js";
 import { safetyRoutes } from "./web/safety.js";
 import { askRoutes } from "./web/ask.js";
 import { judgeRoutes } from "./web/judge.js";
+import { publicRoutes } from "./web/public.js";
 import { shopperRoutes } from "./web/shopper.js";
 import { guardRoutes } from "./web/guard.js";
 import { traceRoutes } from "./web/trace.js";
@@ -82,6 +83,7 @@ export function createApp() {
   app.use(demoRoutes());
   app.use(askRoutes());
   app.use(judgeRoutes());
+  app.use(publicRoutes());
   app.use(apiRoutes());
   app.use(mcpRoutes());
   app.use(opsRoutes());
