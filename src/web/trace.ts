@@ -118,7 +118,9 @@ export function traceRoutes() {
     const res0 = (event.resource ?? {}) as any;
     const custom = res0.custom_id ?? res0.purchase_units?.[0]?.custom_id ?? null;
     const related = res0.supplementary_data?.related_ids ?? {};
+    // Only a demo that exists here: other apps on the same PayPal sandbox account can send look-alike custom_ids.
     let ws = wsOfCustomId(custom);
+    if (ws && !(await db.query("SELECT 1 FROM workspaces WHERE id = $1", [ws])).rows.length) ws = null;
     if (!ws) {
       const ids = [res0.id, related.order_id, related.capture_id].filter(Boolean);
       ws = ids.length ? (await db.query<{ ws_id: string | null }>("SELECT ws_id FROM paypal_refs WHERE resource_id = ANY($1::text[]) AND ws_id IS NOT NULL LIMIT 1", [ids])).rows[0]?.ws_id ?? null : null;
