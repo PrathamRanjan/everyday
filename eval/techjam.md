@@ -1,4 +1,4 @@
-# TechJam-style conversational shopping eval (Everyday, 2026-11-09)
+# TechJam-style conversational shopping eval (Everyday, 2026-11-11)
 
 Protocol reimplemented in TypeScript from the published description; no TechJam material is included. Scenarios are generated from committed seeds (11, 23, 37; see eval/techjam-heldout.json), 40 per seed: 40% exact, 40% vague, 15% ambiguous, 5% out of catalog. The simulated shopper answers questions truthfully from the hidden target.
 
