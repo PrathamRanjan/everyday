@@ -24,10 +24,16 @@ describe("structural safety", () => {
   it("AI modules never import payment code and payment code never imports AI", () => {
     for (const f of walk("src/ai")) {
       const src = readFileSync(f, "utf8");
-      expect(src, `${f} imports paypal`).not.toMatch(/from "\.\.?\/(\.\.\/)?paypal\//);
+      // One exception, and only for reading: the assistant asks PayPal's MCP server through src/paypal/mcp.ts, which
+      // allows four get_ tools and imports nothing that can create, capture or refund (checked below).
+      const paypalImports = [...src.matchAll(/from "\.\.?\/(?:\.\.\/)?paypal\/([a-z]+)\.js"/g)].map((m) => m[1]);
+      expect(paypalImports.filter((m) => !(f.endsWith("agent.ts") && m === "mcp")), `${f} imports paypal`).toEqual([]);
       expect(src, `${f} imports the mandate`).not.toMatch(/from "\.\.\/guard\/policy\.js"/);
     }
     for (const f of walk("src/paypal")) expect(readFileSync(f, "utf8"), `${f} imports ai`).not.toMatch(/from "\.\.?\/ai\//);
+    const mcp = readFileSync("src/paypal/mcp.ts", "utf8");
+    expect(mcp, "the read-only PayPal MCP client imports the payment client").not.toMatch(/from "\.\/(client|index|fake)\.js"/);
+    expect(mcp).toMatch(/READ_TOOLS = \["get_order", "get_refund", "get_dispute", "get_shipment_tracking"\]/);
   });
 
   it("rejects schemas with money or PayPal id fields", () => {

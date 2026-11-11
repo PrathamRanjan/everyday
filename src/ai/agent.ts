@@ -16,7 +16,7 @@ import { owned } from "../services/life.js";
 import { spending } from "../services/orders.js";
 import { createIntent, meetsWord } from "../services/plans.js";
 import { protectionsFor } from "../services/protect.js";
-import { activePolicy, DEFAULT_RULES } from "../guard/policy.js";
+import { readRules } from "../services/rules-view.js";
 import { callPayPalTool, paypalMcpReady, type ReadTool } from "../paypal/mcp.js";
 import type { Account } from "../store.js";
 import { nowIso } from "../store.js";
@@ -75,8 +75,8 @@ export const TOOLS: Tool[] = [
     kind: "read",
     source: "everyday",
     run: async (_x, c) => {
-      const pol = await activePolicy(c.a.id, c.q);
-      return { rules: pol?.rules ?? DEFAULT_RULES, in_their_words: pol?.text ?? null, spending: await spending(c.q, c.a) };
+      const pol = await readRules(c.a.id, c.q);
+      return { rules: pol.rules, in_their_words: pol.text, spending: await spending(c.q, c.a) };
     },
   },
   {

@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { resetDemo, signIn } from "./helpers";
@@ -34,7 +35,7 @@ const record = (c: Check) => {
 test.afterAll(() => {
   if (!checks.length) return;
   writeFileSync(
-    resolve(__dirname, "../../eval/accessibility.json"),
+    resolve(dirname(fileURLToPath(import.meta.url)), "../../eval/accessibility.json"),
     JSON.stringify(
       {
         run_on: new Date().toISOString(),

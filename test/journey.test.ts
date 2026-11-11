@@ -188,7 +188,7 @@ describe("Everyday acceptance journey", () => {
     // The new front end: every screen URL serves the app shell, and each screen's data endpoint answers the right
     // party with no server error. Party boundaries hold: no session is 401, a merchant can't read shopper data.
     const runId = (await ui(maya, "/traces")).runs[0].id as string;
-    const screens = ["/login", "/today", "/discover", `/captures/${cap.id}`, "/plans", `/plans/${intent.id}`, "/purchases", `/orders/${order.id}`, "/you", "/things", "/guard", "/passport", "/safety", "/safety/model-card", "/channels", "/traces", `/trace/${runId}`, "/merchant", "/merchant/money", "/merchant/approvals", "/judge", "/demo", "/console", "/console/evidence", "/console/eval", "/telegram"];
+    const screens = ["/login", "/today", "/discover", `/captures/${cap.id}`, "/plans", `/plans/${intent.id}`, "/purchases", `/orders/${order.id}`, "/you", "/things", "/guard", "/passport", "/safety", "/safety/model-card", "/channels", "/traces", `/trace/${runId}`, "/merchant", "/merchant/money", "/merchant/approvals", "/judge", "/demo", "/console", "/console/evidence", "/console/eval", "/telegram", "/ask", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
     for (const u of screens) {
       const r = await anon.get(u);
       expect(r.status, u).toBe(200);
@@ -217,7 +217,22 @@ describe("Everyday acceptance journey", () => {
     expect((await ui(nl, "/merchant")).lines.map((x: any) => x.order_id)).toContain(order.id);
     expect((await ui(nl, "/merchant/money")).totals.orders).toBeGreaterThan(0);
     expect((await ui(nl, "/merchant/approvals")).chain.ok).toBe(true);
-    expect((await ui(anon, "/judge")).beats.length).toBeGreaterThan(3);
+    const judge = await ui(anon, "/judge");
+    expect(judge.paths.map((p: any) => p.id)).toEqual(["money", "buy", "scam"]);
+    expect(judge.live.length).toBeGreaterThan(8);
+    expect(judge.pages.map((p: any) => p.href)).toContain("/proof");
+    // A3.2: the pages that need no sign-in.
+    for (const [path, key] of [["proof", "suites"], ["ai", "calls"], ["paypal", "apis"], ["roles", "roles"], ["accessibility", null], ["agents", "connect"]] as const) {
+      const r = await anon.get(`/api/public/${path}`);
+      expect(r.status, path).toBe(200);
+      if (key) expect(Array.isArray(r.json[key]), path).toBe(true);
+    }
+    expect((await anon.get("/api/ui/ask/tools")).json.tools.length).toBeGreaterThan(5);
+    // The phone QR link refuses a token it didn't sign.
+    const join = await anon.get("/demo/join?t=forged");
+    expect(join.status).toBe(302);
+    expect(join.location ?? "").toMatch(/err=/);
+    expect((await anon.req("POST", "/api/ui/ask", { json: { question: "hi" } })).status).toBe(401);
     expect((await ui(anon, "/demo")).demo).toBe(true);
     expect((await ui(anon, "/console")).weights.length).toBeGreaterThan(0);
     expect((await ui(anon, "/evidence")).real.captures).toBeGreaterThan(0);
