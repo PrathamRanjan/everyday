@@ -45,7 +45,13 @@ function ManualPlan({ text, recipient, captureId }: { text: string; recipient: s
       aria-label="Fill it in by hand"
       onSubmit={(e) => {
         e.preventDefault();
-        void run("manual", "/plans", { manual: "1", text, category, budget, by, must, recipient_id: recipient, capture_id: captureId });
+        void run("manual", "/plans", { manual: "1", text, category, budget, by, must, recipient_id: recipient, capture_id: captureId }).then((out) => {
+          try {
+            if (out && !out.err) sessionStorage.removeItem(`ev-plan-failed:${captureId ?? ""}`);
+          } catch {
+            /* nothing to clear */
+          }
+        });
       }}
     >
       <p className="text-sm font-medium">Fill it in by hand</p>
@@ -83,13 +89,30 @@ function ManualPlan({ text, recipient, captureId }: { text: string; recipient: s
 }
 
 export function PlanForm({ recipients, captureId, disabled, hint, placeholder = "A quiet mouse under $45 by Thursday", label = "What do you need?" }: { recipients: Recipient[]; captureId?: string; disabled?: boolean; hint?: string; placeholder?: string; label?: string }) {
-  const [text, setText] = useState("");
+  // The page refetches (and remounts this form) after every action, so a failed reading is kept for this tab until it
+  // is retried or planned by hand; otherwise the retry and the manual form would vanish with the toast.
+  const KEY = `ev-plan-failed:${captureId ?? ""}`;
+  const saved = (() => {
+    try {
+      return sessionStorage.getItem(KEY);
+    } catch {
+      return null;
+    }
+  })();
+  const [text, setText] = useState(saved ?? "");
   const [rcp, setRcp] = useState(recipients[0]?.id ?? "");
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(saved !== null);
   const { run, busy } = useAction();
   const submit = async () => {
     const out = await run("plan", "/plans", { text, recipient_id: rcp, capture_id: captureId });
-    setFailed(out?.err === AI_FAILED);
+    const bad = out?.err === AI_FAILED;
+    try {
+      if (bad) sessionStorage.setItem(KEY, text);
+      else sessionStorage.removeItem(KEY);
+    } catch {
+      /* the panel still shows until the page reloads */
+    }
+    setFailed(bad);
   };
   return (
     <div className="grid gap-4">

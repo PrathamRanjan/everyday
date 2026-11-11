@@ -196,7 +196,7 @@ export default function Plan() {
               }
               title={`“${i.text}”`}
               needs={needs}
-              next={d.order ? `Order ${d.order.number}` : q ? "Approve on PayPal, then the order's dates start" : "A 15-minute quote with an exact total"}
+              next={d.order ? `Order ${d.order.number}` : q ? "Approve on PayPal, then the order's dates start" : p && !p.feasible ? "Change the budget, the date or what it must be" : "A 15-minute quote with an exact total"}
             />
 
             {d.order && (
@@ -369,7 +369,7 @@ export default function Plan() {
                     </p>
                   </Panel>
                 )}
-                <TrustStrip className="sm:grid-cols-1 sm:divide-x-0 sm:divide-y" ai="Read the words of your request, with quotes." code="Set the budget, the date, and ruled out what doesn't fit." paypal="Charges only the exact quoted total, after you approve there." />
+                <TrustStrip className="sm:grid-cols-1 sm:divide-x-0 sm:divide-y" ai={i.read?.reader === "model" ? "Read the words of your request, with quotes." : i.read?.reader === "manual" ? "Not used: you filled in the form." : "Not used on this request."} code="Set the budget, the date, and ruled out what doesn't fit." paypal="Charges only the exact quoted total, after you approve there." />
                 {d.runs.length > 0 && (
                   <div className="text-sm" data-detail>
                     <GoLink to={`/trace/${d.runs[0].id}`}>See every step the assistant took</GoLink>

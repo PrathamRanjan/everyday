@@ -188,7 +188,7 @@ export function apiRoutes() {
     const db = await getDb();
     const c = (await db.query<any>("SELECT * FROM captures WHERE id = $1 AND account_id = $2", [req.params.id, a.id])).rows[0];
     if (!c) throw new GtError("Not found", "not_found", 404);
-    const intents = (await db.query<any>("SELECT id, text, status, created_at FROM intents WHERE capture_id = $1 ORDER BY created_at DESC", [c.id])).rows;
+    const intents = (await db.query<any>("SELECT id, text, status, COALESCE((SELECT MIN(wall) FROM events WHERE entity = 'intent' AND entity_id = intents.id), intents.created_at::text) AS created_at FROM intents WHERE capture_id = $1 ORDER BY intents.created_at DESC", [c.id])).rows;
     const sig = J<any>(c.signal);
     return { capture: { id: c.id, url: c.url, title: c.title, platform: c.platform, channel: c.channel, status: c.status, basis: BASIS[c.status] ?? c.basis, selected: c.selected, reader: c.reader, created_at: c.created_at, quarantined: sig?.quarantined ?? [], flags: J<any[]>(c.flags) }, objects: J<any[]>(c.objects), intents };
   }));
@@ -196,7 +196,7 @@ export function apiRoutes() {
   r.get("/api/ui/plans", send(async (req) => {
     const a = await shopperOf(req);
     const db = await getDb();
-    const rows = (await db.query<any>("SELECT i.id, i.text, i.status, i.channel, i.created_at, i.budget_cents, i.deadline, r.name AS recipient, r.is_self FROM intents i JOIN recipients r ON r.id = i.recipient_id WHERE i.account_id = $1 ORDER BY i.created_at DESC", [a.id])).rows;
+    const rows = (await db.query<any>("SELECT i.id, i.text, i.status, i.channel, COALESCE((SELECT MIN(wall) FROM events WHERE entity = 'intent' AND entity_id = i.id), i.created_at::text) AS created_at, i.budget_cents, i.deadline, r.name AS recipient, r.is_self FROM intents i JOIN recipients r ON r.id = i.recipient_id WHERE i.account_id = $1 ORDER BY i.created_at DESC", [a.id])).rows;
     const recipients = (await db.query<any>("SELECT id, name, relation, is_self FROM recipients WHERE account_id = $1 ORDER BY is_self DESC", [a.id])).rows;
     return { plans: rows, recipients };
   }));
@@ -219,7 +219,7 @@ export function apiRoutes() {
     const capture = i.capture_id ? (await db.query<any>("SELECT id, title, url FROM captures WHERE id = $1", [i.capture_id])).rows[0] ?? null : null;
     const runs = await runsFor("intent", i.id, 5).catch(() => []);
     return {
-      intent: { id: i.id, text: i.text, status: i.status, budget_cents: i.budget_cents, deadline: i.deadline, channel: i.channel, created_at: i.created_at, read: reqs?.read ?? null, must_have: reqs?.must_have ?? reqs?.style_words ?? [], require_ergonomic: reqs?.require_ergonomic ?? false, laptop_port: reqs?.laptop_port ?? null },
+      intent: { id: i.id, text: i.text, status: i.status, budget_cents: i.budget_cents, deadline: i.deadline, channel: i.channel, created_at: (await db.query<{ w: string | null }>("SELECT MIN(wall) AS w FROM events WHERE entity = 'intent' AND entity_id = $1", [i.id])).rows[0]?.w ?? i.created_at, read: reqs?.read ?? null, must_have: reqs?.must_have ?? reqs?.style_words ?? [], require_ergonomic: reqs?.require_ergonomic ?? false, laptop_port: reqs?.laptop_port ?? null },
       recipient,
       capture,
       plan: p ? { id: p.id, version: p.version, status: p.status, ...b } : null,

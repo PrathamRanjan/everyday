@@ -190,6 +190,17 @@ describe("A4: quote expiry on the demo clock", () => {
   });
 });
 
+describe("A4/E4: plan dates on the demo clock", () => {
+  it("a plan says when it was made on the demo clock, not the server's date", async () => {
+    const maya = await login(`acc:${s.account}`);
+    const q = await quote(maya);
+    const intent = (await one("SELECT intent_id FROM plans WHERE id = $1", [q.plan_id])).intent_id;
+    expect((await maya.get(`/api/ui/plans/${intent}`)).json.intent.created_at).toBe("2026-11-09T09:00");
+    const row = (await maya.get("/api/ui/plans")).json.plans.find((p: any) => p.id === intent);
+    expect(row.created_at).toBe("2026-11-09T09:00");
+  });
+});
+
 describe("A4: health check", () => {
   it("checks the database and names the build", async () => {
     const saved = config.commit;

@@ -81,11 +81,13 @@ ${req.query.ok ? `<p class="ok">${esc(req.query.ok)}</p>` : ""}${req.query.err ?
     const db = await getDb();
     const c = (await db.query<any>("SELECT count(*) FILTER (WHERE kind = 'visitor' AND expires_at > now())::int AS live, count(*) FILTER (WHERE kind = 'visitor' AND created_at > now() - interval '24 hours')::int AS day, count(*) FILTER (WHERE seed_state = 'failed')::int AS failed FROM workspaces")).rows[0];
     const sc = await showcase();
+    // PayPal webhooks in the last 48 hours: routed into a demo (by custom_id or paypal_refs) or not matched to one.
+    const wh = (await db.query<any>("SELECT count(*) FILTER (WHERE ws_id IS NOT NULL)::int AS routed, count(*) FILTER (WHERE ws_id IS NULL)::int AS unrouted, count(*) FILTER (WHERE verified)::int AS verified, max(received_at) AS last FROM webhook_events WHERE received_at > now() - interval '48 hours'")).rows[0];
     page(
       res,
       "Demo workspaces",
       `<h1>Demo workspaces</h1>
-<dl><dt>Live visitor demos</dt><dd>${esc(c.live)} of ${WS_LIMIT}</dd><dt>Started in 24 hours</dt><dd>${esc(c.day)}</dd><dt>Failed builds</dt><dd>${esc(c.failed)}</dd><dt>Showcase</dt><dd>${sc ? `${esc(sc.id)}, built ${esc(new Date(sc.created_at).toISOString())}` : "none yet"}</dd></dl>
+<dl><dt>Live visitor demos</dt><dd>${esc(c.live)} of ${WS_LIMIT}</dd><dt>Started in 24 hours</dt><dd>${esc(c.day)}</dd><dt>Failed builds</dt><dd>${esc(c.failed)}</dd><dt>PayPal webhooks, 48 hours</dt><dd data-webhooks="${esc(wh.routed)}/${esc(wh.unrouted)}/${esc(wh.verified)}">${esc(wh.routed)} routed into a demo, ${esc(wh.unrouted)} not matched to one, ${esc(wh.verified)} signature-verified${wh.last ? `; last ${esc(new Date(wh.last).toISOString())}` : ""}</dd><dt>Showcase</dt><dd>${sc ? `${esc(sc.id)}, built ${esc(new Date(sc.created_at).toISOString())}` : "none yet"}</dd></dl>
 <p><form method="post" action="/admin/demo/showcase"><button>Rebuild the showcase now</button></form></p>
 <h2>Global reset</h2><p>Deletes every visitor's demo and the showcase, then rebuilds the showcase. Visitors start a new demo on their next visit.</p>
 <form method="post" action="/admin/demo/reset-all"><label><input type="checkbox" name="sure" value="1" required> I mean every visitor's demo</label> <button>Reset everything</button></form>

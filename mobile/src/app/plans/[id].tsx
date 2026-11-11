@@ -198,7 +198,7 @@ export default function Plan() {
                     <Txt>No plan yet. The planner runs when the request is saved; pull down to refresh.</Txt>
                   </Card>
                 )}
-                <TrustStrip ai="Read the words of your request, with quotes." code="Set the budget, the date, and ruled out what doesn't fit." paypal="Charges only the exact quoted total, after you approve there." />
+                <TrustStrip ai={i.read?.reader === "model" ? "Read the words of your request, with quotes." : i.read?.reader === "manual" ? "Not used: you filled in the form." : "Not used on this request."} code="Set the budget, the date, and ruled out what doesn't fit." paypal="Charges only the exact quoted total, after you approve there." />
               </>
             );
           }}
