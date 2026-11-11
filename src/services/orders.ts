@@ -16,6 +16,7 @@ import { merchantOwner } from "../guard/policy.js";
 import { currentWs, customIdFor, rememberPayPalRef, withWs, wsOfOrder } from "../ws.js";
 import { startRun } from "../trace.js";
 import { demoWallet, markWalletGone, walletUsable } from "./demowallet.js";
+import { tick } from "./checklist.js";
 
 /** Runs the money gate and turns its outcomes into the errors the web layer already understands. */
 async function gated(m: MoneyMove, run?: Awaited<ReturnType<typeof startRun>> | null) {
@@ -96,6 +97,7 @@ export async function quotePlan(a: Account, intentId: string) {
     const expWall = a.sim_now ? wallIso(new Date(nowOf(a).getTime() + QUOTE_MINUTES * 60_000)) : null;
     await q.query("INSERT INTO quotes (id, plan_id, merchant_id, body, total_cents, hash, expires_at, status, expires_wall) VALUES ($1,$2,$3,$4,$5,$6, now() + ($7 || ' minutes')::interval, 'open', $8)", [id, p.id, m.id, JSON.stringify(body), body.total_cents, hash, String(QUOTE_MINUTES), expWall]);
     await logEvent(q, a, "intent", i.id, "quote.created", `Quote ${money(body.total_cents)} from ${m.name} for plan v${p.version} (expires in ${QUOTE_MINUTES} min)`);
+    await tick("plan_quoted", { quote: id }, q, a.ws_id ?? null);
     return id;
   });
 }
@@ -265,6 +267,7 @@ export async function payFromDemoWallet(a: Account, orderId: string): Promise<{ 
   // Only PayPal's read-back changes the order's state.
   const status = await settle(o.id, "wallet");
   const cap = (await db.query<any>("SELECT capture_id FROM orders WHERE id = $1", [o.id])).rows[0]?.capture_id ?? null;
+  if (status === "paid" && cap) await tick("paid_demo_wallet", { order: o.number, capture_id: cap }, db, a.ws_id ?? null);
   return { status, capture_id: cap };
 }
 
@@ -440,6 +443,7 @@ async function refundIn(orderId: string, amount: number, requestId: string, note
     if (moved.rows.length) {
       // Only money PayPal has returned counts as refunded; a PENDING refund is counted when it completes.
       if (r.status === "COMPLETED") await q.query("UPDATE orders SET refunded_cents = refunded_cents + $2 WHERE id = $1", [o.id, amount]);
+      if (r.status === "COMPLETED") await tick("refund_confirmed", { order: o.number, refund_id: r.id }, q, a.ws_id ?? null);
       await logEvent(q, a, "order", o.id, "refund.sent", `Refund ${money(amount)} on PayPal capture ${o.capture_id}: ${r.id} ${r.status} (${note})`, "Northlight Supply");
     }
   });
@@ -493,6 +497,7 @@ export async function verifyRefunds() {
       const moved = (await q.query("UPDATE payment_ops SET paypal_status = $2, status = CASE WHEN $2 IN ('FAILED','CANCELLED') THEN 'failed' ELSE status END, refusal_confirmed = refusal_confirmed OR $2 IN ('FAILED','CANCELLED') WHERE id = $1 AND paypal_status = $3 RETURNING id", [op.id, r.status, op.paypal_status])).rows.length;
       if (!moved) return;
       if (r.status === "COMPLETED") await q.query("UPDATE orders SET refunded_cents = refunded_cents + $2 WHERE id = $1", [op.order_id, op.amount_cents]);
+      if (r.status === "COMPLETED") await tick("refund_confirmed", { refund_id: op.paypal_id }, q, op.ws_id ?? null);
       if ((r.status === "FAILED" || r.status === "CANCELLED") && op.case_id) {
         const c = (await q.query<any>("SELECT c.*, o.account_id FROM cases c JOIN orders o ON o.id = c.order_id WHERE c.id = $1", [op.case_id])).rows[0];
         if (c?.status === "refunding") {

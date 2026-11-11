@@ -99,7 +99,9 @@ export function PlanForm({ recipients, captureId, disabled, hint, placeholder = 
       return null;
     }
   })();
-  const [text, setText] = useState(saved ?? "");
+  // A3.1: a judge-page button opens this page with the sentence already typed (?text=).
+  const typed = typeof window !== "undefined" && !captureId ? new URLSearchParams(window.location.search).get("text") : null;
+  const [text, setText] = useState(saved ?? typed ?? "");
   const [rcp, setRcp] = useState(recipients[0]?.id ?? "");
   const [failed, setFailed] = useState(saved !== null);
   const { run, busy } = useAction();

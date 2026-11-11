@@ -3,6 +3,7 @@ import { wall } from "../core/time.js";
 import { newId } from "../lib/ids.js";
 import { GtError } from "../lib/util.js";
 import { accountById, J, logEvent, notify, nowIso, type Account } from "../store.js";
+import { tick } from "./checklist.js";
 
 /**
  * Price protection: a merchant promise, not a PayPal feature. If the merchant's own recorded price for the same
@@ -119,6 +120,7 @@ export async function claimPriceProtection(a: Account, lineId: string) {
       [id, number, pr.order_id, lineId, `Price protection: ${pr.title} is now ${money(pr.now_cents)}; asking for the ${money(pr.amount_cents)} difference.`, JSON.stringify(observations), JSON.stringify(eligibility), JSON.stringify([{ key: "price_protection", label: `Refund the ${money(pr.amount_cents)} difference`, refund_cents: pr.amount_cents }]), pr.amount_cents],
     );
     await logEvent(q, a, "order", pr.order_id, "case.price_protection", `${a.name} claimed price protection on ${pr.title}: ${money(pr.amount_cents)} (${pr.evidence}; ${pr.policy_version})`, a.name);
+    await tick("price_drop_claimed", { case: number, cents: pr.amount_cents }, q, a.ws_id ?? null);
     return { id, number, amount_cents: pr.amount_cents };
   });
 }

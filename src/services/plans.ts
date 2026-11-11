@@ -11,6 +11,7 @@ import { accountById, J, logEvent, notify, nowOf, selfRecipient, type Account } 
 import { catalog, CATEGORY_LABEL, type Product } from "./catalog.js";
 import { featuresOf, medianPrice, modelFor, recordChoice } from "./ml.js";
 import { dateForDay, readRequest, type Reading, type RequestRead } from "../ai/request.js";
+import { tick } from "./checklist.js";
 
 // ---------- Parsing a goal ----------
 
@@ -166,7 +167,9 @@ export async function createIntent(account: Account, input: { text: string; capt
         if (read.whole_setup && named.length < 3) {
           g.goal = "desk_setup";
           g.categories = [];
-        } else if (named.length) {
+        } else {
+          // The model's reading decides what is wanted: a thing the person already has ("who already has a
+          // mechanical keyboard") is never the thing to buy, even when the word appears in the sentence.
           g.goal = "single";
           g.categories = named;
         }
@@ -195,13 +198,15 @@ export async function createIntent(account: Account, input: { text: string; capt
       if (!has) await q.query("INSERT INTO owned_items (id, account_id, recipient_id, title, category, acquired, source) VALUES ($1,$2,$3,$4,$5,$6,'mentioned in a request')", [newId("own"), account.id, recipientId, `${CATEGORY_LABEL[cat] ?? cat} (model not given)`, cat, wallIso(now).slice(0, 10)]);
     }
     const categories = g.goal === "single" ? (g.categories.length ? g.categories : focus?.category ? [focus.category] : []) : [];
-    if (g.goal === "single" && !categories.length) throw new GtError("What kind of item is it? Try “a desk lamp under $60” or pick an object in a saved clip.", "invalid");
+    if (g.goal === "single" && !categories.length)
+      throw new GtError(g.recipient ? `What kind of gift for your ${g.recipient}? Try “a desk lamp under $60 for my ${g.recipient}”.${g.owned.length ? ` (Everyday noted they already have a ${g.owned.map((c) => (CATEGORY_LABEL[c] ?? c).toLowerCase()).join(" and a ")}.)` : ""}` : "What kind of item is it? Try “a desk lamp under $60” or pick an object in a saved clip.", "invalid");
     const reqs: Reqs = { goal: g.goal, categories, require_ergonomic: g.require_ergonomic, laptop_port: null, replace: g.replace, style_words: g.style_words, focus, owned_mentioned: g.owned, addons: g.goal === "desk_setup" ? g.mentioned.filter((c) => ["mouse", "keyboard", "monitor_arm", "desk_mat", "webcam"].includes(c)) : [], must_have: must, read: { reader: read.reader, model: read.model, readings: read.readings, dropped: read.dropped } };
     const id = newId("int");
     const flags = scanText(text);
     await q.query("INSERT INTO intents (id, account_id, recipient_id, capture_id, goal, text, budget_cents, deadline, reqs, channel) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [id, account.id, recipientId, input.capture_id ?? null, g.goal, text.slice(0, 1000), g.budget_cents, g.deadline, JSON.stringify(reqs), input.channel]);
     await logEvent(q, account, "intent", id, "intent.created", `New goal${g.goal === "desk_setup" ? " (desk setup)" : ""}: "${text.slice(0, 120)}"${g.budget_cents ? `; budget $${g.budget_cents / 100}` : ""}${g.deadline ? `; by ${g.deadline}` : ""}${g.owned.length ? `; already owns ${g.owned.join(", ")}` : ""}${flags.length ? `; ${flags.length} instruction-like phrase(s) ignored` : ""}`, `${account.name} (${input.channel})`);
     await buildPlan(q, account, id, null);
+    await tick("plan_made", { intent: id }, q, account.ws_id ?? null);
     return id;
   });
 }

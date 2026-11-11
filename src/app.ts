@@ -7,6 +7,8 @@ import { getDb } from "./db.js";
 import { GtError } from "./lib/util.js";
 import { opsRoutes } from "./web/ops.js";
 import { safetyRoutes } from "./web/safety.js";
+import { askRoutes } from "./web/ask.js";
+import { judgeRoutes } from "./web/judge.js";
 import { shopperRoutes } from "./web/shopper.js";
 import { guardRoutes } from "./web/guard.js";
 import { traceRoutes } from "./web/trace.js";
@@ -78,6 +80,8 @@ export function createApp() {
   const shell = serveApp(app, root);
   app.use(adminRoutes());
   app.use(demoRoutes());
+  app.use(askRoutes());
+  app.use(judgeRoutes());
   app.use(apiRoutes());
   app.use(mcpRoutes());
   app.use(opsRoutes());

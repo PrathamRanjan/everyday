@@ -10,6 +10,7 @@ import { readMessage } from "../safety/readers.js";
 import { shopper } from "./auth.js";
 import { back, json } from "./common.js";
 import { unlimited } from "./demo.js";
+import { tick } from "../services/checklist.js";
 
 /** The scan is public (the landing page and order pages use it) and asks a paid model, so each address gets 40 an hour. */
 const hits = new Map<string, number[]>();
@@ -34,6 +35,8 @@ export function safetyRoutes() {
     if (!unlimited(req) && limited(String(req.ip ?? req.socket.remoteAddress ?? "unknown"))) throw new GtError("That's a lot of checks from one place in an hour. Try again later.", "rate_limited", 429);
     // A6.1: rules, Decisions and the code reader; the browser adds the on-device model.
     const out = await readMessage(text);
+    if (out.decisions.ran) await tick("scam_checked", { state: out.state });
+    if (out.state === "hold") await tick("scam_held", { reasons: out.reasons.slice(0, 2) });
     return { ...out, risk: out.rules.risk };
   }));
 

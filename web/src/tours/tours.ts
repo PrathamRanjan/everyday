@@ -1,9 +1,11 @@
 import type { Driver } from "driver.js";
-import { getJson, postAction } from "@/lib/api";
+import { toast } from "sonner";
+import { getJson } from "@/lib/api";
 
 /**
- * Guided tours (Driver.js, MIT). A tour is a list of steps; each step names the page it lives on, so the tour can
- * move between screens. Progress is kept in sessionStorage, which also survives the round trip to PayPal and back.
+ * Guided tours (Driver.js, MIT). A tour is a list of steps; each step names the page it lives on. A3.3: a tour is
+ * started only from a button, shows only the steps of the page it was started on, ends on any route change and never
+ * calls the router. The judge page's self-ticking paths are the way through the whole product.
  */
 export type TourKind = "shopper" | "merchant" | "judge";
 interface Step {
@@ -73,12 +75,8 @@ const TOURS: Record<TourKind, Step[]> = {
   ],
 };
 
-let nav: ((to: string) => void) | null = null;
 let current: Driver | null = null;
-/** The router registers its navigate function so tours can move between pages. */
-export const registerTourNav = (fn: (to: string) => void) => {
-  nav = fn;
-};
+let page: string | null = null;
 
 const wait = (sel: string, ms = 5000) =>
   new Promise<Element | null>((res) => {
@@ -92,24 +90,23 @@ const wait = (sel: string, ms = 5000) =>
     tick();
   });
 
-let showing = false;
-async function show(s: State) {
-  showing = true;
-  try {
-    await showStep(s);
-  } finally {
-    showing = false;
+/** The steps of a tour that live on this page; a tour never moves between pages (A3.3). */
+async function stepsHere(kind: TourKind): Promise<Step[]> {
+  const out: Step[] = [];
+  for (const st of TOURS[kind]) {
+    const route = typeof st.route === "string" ? st.route : await st.route().catch(() => "");
+    if (route.split("?")[0] === location.pathname) out.push(st);
   }
+  return out;
 }
-async function showStep(s: State) {
-  const steps = TOURS[s.kind];
-  const step = steps[s.i];
+
+async function show(steps: Step[], i: number) {
+  const step = steps[i];
   if (!step) return end();
-  const route = typeof step.route === "string" ? step.route : await step.route();
-  if (location.pathname !== route.split("?")[0]) nav?.(route);
   const el = step.el ? await wait(step.el) : null;
+  if (page !== location.pathname) return end();
   current?.destroy();
-  const last = s.i === steps.length - 1;
+  const last = i === steps.length - 1;
   // Loaded on first use, so the tour library isn't in the first page load.
   const [{ driver }] = await Promise.all([import("driver.js"), import("driver.js/dist/driver.css")]);
   const d = driver({
@@ -125,30 +122,16 @@ async function showStep(s: State) {
   d.highlight({
     element: (el as HTMLElement) ?? undefined,
     popover: {
-      title: step.title,
-      description: step.body + (step.el && !el ? " (This part isn't on screen yet — it appears once there's data.)" : ""),
-      progressText: `${s.i + 1} of ${steps.length}`,
+      title: step.title.replace(/^\d+ · /, ""),
+      description: step.body + (step.el && !el ? " (This part isn't on screen yet; it appears once there's data.)" : ""),
+      progressText: `${i + 1} of ${steps.length}`,
       showProgress: true,
-      showButtons: s.i === 0 ? ["next", "close"] : ["previous", "next", "close"],
-      nextBtnText: step.waitFor ? step.waitFor.label : last ? "Finish" : "Next",
+      showButtons: i === 0 ? ["next", "close"] : ["previous", "next", "close"],
+      nextBtnText: last ? "Finish" : "Next",
       prevBtnText: "Back",
       doneBtnText: "Finish",
-      onNextClick: () => {
-        if (step.waitFor) {
-          write({ ...s, i: s.i + 1, waiting: true });
-          d.destroy();
-          return;
-        }
-        if (last) return end();
-        const n = { ...s, i: s.i + 1 };
-        write(n);
-        void show(n);
-      },
-      onPrevClick: () => {
-        const n = { ...s, i: Math.max(0, s.i - 1), waiting: false };
-        write(n);
-        void show(n);
-      },
+      onNextClick: () => (last ? end() : void show(steps, i + 1)),
+      onPrevClick: () => void show(steps, Math.max(0, i - 1)),
       onCloseClick: () => end(),
     },
   });
@@ -157,6 +140,7 @@ async function showStep(s: State) {
 function end() {
   current?.destroy();
   current = null;
+  page = null;
   write(null);
   try {
     localStorage.setItem("ev-toured", "1");
@@ -165,36 +149,26 @@ function end() {
   }
 }
 
-/** Start a tour from the first step. The judge tour signs in as the demo shopper first. */
-export async function startTour(kind: TourKind) {
-  if (kind === "judge") {
-    const s = await getJson<{ who: { kind: string } | null }>("/api/ui/session").catch(() => null);
-    if (s?.who?.kind !== "shopper") {
-      // A1: the tour runs in the visitor's own demo workspace (made now if they have none).
-      await postAction("/demo/start", {}).catch(() => undefined);
-      window.dispatchEvent(new Event("ev:changed"));
-    }
+/**
+ * A3.3: a tour starts only from a button, explains the page it was started on, and never calls the router. Returns
+ * false when this page has no tour steps (the caller says so).
+ */
+export async function startTour(kind: TourKind): Promise<boolean> {
+  const steps = await stepsHere(kind);
+  if (!steps.length) {
+    toast("This page has no tour. The judge page lists short paths through the whole demo.");
+    return false;
   }
-  const s: State = { kind, i: 0, started: Date.now() };
-  write(s);
-  await show(s);
+  page = location.pathname;
+  write({ kind, i: 0, started: Date.now() });
+  await show(steps, 0);
+  return true;
 }
 
-/** Called on every navigation: resumes a tour after a page change or the PayPal round trip. */
-export function resumeTour(pathname: string) {
-  const s = read();
-  if (!s) return;
-  const steps = TOURS[s.kind];
-  if (s.waiting) {
-    const prev = steps[s.i - 1];
-    if (prev?.waitFor && prev.waitFor.resumeOn.test(pathname)) {
-      const n = { ...s, waiting: false };
-      write(n);
-      setTimeout(() => void show(n), 400);
-    }
-    return;
-  }
-  if (!showing && !current?.isActive()) setTimeout(() => !showing && !current?.isActive() && void show(s), 300);
+/** Called on every navigation: a running tour ends on any route change. */
+export function endTourOnRouteChange(pathname: string) {
+  if (page && page !== pathname) end();
+  else if (!page && read()) write(null);
 }
 
 export const tourActive = () => Boolean(read());

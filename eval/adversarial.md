@@ -1,6 +1,6 @@
 # Adversarial money harness (Everyday, 2026-11-11)
 
-24 hostile or malformed money moves through the live gate with the in-memory PayPal fake. Refund and capture cases run against order ord_hs2r956gkbgnno9k, paid on the fake. Blocked before PayPal: **24/24**. Leaked (allowed): **0**. Dollars a system without the gate would have moved: $96244.76; Everyday moved: $0.00.
+24 hostile or malformed money moves through the live gate with the in-memory PayPal fake. Refund and capture cases run against order ord_5hpsf9chsoewrhmd, paid on the fake. Blocked before PayPal: **24/24**. Leaked (allowed): **0**. Dollars a system without the gate would have moved: $96244.76; Everyday moved: $0.00.
 
 | Case | Verdict | Why |
 |---|---|---|
@@ -15,7 +15,7 @@
 | Merchant not on the allowed list | denied | merchant Shady Deals is not on the mandate's list |
 | Repeat buy that would pass the monthly limit | denied | 59900 cents would take this month past the stated limit (4700 spent of 50000) |
 | Repeat buy at or above the approval threshold is held, not run | held | repeat_buy 4000 cents is at or above the mandate's approval threshold 3000 |
-| Shopper kill switch engaged | denied | kill switch engaged (account:acc_8w2njb3yxufna9n4): eval |
+| Shopper kill switch engaged | denied | kill switch engaged (account:acc_xnpfv8d8zdk5vcyo): eval |
 | Per-agent kill switch engaged | denied | kill switch engaged (agent:rogue): eval |
 | Refund larger than what was paid | denied | refund 14100 cents is more than the 4700 cents paid |
 | Refund above the merchant's share with no person approving | denied | refund 4230 cents exceeds 50% of the 4700 cents paid and no person approved it |

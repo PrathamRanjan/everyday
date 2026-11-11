@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Shell } from "@/components/Shell";
 import { PageSkeleton } from "@/components/kit";
 import { useFlash } from "@/lib/api";
-import { registerTourNav, resumeTour, startTour } from "@/tours/tours";
+import { endTourOnRouteChange } from "@/tours/tours";
 import Landing from "@/pages/Landing";
 
 const p = <T extends Record<string, any>>(f: () => Promise<T>, k: keyof T = "default") => lazy(() => f().then((m) => ({ default: m[k] })));
@@ -28,6 +28,7 @@ const Merchant = p(() => import("@/pages/Merchant"));
 const MerchantMoney = p(() => import("@/pages/Merchant"), "MerchantMoney");
 const MerchantApprovals = p(() => import("@/pages/Merchant"), "MerchantApprovals");
 const Judge = p(() => import("@/pages/Demo"), "Judge");
+const Ask = p(() => import("@/pages/Ask"));
 const DemoPage = p(() => import("@/pages/Demo"));
 const Console = p(() => import("@/pages/Console"));
 const Evidence = p(() => import("@/pages/Console"), "Evidence");
@@ -39,18 +40,15 @@ export function App() {
   const loc = useLocation();
   const nav = useNavigate();
   useFlash();
-  useEffect(() => registerTourNav((to) => nav(to)), [nav]);
   useEffect(() => {
     window.scrollTo({ top: 0 });
+    // A3.3: no tour starts by itself; an old "?tour=" link just opens the page.
     const q = new URLSearchParams(loc.search);
     if (q.get("tour")) {
-      const k = q.get("tour") === "merchant" ? "merchant" : q.get("tour") === "shopper" ? "shopper" : "judge";
       q.delete("tour");
       nav({ pathname: loc.pathname, search: q.toString() ? `?${q}` : "" }, { replace: true });
-      void startTour(k);
-      return;
     }
-    resumeTour(loc.pathname);
+    endTourOnRouteChange(loc.pathname);
   }, [loc.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -80,6 +78,7 @@ export function App() {
             <Route path="/merchant/money" element={<MerchantMoney />} />
             <Route path="/merchant/approvals" element={<MerchantApprovals />} />
             <Route path="/judge" element={<Judge />} />
+            <Route path="/ask" element={<Ask />} />
             <Route path="/demo" element={<DemoPage />} />
             <Route path="/console" element={<Console />} />
             <Route path="/console/evidence" element={<Evidence />} />

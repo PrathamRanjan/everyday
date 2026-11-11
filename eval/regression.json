@@ -1,0 +1,97 @@
+{
+  "suite": "regression",
+  "run_on": "2026-11-11T14:29:00.304Z",
+  "provider": "openai (gpt-6.1-sol, backup gpt-6-sol, small jobs gpt-6-luna)",
+  "arms": [
+    {
+      "arm": "live planner",
+      "cases": 5,
+      "correct": 5,
+      "traps": 0,
+      "traps_caught": 0,
+      "naive_usd": 0,
+      "paid_usd": 0,
+      "cost_usd": 0,
+      "p50_ms": 3584
+    }
+  ],
+  "inputs": {
+    "earbuds": "sweat-proof wireless earbuds for running, under $80, need them by next Friday",
+    "monitor-arm": "a monitor arm for a 34-inch ultrawide, VESA 100, under $90",
+    "gift-brother": "a gift for my brother who already has a mechanical keyboard",
+    "dock-hdmi": "the cheapest USB-C dock with two HDMI ports by Thursday",
+    "kayak": "a kayak"
+  },
+  "cases": [
+    {
+      "arm": "live planner",
+      "case_id": "dock-hdmi",
+      "expected": "\"A USB-C dock; two HDMI ports either shown in its details or said to be unconfirmed; the date read.\"",
+      "actual": "\"No dock fits, and it says why:  Nothing in the catalog fits; here is why. LinkHub 4-in-1 USB-C Hub ($19.00): no video output, so it cannot drive your monitor; not shown to\"",
+      "correct": true,
+      "trap": false,
+      "latency_ms": 5571,
+      "detail": {
+        "input": "the cheapest USB-C dock with two HDMI ports by Thursday",
+        "model": "gpt-6.1-sol",
+        "reader": "model"
+      }
+    },
+    {
+      "arm": "live planner",
+      "case_id": "earbuds",
+      "expected": "\"No $0 plan. Either a pick shown to be sweat-proof and wireless within $80, or a plan that can't be quoted and names what's unmet.\"",
+      "actual": "\"Not quotable, and says why (sweat-proof not shown)\"",
+      "correct": true,
+      "trap": false,
+      "latency_ms": 3983,
+      "detail": {
+        "input": "sweat-proof wireless earbuds for running, under $80, need them by next Friday",
+        "model": "gpt-6.1-sol",
+        "reader": "model"
+      }
+    },
+    {
+      "arm": "live planner",
+      "case_id": "gift-brother",
+      "expected": "\"Read as a gift for a brother; never proposes another keyboard.\"",
+      "actual": "\"Read the brother and the keyboard he has, and asks what kind of gift: \\\"What kind of gift for your brother? Try “a desk lamp under $60 for my brother”. (Everyday noted they already have a keyboard.)\\\"\"",
+      "correct": true,
+      "trap": false,
+      "latency_ms": 3584,
+      "detail": {
+        "input": "a gift for my brother who already has a mechanical keyboard",
+        "model": null,
+        "reader": null
+      }
+    },
+    {
+      "arm": "live planner",
+      "case_id": "kayak",
+      "expected": "\"Nothing in the stores Everyday can search fits; no plan to pay for.\"",
+      "actual": "\"Says so: \\\"What kind of item is it? Try “a desk lamp under $60” or pick an object in a saved clip.\\\"\"",
+      "correct": true,
+      "trap": false,
+      "latency_ms": 2237,
+      "detail": {
+        "input": "a kayak",
+        "model": null,
+        "reader": null
+      }
+    },
+    {
+      "arm": "live planner",
+      "case_id": "monitor-arm",
+      "expected": "\"A monitor arm that fits VESA 100 within $90, or a plan that says which part is unmet.\"",
+      "actual": "\"Lift Monitor Arm, Single, VESA 75/100\"",
+      "correct": true,
+      "trap": false,
+      "latency_ms": 2369,
+      "detail": {
+        "input": "a monitor arm for a 34-inch ultrawide, VESA 100, under $90",
+        "model": "gpt-6.1-sol",
+        "reader": "model"
+      }
+    }
+  ]
+}

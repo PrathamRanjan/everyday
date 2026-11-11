@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { getDb } from "../src/db.js";
 import { runAdversarial } from "../src/eval/adversarial.js";
-import { summarise } from "../src/eval/store.js";
+import { casesOf, summarise } from "../src/eval/store.js";
 import { seedAll } from "../src/services/seed.js";
 import { FakePayPal } from "../src/paypal/fake.js";
 import { setPayPal } from "../src/paypal/index.js";
@@ -45,6 +45,6 @@ if (!ord) {
 }
 const r = await runAdversarial(acc, ord);
 writeFileSync("eval/adversarial.md", r.markdown);
-writeFileSync("eval/adversarial.json", JSON.stringify({ suite: "adversarial", run_on: new Date().toISOString(), provider: "no model (code gate and the in-memory PayPal fake)", arms: await summarise("adversarial") }, null, 2) + "\n");
+writeFileSync("eval/adversarial.json", JSON.stringify({ suite: "adversarial", run_on: new Date().toISOString(), provider: "no model (code gate and the in-memory PayPal fake)", arms: await summarise("adversarial"), inputs: Object.fromEntries(r.rows.map((x) => [x.id, x.title])), reasons: Object.fromEntries(r.rows.map((x) => [x.id, x.reason])), cases: await casesOf("adversarial") }, null, 2) + "\n");
 console.log(r.markdown);
 process.exit(r.leaked.length ? 1 : 0);

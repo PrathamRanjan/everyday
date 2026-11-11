@@ -67,3 +67,18 @@ export async function evalRows(suite: string, limit = 200, q?: Queryable) {
   const db = q ?? (await getDb());
   return (await db.query<any>("SELECT * FROM eval_runs WHERE suite = $1 ORDER BY arm, case_id LIMIT $2", [suite, limit])).rows.map((r: any) => ({ ...r, expected: typeof r.expected === "string" ? JSON.parse(r.expected) : r.expected, actual: typeof r.actual === "string" ? JSON.parse(r.actual) : r.actual, detail: typeof r.detail === "string" ? JSON.parse(r.detail) : r.detail }));
 }
+
+/** A5.6: every case of a suite, for the committed result file and /proof. */
+export async function casesOf(suite: string, q?: Queryable) {
+  const db = q ?? (await getDb());
+  return (await db.query<any>("SELECT arm, case_id, expected, actual, correct, trap, latency_ms, detail FROM eval_runs WHERE suite = $1 ORDER BY case_id, arm", [suite])).rows.map((r) => ({
+    arm: r.arm,
+    case_id: r.case_id,
+    expected: r.expected,
+    actual: r.actual,
+    correct: Boolean(r.correct),
+    trap: Boolean(r.trap),
+    latency_ms: Number(r.latency_ms),
+    detail: typeof r.detail === "string" ? JSON.parse(r.detail) : r.detail,
+  }));
+}

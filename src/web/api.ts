@@ -38,7 +38,7 @@ import { pushReady } from "../channels/push.js";
 import { loadRun, recentRuns, runsFor } from "../trace.js";
 import { bearerOf, whoami } from "./auth.js";
 import { unlimited } from "./demo.js";
-import { partyOf, BEATS } from "./trace.js";
+import { partyOf } from "./trace.js";
 import { DEMO_SCAM } from "./safety.js";
 import { newId } from "../lib/ids.js";
 import { demoWallet, walletView } from "../services/demowallet.js";
@@ -475,12 +475,6 @@ export function apiRoutes() {
   }));
 
   // ---------- Judge and operator (demo mode) ----------
-  r.get("/api/ui/judge", send(async () => {
-    const db = await getDb();
-    const id = newId("jdg");
-    await db.query("INSERT INTO judge_sessions (id, persona) VALUES ($1, 'judge')", [id]).catch(() => undefined);
-    return { beats: BEATS, session: id };
-  }));
 
   r.get("/api/ui/demo", send(async () => {
     const db = await getDb();
