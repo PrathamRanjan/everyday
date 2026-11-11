@@ -57,18 +57,32 @@ export const config = {
     anthropicBaseUrl: (process.env.EV_ANTHROPIC_BASE_URL || "https://api.anthropic.com").replace(/\/$/, ""),
     model: process.env.EV_MODEL || "claude-haiku-5-5",
   },
-  /** Roadmap B.1: OpenAI Responses API. provider "none" means rules only; replayed answers still work. */
+  /**
+   * Roadmap B.1, spec A5.1: OpenAI Responses API. A failed call goes to one repair attempt, then the backup model, then
+   * the honest failure state (A5.5). provider "none" is only for the tests and the labelled offline evaluation arms.
+   */
   ai: {
     provider: (process.env.AI_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "none")) as "openai" | "none",
     openaiKey: process.env.OPENAI_API_KEY || "",
     openaiBaseUrl: (process.env.OPENAI_BASE_URL || "https://api.openai.com").replace(/\/$/, ""),
     models: {
-      vision: process.env.AI_MODEL_VISION || "gpt-5.6-luna",
-      read: process.env.AI_MODEL_READ || "gpt-5.5",
-      classify: process.env.AI_MODEL_CLASSIFY || "gpt-5.4-mini",
-      transcribe: process.env.AI_MODEL_TRANSCRIBE || "gpt-4o-mini-transcribe",
+      /** Reading requests, rules and photos (image input). */
+      read: process.env.AI_MODEL_READ || "gpt-6.1-sol",
+      vision: process.env.AI_MODEL_VISION || "gpt-6.1-sol",
+      /** The backup when the reading model fails twice. */
+      backup: process.env.AI_MODEL_BACKUP || "gpt-6-sol",
+      /** Small wording jobs. */
+      classify: process.env.AI_MODEL_CLASSIFY || "gpt-6-luna",
+      transcribe: process.env.AI_MODEL_TRANSCRIBE || "gpt-transcribe",
     },
+    /**
+     * A11: the rules reader may stand in for the model only in the tests and the labelled offline evaluation arms.
+     * Everywhere else a failed reading shows the honest failure sentence, a retry and the manual form.
+     */
+    rulesReader: bool(process.env.EV_RULES_READER, Boolean(process.env.VITEST)),
   },
+  /** A11: production (NODE_ENV=production, or running on Render) refuses to start without its keys. */
+  production: process.env.NODE_ENV === "production" || process.env.RENDER === "true",
   /** Roadmap B.8: channels beyond the existing Telegram bot. */
   channels: {
     telegramToken: process.env.TELEGRAM_BOT_TOKEN || "",

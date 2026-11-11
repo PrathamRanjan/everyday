@@ -84,8 +84,8 @@ describe("Everyday foundation", () => {
     ok(await nl.post("/login", { as: `mer:${s.merchant}` }));
     const anon = new Client(base);
 
-    // ---- Seeded mandates compiled locally.
-    expect(await one("SELECT compiler FROM policies WHERE active AND owner_id = $1", [s.account])).toMatchObject({ compiler: "local-rules" });
+    // ---- Seeded mandates are set by code, and labelled so (A11: never presented as a model's reading).
+    expect(await one("SELECT compiler FROM policies WHERE active AND owner_id = $1", [s.account])).toMatchObject({ compiler: "the demo's starting rules (set by code, not read by a model)" });
     const rules = (await one("SELECT rules FROM policies WHERE active AND owner_id = $1", [s.account])).rules;
     expect(rules).toMatchObject({ max_purchase_cents: 40000, approve_above_cents: 3000, one_tap_repeat: true, allowed_merchants: ["northlight"], blocked_categories: ["headphones"] });
     expect(await uiText(maya, "/guard")).toMatch(/northlight/i);

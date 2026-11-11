@@ -186,7 +186,7 @@ export default function Guard() {
               <KillSwitch kill={d.kill} path="/guard/kill" scope="account" reload={st.reload} who="for you" />
             </div>
             <div className="grid gap-6 lg:grid-cols-2">
-              <Panel title="Your mandate" sub={d.policy ? `Read by ${d.policy.compiler}.` : "Using the defaults."}>
+              <Panel title="Your mandate" sub={d.policy ? (/^gpt-/.test(d.policy.compiler) ? `Read by ${d.policy.compiler}.` : `Rules: ${d.policy.compiler === "local-rules" ? "set by code, not read by a model" : d.policy.compiler}.`) : "Using the defaults."}>
                 <div data-tour="rules">
                   {d.policy && <blockquote className="mb-3 border-l-2 border-rule-2 pl-3 text-sm text-ink-2 italic">{d.policy.text}</blockquote>}
                   <RulesList rules={d.rules} />

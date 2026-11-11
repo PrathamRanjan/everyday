@@ -26,8 +26,10 @@ export async function seedAll(opts: { anchor?: string; ws?: string | null } = {}
   return withWs(ws, async () => {
     const s = await db.tx((q) => seed(q, opts));
     await seedPurchaseHistory(db, ws);
-    await savePolicy(s.account, SHOPPER_MANDATE, compileLocal(SHOPPER_MANDATE), true, db);
-    await savePolicy(merchantOwner(ws), MERCHANT_MANDATE, compileLocal(MERCHANT_MANDATE), true, db);
+    // A11: the demo's starting mandates are set by code and say so; no model read them.
+    const seeded = (t: string) => ({ ...compileLocal(t), compiler: "the demo's starting rules (set by code, not read by a model)" });
+    await savePolicy(s.account, SHOPPER_MANDATE, seeded(SHOPPER_MANDATE), true, db);
+    await savePolicy(merchantOwner(ws), MERCHANT_MANDATE, seeded(MERCHANT_MANDATE), true, db);
     return s;
   });
 }

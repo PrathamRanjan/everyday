@@ -5,7 +5,8 @@
  * never acted on. The reader never sees prices as something to act on: a price it reads is an observation with a
  * quote, and the plan compares it with the merchant's recorded price.
  */
-import { hasOpenAI, structured } from "../ai/provider.js";
+import { AiFailed, hasOpenAI, structured } from "../ai/provider.js";
+import { config } from "../config.js";
 import { ground, quarantine, type Grounded } from "../ai/grounding.js";
 import { CATEGORY_LABEL } from "./catalog.js";
 
@@ -53,7 +54,11 @@ const SCHEMA = {
 /** Reads one frame. Returns reader "none" with an empty signal when no vision model is configured. */
 export async function readFrame(image: { mime: string; body: Buffer }, runId?: string | null): Promise<FrameSignal> {
   const t0 = Date.now();
-  if (!hasOpenAI()) return { reader: "none", model: null, transcript: "", objects: [], quarantined: [], ungrounded: 0, latency_ms: 0 };
+  // A11: no model means "not read" in the tests and offline evaluation only; elsewhere it is a failure, said plainly.
+  if (!hasOpenAI()) {
+    if (config.ai.rulesReader) return { reader: "none", model: null, transcript: "", objects: [], quarantined: [], ungrounded: 0, latency_ms: 0 };
+    throw new AiFailed("No model is configured on this server", "I couldn't read that screenshot. Try again, or describe the item below.");
+  }
   const r = await structured<any>({
     purpose: "capture_frame",
     tier: "vision",

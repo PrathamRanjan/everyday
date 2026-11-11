@@ -10,7 +10,7 @@ import { GtError } from "../lib/util.js";
 import { accountById, J, logEvent, notify, nowOf, selfRecipient, type Account } from "../store.js";
 import { catalog, CATEGORY_LABEL, type Product } from "./catalog.js";
 import { featuresOf, medianPrice, modelFor, recordChoice } from "./ml.js";
-import { dateForDay, readRequest, type Reading } from "../ai/request.js";
+import { dateForDay, readRequest, type Reading, type RequestRead } from "../ai/request.js";
 
 // ---------- Parsing a goal ----------
 
@@ -41,7 +41,7 @@ export interface Reqs {
   /** Qualities the person asked for in words ("quiet", "oak"): ranked as stated requirements, not taste. */
   must_have?: string[];
   /** Who read the request: the model (with the quotes it was grounded on) or the rules parser. */
-  read?: { reader: "model" | "rules"; model: string | null; readings: Reading[]; dropped: number };
+  read?: { reader: "model" | "rules" | "manual"; model: string | null; readings: Reading[]; dropped: number };
 }
 
 export function parseGoal(text: string, now: Date) {
@@ -130,14 +130,33 @@ function questionsFor(slots: { category: string; outcome?: string }[], ctx: Ctx,
 
 // ---------- Intents ----------
 
-export async function createIntent(account: Account, input: { text: string; capture_id?: string | null; recipient_id?: string | null; channel: "app" | "telegram" | "mobile" | "extension" }) {
+/** A5.5: the manual form, for when the model couldn't read the sentence. Every field is what the person chose. */
+export interface ManualRequest {
+  category: string;
+  budget_cents: number | null;
+  deadline: string | null;
+  must: string[];
+}
+export const MANUAL_CATEGORIES = ["lamp", "chair", "dock", "mouse", "keyboard", "monitor_arm", "desk_mat", "webcam", "headphones"] as const;
+
+export async function createIntent(account: Account, input: { text: string; capture_id?: string | null; recipient_id?: string | null; channel: "app" | "telegram" | "mobile" | "extension"; manual?: ManualRequest | null }) {
   const db = await getDb();
-  if (!input.text.trim() && !input.capture_id) throw new GtError("Tell Everyday what you want to do.", "invalid");
-  // The model reads the words (outside the transaction: it is a network call); code reads every number.
-  const read = await readRequest(input.text);
+  const m = input.manual ?? null;
+  if (m && !(MANUAL_CATEGORIES as readonly string[]).includes(m.category)) throw new GtError("Pick what kind of item it is.", "invalid");
+  if (m?.deadline && !/^\d{4}-\d{2}-\d{2}$/.test(m.deadline)) throw new GtError("Pick a date it's needed by, or leave it empty.", "invalid");
+  if (m && m.budget_cents !== null && !(Number.isInteger(m.budget_cents) && m.budget_cents > 0 && m.budget_cents <= 1_000_000)) throw new GtError("A budget is a whole number of dollars, up to $10,000.", "invalid");
+  const text = m ? input.text.trim() || `${CATEGORY_LABEL[m.category] ?? m.category}${m.budget_cents ? ` under $${m.budget_cents / 100}` : ""}${m.deadline ? ` by ${m.deadline}` : ""}${m.must.length ? `, ${m.must.join(", ")}` : ""}` : input.text;
+  if (!text.trim() && !input.capture_id) throw new GtError("Tell Everyday what you want to do.", "invalid");
+  // The model reads the words (outside the transaction: it is a network call); code reads every number. On the manual
+  // form nothing is read: the person picked each field.
+  const read: RequestRead = m
+    ? { reader: "manual", model: null, wants: [m.category], owns: [], replace: [], whole_setup: false, recipient: null, deadline_day: null, comfort: null, must_have: m.must, readings: [], dropped: 0, quarantined: [] }
+    : await readRequest(text);
   return db.tx(async (q) => {
     const now = nowOf(account);
-    const g = parseGoal(input.text, now);
+    const g = m
+      ? { ...parseGoal("", now), goal: "single" as Reqs["goal"], categories: [m.category], mentioned: [m.category], budget_cents: m.budget_cents, deadline: m.deadline, style_words: [] as string[] }
+      : parseGoal(text, now);
     if (read.reader === "model") {
       g.owned = [...new Set([...g.owned, ...read.owns])];
       g.replace = [...new Set([...g.replace, ...read.replace])];
@@ -179,9 +198,9 @@ export async function createIntent(account: Account, input: { text: string; capt
     if (g.goal === "single" && !categories.length) throw new GtError("What kind of item is it? Try “a desk lamp under $60” or pick an object in a saved clip.", "invalid");
     const reqs: Reqs = { goal: g.goal, categories, require_ergonomic: g.require_ergonomic, laptop_port: null, replace: g.replace, style_words: g.style_words, focus, owned_mentioned: g.owned, addons: g.goal === "desk_setup" ? g.mentioned.filter((c) => ["mouse", "keyboard", "monitor_arm", "desk_mat", "webcam"].includes(c)) : [], must_have: must, read: { reader: read.reader, model: read.model, readings: read.readings, dropped: read.dropped } };
     const id = newId("int");
-    const flags = scanText(input.text);
-    await q.query("INSERT INTO intents (id, account_id, recipient_id, capture_id, goal, text, budget_cents, deadline, reqs, channel) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [id, account.id, recipientId, input.capture_id ?? null, g.goal, input.text.slice(0, 1000), g.budget_cents, g.deadline, JSON.stringify(reqs), input.channel]);
-    await logEvent(q, account, "intent", id, "intent.created", `New goal${g.goal === "desk_setup" ? " (desk setup)" : ""}: "${input.text.slice(0, 120)}"${g.budget_cents ? `; budget $${g.budget_cents / 100}` : ""}${g.deadline ? `; by ${g.deadline}` : ""}${g.owned.length ? `; already owns ${g.owned.join(", ")}` : ""}${flags.length ? `; ${flags.length} instruction-like phrase(s) ignored` : ""}`, `${account.name} (${input.channel})`);
+    const flags = scanText(text);
+    await q.query("INSERT INTO intents (id, account_id, recipient_id, capture_id, goal, text, budget_cents, deadline, reqs, channel) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)", [id, account.id, recipientId, input.capture_id ?? null, g.goal, text.slice(0, 1000), g.budget_cents, g.deadline, JSON.stringify(reqs), input.channel]);
+    await logEvent(q, account, "intent", id, "intent.created", `New goal${g.goal === "desk_setup" ? " (desk setup)" : ""}: "${text.slice(0, 120)}"${g.budget_cents ? `; budget $${g.budget_cents / 100}` : ""}${g.deadline ? `; by ${g.deadline}` : ""}${g.owned.length ? `; already owns ${g.owned.join(", ")}` : ""}${flags.length ? `; ${flags.length} instruction-like phrase(s) ignored` : ""}`, `${account.name} (${input.channel})`);
     await buildPlan(q, account, id, null);
     return id;
   });

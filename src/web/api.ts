@@ -180,7 +180,7 @@ export function apiRoutes() {
     const q = String(req.query.q ?? "").trim().slice(0, 120);
     const results = q ? cat.index.fused(q, 12).map((x) => cat.byId.get(x.id)!).filter(Boolean).map((p) => ({ id: p.id, title: p.title, model: p.model, merchant: p.merchant_label, price_cents: p.price_cents, checkout: p.checkout, category: p.category })) : [];
     const watches = (await db.query<any>("SELECT w.id, w.target_cents, w.status, p.title, p.price_cents FROM price_watches w JOIN products p ON p.id = w.product_id WHERE w.account_id = $1", [a.id])).rows;
-    return { captures: caps, q, results, watches, clips: CLIPS.map((c) => ({ url: c.url, title: c.title })), ai: hasOpenAI() };
+    return { captures: caps, q, results, watches, clips: CLIPS.map((c) => ({ url: c.url, title: c.title })) };
   }));
 
   r.get("/api/ui/captures/:id", send(async (req) => {

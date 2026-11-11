@@ -211,7 +211,7 @@ export default function Plan() {
 
             <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
               <div className="min-w-0 space-y-6">
-                <Panel title="What Everyday understood" sub={i.read?.reader === "model" ? `Read by ${i.read.model ?? "the model"}; each line shows the words it came from.` : "Read by rules (no model on this request)."}>
+                <Panel title="What Everyday understood" sub={i.read?.reader === "model" ? `Read by ${i.read.model ?? "the model"}; each line shows the words it came from.` : i.read?.reader === "manual" ? "Filled in by you on the form; no model read it." : "Not read by a model: the fields below are from the words and numbers you typed."}>
                   <div data-tour="plan-read">
                     <ul className="grid gap-2 sm:grid-cols-2">
                       {i.budget_cents ? (

@@ -12,12 +12,15 @@ import * as WebBrowser from "expo-web-browser";
  */
 export function useAct(reload?: () => Promise<void> | void) {
   const [busy, setBusy] = useState<string | null>(null);
+  /** The last refusal's sentence, so a screen can offer what comes next (A5.5: a retry and the manual form). */
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const toast = useToast();
   const { refresh } = useSession();
   const run = useCallback(
     async (key: string, path: string, data?: Parameters<typeof act>[1], opts: { stay?: boolean } = {}): Promise<ActResult | null> => {
       setBusy(key);
+      setError(null);
       try {
         const out = await act(path, data);
         if (out.external) {
@@ -37,6 +40,7 @@ export function useAct(reload?: () => Promise<void> | void) {
         void refresh();
         return out;
       } catch (e) {
+        setError((e as Error).message);
         toast((e as Error).message, "err");
         if (e instanceof ApiError && e.code === "signin") {
           await refresh();
@@ -49,5 +53,5 @@ export function useAct(reload?: () => Promise<void> | void) {
     },
     [reload, refresh, router, toast],
   );
-  return { run, busy };
+  return { run, busy, error };
 }

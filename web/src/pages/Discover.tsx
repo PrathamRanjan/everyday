@@ -16,7 +16,6 @@ interface DiscoverData {
   results: { id: string; title: string; model: string; merchant: string; price_cents: number; checkout: boolean; category: string }[];
   watches: { id: string; target_cents: number; status: string; title: string; price_cents: number }[];
   clips: { url: string; title: string }[];
-  ai: boolean;
 }
 
 function CaptureForm({ clips }: { clips: DiscoverData["clips"] }) {
@@ -89,7 +88,7 @@ export default function Discover() {
             <Panel title="Ask" sub="The quickest way." className="lg:order-2">
               {rc.data ? <PlanForm recipients={rc.data.recipients} /> : <div className="h-40 animate-pulse rounded-md bg-sunk" />}
             </Panel>
-            <Panel title="Show it" sub={d.ai ? "Screenshots and video covers are read by a vision model." : "No vision model on this server: links are saved and demo clips use their authored items."} className="lg:order-1">
+            <Panel title="Show it" sub="Screenshots and video covers are read by a vision model. Demo clips use items authored for the demo, and say so."  className="lg:order-1">
               <div data-tour="capture-form">
                 <CaptureForm clips={d.clips} />
               </div>

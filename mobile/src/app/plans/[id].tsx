@@ -79,7 +79,7 @@ export default function Plan() {
                   </Card>
                 )}
 
-                <Card title="What Everyday understood" sub={i.read?.reader === "model" ? `Read by ${i.read.model ?? "the model"}; each line shows the words it came from.` : "Read by rules (no model on this request)."}>
+                <Card title="What Everyday understood" sub={i.read?.reader === "model" ? `Read by ${i.read.model ?? "the model"}; each line shows the words it came from.` : i.read?.reader === "manual" ? "Filled in by you on the form; no model read it." : "Not read by a model: the fields below are from the words and numbers you typed."}>
                   {i.budget_cents ? <KV rows={[["Budget (parsed by code)", money(i.budget_cents)]]} /> : null}
                   {i.deadline ? <KV rows={[["Need by (worked out by code)", day(i.deadline)]]} /> : null}
                   {(i.read?.readings ?? []).map((r, k) => (

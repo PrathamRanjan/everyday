@@ -57,7 +57,18 @@ export function shopperRoutes() {
   }, true));
 
   r.post("/plans", shopper(async (req, res, a) => {
-    const id = await createIntent(a, { text: String(req.body.text ?? ""), capture_id: req.body.capture_id || null, recipient_id: req.body.recipient_id || null, channel: clientOf(req) });
+    // A5.5: the manual form (shown when the model couldn't read the sentence) sends each field itself.
+    const b = req.body ?? {};
+    const dollars = String(b.budget ?? "").trim();
+    const manual = b.manual === "1"
+      ? {
+          category: String(b.category ?? ""),
+          budget_cents: dollars ? (/^\d{1,5}$/.test(dollars) ? Number(dollars) * 100 : -1) : null,
+          deadline: String(b.by ?? "").trim() || null,
+          must: String(b.must ?? "").split(",").map((w) => w.trim().toLowerCase()).filter((w) => /^[a-z][a-z -]{1,24}$/.test(w)).slice(0, 6),
+        }
+      : null;
+    const id = await createIntent(a, { text: String(b.text ?? ""), capture_id: b.capture_id || null, recipient_id: b.recipient_id || null, channel: clientOf(req), manual });
     res.redirect(`/plans/${id}`);
   }, true));
 

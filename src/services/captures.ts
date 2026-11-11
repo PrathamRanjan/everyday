@@ -2,7 +2,6 @@ import { link as linkParty } from "../channels/index.js";
 import { config } from "../config.js";
 import { getDb, type Queryable } from "../db.js";
 import { forcedToolCall, hasModel } from "../ai/anthropic.js";
-import { hasOpenAI } from "../ai/provider.js";
 import { readFrame, type FrameSignal } from "./vision.js";
 import { coverOf } from "./oembed.js";
 import { scanText } from "../ai/scan.js";
@@ -19,6 +18,7 @@ import { createIntent, currentPlan } from "./plans.js";
  *   analysed_fixture    a seeded demo clip whose scene objects are authored for the demo
  *   analysed_screenshot a model read an uploaded screenshot
  *   described           the person typed what they meant
+ *   read_failed         a screenshot was added but no model could read it (A5.5: said plainly, never guessed)
  */
 export const BASIS: Record<string, string> = {
   link_saved: "Link saved. Everyday has no permitted access to this video's frames; pick or describe the item, or add a screenshot.",
@@ -26,6 +26,7 @@ export const BASIS: Record<string, string> = {
   analysed_screenshot: "Objects read from the screenshot you added.",
   analysed_cover: "Objects read by a vision model from the video's public cover image and title (YouTube or TikTok oEmbed), not from the full video. Pick the one you mean, or add a screenshot of the exact moment.",
   described: "Based on your description.",
+  read_failed: "I couldn't read that screenshot. Try again, or describe the item below.",
 };
 
 export async function capture(account: Account, input: { url?: string; text?: string; channel: "app" | "telegram" | "mobile" | "extension"; image?: { mime: string; body: Buffer } | null }) {
@@ -49,7 +50,7 @@ export async function capture(account: Account, input: { url?: string; text?: st
   if (link && status === "link_saved" && !input.image) {
     const cover = await coverOf(link);
     if (cover?.title) title = cover.title + (cover.author ? ` · ${cover.author}` : "");
-    if (cover?.image && hasOpenAI()) {
+    if (cover?.image) {
       try {
         const s2 = await readFrame(cover.image);
         if (s2.reader === "vision-model" && s2.objects.length) {
@@ -63,7 +64,7 @@ export async function capture(account: Account, input: { url?: string; text?: st
       }
     }
   }
-  if (input.image && hasOpenAI()) {
+  if (input.image) {
     try {
       signal = await readFrame(input.image);
       if (signal.reader === "vision-model") {
@@ -87,9 +88,10 @@ export async function capture(account: Account, input: { url?: string; text?: st
       status = "analysed_screenshot";
       reader = config.models.model;
     } catch {
-      /* keep the link-only basis */
+      /* said below: the screenshot couldn't be read */
     }
   }
+  if (input.image && status !== "analysed_screenshot") status = "read_failed";
   const flags = scanText(`${input.text ?? ""}`);
   const canonical = link?.canonical ?? `note:${newId("n")}`;
   return db.tx(async (q) => {
