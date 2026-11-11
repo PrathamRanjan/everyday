@@ -1,0 +1,89 @@
+{
+  "run_on": "2026-11-11T15:56:59.011Z",
+  "target": "https://pph-everyday.onrender.com",
+  "by": "robot (Playwright, buttons on screen only)",
+  "ok": true,
+  "paths": [
+    {
+      "id": "money",
+      "title": "Get money back",
+      "ok": true,
+      "seconds": 26,
+      "steps": [
+        {
+          "key": "price_drop_claimed",
+          "label": "Claimed a price drop",
+          "done": true
+        },
+        {
+          "key": "refund_confirmed",
+          "label": "PayPal confirmed the refund",
+          "done": true
+        },
+        {
+          "key": "ask_answered",
+          "label": "Asked the assistant and watched it work (two or more tool calls)",
+          "done": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "buy",
+      "title": "Ask for something and buy it",
+      "ok": true,
+      "seconds": 12,
+      "steps": [
+        {
+          "key": "plan_made",
+          "label": "Made a plan from a sentence",
+          "done": true
+        },
+        {
+          "key": "plan_quoted",
+          "label": "Got the exact quote",
+          "done": true
+        },
+        {
+          "key": "paid_demo_wallet",
+          "label": "Paid as the demo shopper (no PayPal login)",
+          "done": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "scam",
+      "title": "Check a scam message",
+      "ok": true,
+      "seconds": 3,
+      "steps": [
+        {
+          "key": "scam_checked",
+          "label": "Checked a message with all the readers",
+          "done": true
+        },
+        {
+          "key": "scam_held",
+          "label": "A scam message was held",
+          "done": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "receipt",
+      "title": "Add a receipt from another shop",
+      "ok": true,
+      "seconds": 6,
+      "steps": [
+        {
+          "key": "receipt_added",
+          "label": "Added a receipt and got its return and warranty dates",
+          "done": true
+        }
+      ],
+      "error": null
+    }
+  ]
+}

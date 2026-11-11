@@ -152,8 +152,10 @@ test("keyboard only: make a plan, get the quote and pay", async ({ page }) => {
     await tabTo(/^Plan it/i);
     await page.keyboard.press("Enter");
     await page.waitForURL(/\/plans\/[\w-]+/, { timeout: 60_000 });
-    await page.waitForLoadState("networkidle");
-    steps.push("made a plan");
+    // A keyboard user waits for the plan to appear too; how long it took is recorded.
+    const t0 = Date.now();
+    await page.getByRole("button", { name: /Get the exact quote/i }).first().waitFor({ timeout: 60_000 });
+    steps.push(`made a plan (shown after ${((Date.now() - t0) / 1000).toFixed(1)} s)`);
     await tabTo(/Get the exact quote/i);
     await page.keyboard.press("Enter");
     await page.waitForLoadState("networkidle");

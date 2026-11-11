@@ -1,0 +1,52 @@
+{
+  "run_on": "2026-11-11T16:08:34.573Z",
+  "target": "https://pph-everyday.onrender.com",
+  "checks": [
+    {
+      "id": "axe-light",
+      "title": "No serious or critical WCAG 2.2 AA issues, light theme",
+      "how": "axe-core (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa) on every primary page, signed out, as the shopper and as the shop. It includes colour contrast and a name for every button, link and form control.",
+      "ok": true,
+      "detail": "25 pages, no serious or critical issue.",
+      "pages": 25
+    },
+    {
+      "id": "axe-dark",
+      "title": "No serious or critical WCAG 2.2 AA issues, dark theme",
+      "how": "axe-core (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa) on every primary page, signed out, as the shopper and as the shop. It includes colour contrast and a name for every button, link and form control.",
+      "ok": true,
+      "detail": "25 pages, no serious or critical issue.",
+      "pages": 25
+    },
+    {
+      "id": "reflow",
+      "title": "Reflow at 320 px wide and at 200% text",
+      "how": "Each page is measured for sideways scroll (page width minus window width) at 320 by 760, then at 1280 wide with the root text size at 200%.",
+      "ok": true,
+      "detail": "8 pages, no sideways scroll either way.",
+      "pages": 8
+    },
+    {
+      "id": "reduced-motion",
+      "title": "Reduced motion",
+      "how": "With prefers-reduced-motion set, count the elements still running a repeating animation on the landing page.",
+      "ok": true,
+      "detail": "Nothing repeats."
+    },
+    {
+      "id": "keyboard-pay",
+      "title": "Keyboard only: plan, quote and pay",
+      "how": "Only Tab and Enter, from a typed request to a paid order on the demo's saved sandbox wallet. The payment result must be announced in the page's one live region.",
+      "ok": true,
+      "detail": "made a plan (shown after 0.3 s), got the quote, paid, and the live region said \"Paid from the demo's saved sandbox wallet. PayPal capture 20A395083P999284X confirmed.\"."
+    }
+  ],
+  "not_tested": [
+    "A VoiceOver or NVDA pass by a person: only automated checks and a scripted keyboard pass ran.",
+    "The phone app (Expo) on a real device: it was checked as a web build only.",
+    "Windows high-contrast mode and forced colours.",
+    "Speech input (Voice Control, Dragon).",
+    "Screen magnifiers beyond 200% text.",
+    "Languages other than English."
+  ]
+}
