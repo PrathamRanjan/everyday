@@ -91,6 +91,8 @@ export function ThemeToggle() {
 function DemoRibbon() {
   const { session, refresh } = useSession();
   const nav = useNavigate();
+  // E9: no Reset on the public landing page; it lives on the app's own screens and on /demo.
+  const onLanding = useLocation().pathname === "/";
   const [busy, setBusy] = useState<string | null>(null);
   // The server puts the demo flag in the page, so the ribbon is there on first paint and nothing below it shifts.
   const boot = (window as { __EV_BOOT__?: { demo: boolean; paypal_env: string; who: { kind: string; clock?: string } | null } }).__EV_BOOT__;
@@ -136,7 +138,7 @@ function DemoRibbon() {
               </button>
             </>
           )}
-          {session?.workspace ? (
+          {session?.workspace && onLanding ? null : session?.workspace ? (
             <button
               className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50"
               disabled={Boolean(busy)}

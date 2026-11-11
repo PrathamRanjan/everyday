@@ -104,7 +104,7 @@ export function ApprovalCard({ a, merchant = false, reload, next, className }: {
             <Busy on={busy === "decline"}>{null}</Busy>
             Decline
           </Button>
-          {a.passkey && <p className="max-w-56 text-xs text-ink-2">Over the countersign limit, so a passkey on this device signs this exact amount and payee.</p>}
+          {a.passkey && <p className="max-w-56 text-xs text-ink-2">Over your passkey limit, so a passkey on this device signs this exact amount and payee.</p>}
         </div>
       </div>
     </article>

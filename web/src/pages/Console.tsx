@@ -245,7 +245,7 @@ export function Evidence() {
               {d.adversarial.length ? <ArmTable arms={d.adversarial} /> : <p className="text-sm text-ink-2">Not run on this instance yet.</p>}
               {d.runs?.adversarial?.run_on && <p className="mt-2 text-xs text-ink-2">From {d.runs.adversarial.source}, run on {d.runs.adversarial.run_on.slice(0, 10)} ({d.runs.adversarial.provider}).</p>}
             </Panel>
-            <Panel title="Conversational shopping eval (TechJam-style)">{d.techjam ? <pre tabIndex={0} className="rail-scroll rounded-md bg-sunk p-3 text-xs whitespace-pre">{d.techjam}</pre> : <p className="text-sm text-ink-2">Not run yet.</p>}</Panel>
+            <Panel title="Shopping chat test">{d.techjam ? <pre tabIndex={0} className="rail-scroll rounded-md bg-sunk p-3 text-xs whitespace-pre">{d.techjam}</pre> : <p className="text-sm text-ink-2">Not run yet.</p>}</Panel>
           </div>
         )}
       </Loaded>
@@ -277,7 +277,7 @@ export function Eval() {
           <TabsList className="bg-sunk">
             <TabsTrigger value="capture">Capture</TabsTrigger>
             <TabsTrigger value="adversarial">Adversarial</TabsTrigger>
-            <TabsTrigger value="techjam">TechJam</TabsTrigger>
+            <TabsTrigger value="techjam">Shopping chat</TabsTrigger>
           </TabsList>
         </Tabs>
         <Tabs value={outcome || "all"} onValueChange={(v) => set("outcome", v === "all" ? "" : v)}>

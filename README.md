@@ -1,6 +1,8 @@
 # Everyday
 
-**Show Everyday something you like, or say what you need. It helps you decide, buys with your approval, and keeps helping after delivery.**
+**Buy the right thing once. Then stop worrying about it.**
+
+Show Everyday something you like, or say what you need. It helps you decide, buys with your approval, and keeps helping after delivery.
 
 A personal buying and ownership assistant. A shared Reel/TikTok/Short becomes a compatible, budgeted plan that knows what you already own; the plan is bought through PayPal after you approve an exact quote; delays, damage and returns are handled on the same record; delivered items become possessions that shape future decisions.
 

@@ -50,7 +50,10 @@ export function demoRoutes() {
     const ws = existing && existing.seed_state !== "failed" && new Date(existing.expires_at) > new Date() && existing.kind === "visitor" ? existing : await startWorkspace({ ip: ipOf(req), unlimited: unlimited(req) });
     setWsCookie(res, ws.id);
     if (ws.account_id) signIn(res, `acc:${ws.account_id}`);
-    back(res, "/today", existing === ws ? "Back in your own demo." : "Your own demo is ready. Nobody else sees what you do here.");
+    // E10: the landing page asks to land on Ask with a question typed; only that one shape is accepted.
+    const next = String(req.body?.next ?? "");
+    const to = /^\/ask\?q=[\w%.~-]{1,300}$/.test(next) ? next : "/today";
+    back(res, to, existing === ws ? "Back in your own demo." : "Your own demo is ready. Nobody else sees what you do here.");
   }));
 
   r.get("/demo/join/:token", demoOn(async (req, res) => {

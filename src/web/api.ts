@@ -98,7 +98,7 @@ export function approvalView(a: any) {
     status: a.status,
     created_at: a.created_at,
     level: scam ? "hold" : "caution",
-    reasons: scam ? (p.safety_reasons as string[]) : [`It's at or above the approval limit${isMerchantOwner(a.owner_id) ? " in the merchant's refund mandate" : " you set"}.`],
+    reasons: scam ? (p.safety_reasons as string[]) : [`It's at or above the approval limit${isMerchantOwner(a.owner_id) ? " in the shop's refund rules" : " you set"}.`],
     passkey: Number(p.cents ?? 0) > countersignThreshold(),
   };
 }

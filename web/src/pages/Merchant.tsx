@@ -120,7 +120,7 @@ function CaseRow({ c, reload }: { c: MerchantData["cases"][number]; reload: () =
           <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => run("no", `/merchant/cases/${c.id}`, { approve: "0", note }, { stay: true })}>
             Decline
           </Button>
-          <span className="w-full text-xs text-ink-2">A refund runs under your refund mandate; at or above its approval line it waits on Approvals first.</span>
+          <span className="w-full text-xs text-ink-2">A refund runs under your refund rules; at or above its approval line it waits on Approvals first.</span>
         </div>
       )}
     </li>
@@ -415,7 +415,7 @@ export function MerchantApprovals() {
     <Loaded state={st}>
       {(d) => (
         <div className="ev-rise">
-          <PageHead eyebrow="Approvals" title="Your refund mandate" lede="Refunds run under rules you write. At or above the approval line a refund waits here; above the countersign line it needs a passkey." needs={d.approvals.length ? `${d.approvals.length} refund waiting` : undefined} />
+          <PageHead eyebrow="Approvals" title="Your refund rules" lede="Refunds run under rules you write. At or above the approval line a refund waits here; above the passkey line it needs a passkey." needs={d.approvals.length ? `${d.approvals.length} refund waiting` : undefined} />
           {d.approvals.length > 0 && (
             <section className="mb-6 space-y-3">
               {d.approvals.map((a) => (

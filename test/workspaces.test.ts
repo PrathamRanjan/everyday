@@ -165,6 +165,11 @@ describe("private demo workspaces", () => {
     expect(flash(await anon.post("/demo/reset"))).toMatch(/Start your own demo/);
     for (let i = 0; i < 5; i++) expect((await new Client(base).req("POST", "/demo/start", { form: {}, headers: { "x-forwarded-for": "192.0.2.1" } })).status).toBe(302);
     expect(flash(await new Client(base).req("POST", "/demo/start", { form: {}, headers: { "x-forwarded-for": "192.0.2.1" } }))).toMatch(/5 demos in the last hour/);
+    // E10: the landing page's start lands on Ask with a question typed; any other target falls back to Today.
+    const toAsk = await new Client(base).req("POST", "/demo/start", { form: { next: "/ask?q=What%20can%20I%20still%20get%20money%20back%20on%3F" }, headers: { "x-forwarded-for": "192.0.2.2" } });
+    expect(toAsk.location ?? "").toMatch(/^\/ask\?q=What%20can%20I%20still%20get%20money%20back%20on%3F&ok=/);
+    const off = await new Client(base).req("POST", "/demo/start", { form: { next: "https://elsewhere.example/" }, headers: { "x-forwarded-for": "192.0.2.3" } });
+    expect(off.location ?? "").toMatch(/^\/today\?ok=/);
 
     const sc = await rebuildShowcase({ background: false });
     const pv = (await anon.get("/api/ui/preview")).json;

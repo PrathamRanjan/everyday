@@ -80,12 +80,13 @@ export default function Landing() {
   const pv = useApi<Preview>("/api/ui/preview");
   const hero = heroOf(pv.data);
   useEffect(() => {
-    document.title = "Everyday — know what you bought, and when it runs out";
+    document.title = "Everyday — Buy the right thing once. Then stop worrying about it.";
   }, []);
   const who = session?.who;
   const { run: act, busy } = useAction();
   // A1: one tap builds the visitor's own private copy of the demo and signs them in as its Maya.
-  const tryDemo = () => void act("start", "/demo/start", {});
+  // E10: it lands on Ask with a question typed, so the first thing a visitor sees is the assistant at work.
+  const tryDemo = () => void act("start", "/demo/start", { next: `/ask?q=${encodeURIComponent("What can I still get money back on?")}` });
 
   return (
     <div className="ev-rise">
@@ -119,12 +120,33 @@ export default function Landing() {
           <BorderBeam />
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="eyebrow">{hero.live ? "Live preview" : "Preview"}</div>
+              <div className="eyebrow">
+                {hero.live ? "Live preview" : "Preview"} <span className="ml-1 rounded-full border border-rule px-1.5 py-px text-[0.65rem] normal-case">Sample data</span>
+              </div>
               <p className="mt-1 truncate font-display text-2xl">{hero.title}</p>
             </div>
-            {hero.cents !== null && <NumberTicker value={hero.cents} format={money} className="font-display text-2xl" />}
+            {hero.cents !== null && (
+              <div className="shrink-0 text-right">
+                <div className="eyebrow">Paid</div>
+                <NumberTicker value={hero.cents} format={money} className="font-display text-2xl" />
+              </div>
+            )}
           </div>
           <Lifeline marks={hero.marks} bands={hero.bands} today={hero.today} compact title={`${hero.title} lifeline`} />
+          <dl className="mt-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2" aria-label="What the timeline shows">
+            {hero.marks.filter((m) => m.date).map((m) => (
+              <div key={m.key} className="flex justify-between gap-2 border-b border-rule/60 py-1">
+                <dt className="text-ink-2">{m.label}</dt>
+                <dd className="num">{day(m.date!)}</dd>
+              </div>
+            ))}
+            {hero.bands.map((b) => (
+              <div key={b.key} className="flex justify-between gap-2 border-b border-rule/60 py-1">
+                <dt className="min-w-0 truncate text-ink-2">{b.label} ends</dt>
+                <dd className="num shrink-0">{day(b.to)}</dd>
+              </div>
+            ))}
+          </dl>
           <figcaption className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-2">
             {pv.data?.line && <State s={pv.data.line.paid ? "COMPLETED" : pv.data.line.status} />}
             <span className="id">{hero.caption}</span>
@@ -210,7 +232,7 @@ export default function Landing() {
             <ul className="mt-4 space-y-2 text-sm">
               <li>Orders arrive already checked for fit</li>
               <li>Cases arrive with what was observed and the policy clause</li>
-              <li>Refunds run under a mandate you set, with approvals</li>
+              <li>Refunds follow rules you set, with approvals</li>
               <li>PayPal tracking and disputes in one place</li>
             </ul>
           </div>

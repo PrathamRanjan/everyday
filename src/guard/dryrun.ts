@@ -20,6 +20,8 @@ import { categoryBlocked, rulesFor } from "./policy.js";
 import { isMerchantOwner, wsOfOwner } from "../ws.js";
 import { moneyArgumentOk } from "./provenance.js";
 
+const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
+
 export type MoneyAction = "order" | "capture" | "refund" | "repeat_buy" | "tracking" | "evidence";
 
 export interface MoneyMove {
@@ -84,17 +86,17 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
 
   const rules = await rulesFor(m.ownerId, db);
   if (m.action === "order" || m.action === "repeat_buy") {
-    if (m.cents > rules.max_purchase_cents) return refuse(`${m.cents} cents exceeds the mandate's largest single purchase ${rules.max_purchase_cents}`, "denied");
-    if (rules.allowed_merchants.length && m.merchantName && !rules.allowed_merchants.some((a) => m.merchantName!.toLowerCase().includes(a.toLowerCase()))) return refuse(`merchant ${m.merchantName} is not on the mandate's list`, "denied");
-    if (categoryBlocked(rules, m.category)) return refuse(`category ${m.category} is blocked by the mandate`, "denied");
+    if (m.cents > rules.max_purchase_cents) return refuse(`${usd(m.cents)} is more than your largest single purchase (${usd(rules.max_purchase_cents)})`, "denied");
+    if (rules.allowed_merchants.length && m.merchantName && !rules.allowed_merchants.some((a) => m.merchantName!.toLowerCase().includes(a.toLowerCase()))) return refuse(`${m.merchantName} isn't one of the shops your rules allow`, "denied");
+    if (categoryBlocked(rules, m.category)) return refuse(`Your rules block ${m.category} purchases`, "denied");
     const acct = (await db.query<any>("SELECT monthly_limit_cents FROM accounts WHERE id = $1", [m.ownerId])).rows[0];
     if (acct) {
       const month = new Date().toISOString().slice(0, 7);
       const spent = Number((await db.query<{ s: number }>("SELECT COALESCE(SUM(gross_cents - refunded_cents),0)::int AS s FROM orders WHERE account_id = $1 AND status NOT IN ('created','cancelled') AND to_char(created_at, 'YYYY-MM') = $2", [m.ownerId, month])).rows[0]?.s ?? 0);
-      if (spent + m.cents > Number(acct.monthly_limit_cents)) return refuse(`${m.cents} cents would take this month past the stated limit (${spent} spent of ${acct.monthly_limit_cents})`, "denied");
-      checks.push(`within the monthly limit (${spent} spent of ${acct.monthly_limit_cents})`);
+      if (spent + m.cents > Number(acct.monthly_limit_cents)) return refuse(`${usd(m.cents)} would take this month past your limit (${usd(spent)} spent of ${usd(Number(acct.monthly_limit_cents))})`, "denied");
+      checks.push(`within the monthly limit (${usd(spent)} spent of ${usd(Number(acct.monthly_limit_cents))})`);
     }
-    if (m.action === "repeat_buy" && !rules.one_tap_repeat) return refuse("one-tap repeat buys are off in the mandate: the shopper approves each purchase on PayPal", "denied");
+    if (m.action === "repeat_buy" && !rules.one_tap_repeat) return refuse("One-tap repeat buys are off in your rules: approve each purchase on PayPal", "denied");
   }
   if (m.action === "refund" && isMerchantOwner(m.ownerId)) {
     // What was paid for the thing being refunded: a line, a case's line, a dispute's order, or the order itself.
@@ -151,7 +153,7 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
       const party = isMerchantOwner(m.ownerId) ? "merchant" : "shopper";
       await notifyParty(party, m.ownerId, `${safetyHold ? `Everyday paused a ${m.action.replace("_", " ")} of $${(m.cents / 100).toFixed(2)} for a scam check: ${safety!.reasons.slice(0, 2).join(" ")}` : `Everyday wants to ${m.action.replace("_", " ")} $${(m.cents / 100).toFixed(2)} on ${m.entity} ${m.entityId}. It is at or above your approval threshold.`}${big ? ` Above ${(config.guard.countersignAboveCents / 100).toFixed(2)} it needs your passkey.` : ""}`, big ? [{ id: `decline:${approvalId}`, label: "Decline" }] : [{ id: `approve:${approvalId}`, label: "Approve" }, { id: `decline:${approvalId}`, label: "Decline" }], "approval", approvalId, db).catch(() => undefined);
     }
-    return { gate: "held", approvalId, reason: safetyHold ? `Paused by the scam check: ${safety!.reasons[0] ?? "this payment matches a scam pattern"}` : `${m.action} ${m.cents} cents is at or above the mandate's approval threshold ${rules.approve_above_cents}`, checks };
+    return { gate: "held", approvalId, reason: safetyHold ? `Paused by the scam check: ${safety!.reasons[0] ?? "this payment matches a scam pattern"}` : `${usd(m.cents)} is at or above the approval line (${usd(rules.approve_above_cents)}), so it waits for a yes`, checks };
   }
 
   await run?.step({ actor: "guard", tool: `dry_run:${m.action}`, args: { cents: m.cents, entity: m.entity, entity_id: m.entityId }, gate: "allowed", result: { checks } });

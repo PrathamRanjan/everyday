@@ -29,7 +29,7 @@ export function guardRoutes() {
 
   r.post("/guard/policy", shopper(async (req, res, a) => {
     const text = String(req.body.text ?? "").slice(0, 2000);
-    if (!text.trim()) throw new GtError("Write the mandate first", "validation", 422);
+    if (!text.trim()) throw new GtError("Write your rules first", "validation", 422);
     const compiled = await compilePolicy(text);
     const adopt = req.body.mode === "adopt";
     await savePolicy(a.id, text, compiled, adopt);
@@ -146,7 +146,7 @@ export function guardRoutes() {
   }));
   r.post("/merchant/approvals/policy", merchant(async (req, res) => {
     const text = String(req.body.text ?? "").slice(0, 1000);
-    if (!text.trim()) throw new GtError("Write the mandate first", "validation", 422);
+    if (!text.trim()) throw new GtError("Write your rules first", "validation", 422);
     const compiled = await compilePolicy(text);
     await savePolicy(merchantOwner(), text, compiled, true);
     back(res, "/merchant/approvals", `Mandate adopted (${compiled.compiler})${compiled.unexpressed.length ? `; could not express: ${compiled.unexpressed.join("; ")}` : ""}`);
