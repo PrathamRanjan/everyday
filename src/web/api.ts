@@ -17,7 +17,7 @@ import { CLIPS } from "../services/catalog-data.js";
 import { calendar, owned, recallsFor, today } from "../services/life.js";
 import { choiceReceipts, modelFor, whyPanel } from "../services/ml.js";
 import { protectionsFor } from "../services/protect.js";
-import { spending } from "../services/orders.js";
+import { quoteExpired, spending } from "../services/orders.js";
 import { currentPlan, intentRow, tastePairs } from "../services/plans.js";
 import { passportSummary, reconcileTransactions, vaultStatus } from "../services/passport.js";
 import { channel3Ready, searchProducts } from "../services/channel3.js";
@@ -210,7 +210,8 @@ export function apiRoutes() {
     const open = p?.status === "current" && i.status === "planning";
     const pairs = open && b && !b.questions.length ? await tastePairs(db, a, i.id, 1) : [];
     const answered = (await db.query<{ n: number }>("SELECT count(*)::int AS n FROM pref_events WHERE intent_id = $1", [i.id])).rows[0].n;
-    const quote = (await db.query<any>("SELECT * FROM quotes WHERE plan_id = $1 AND status = 'open' AND expires_at > now() ORDER BY created_at DESC LIMIT 1", [p?.id ?? ""])).rows[0];
+    const quote0 = (await db.query<any>("SELECT * FROM quotes WHERE plan_id = $1 AND status = 'open' ORDER BY created_at DESC LIMIT 1", [p?.id ?? ""])).rows[0];
+    const quote = quote0 && !quoteExpired(a, quote0) ? quote0 : undefined;
     const order = (await db.query<any>("SELECT id, number, status, total_cents FROM orders WHERE intent_id = $1 ORDER BY created_at DESC LIMIT 1", [i.id])).rows[0] ?? null;
     const recipient = (await db.query<any>("SELECT id, name, relation, is_self FROM recipients WHERE id = $1", [i.recipient_id])).rows[0];
     const reqs = J<any>(i.reqs);
@@ -225,7 +226,8 @@ export function apiRoutes() {
       open,
       pairs: pairs.map(([x, y]: any) => [pairItem(x), pairItem(y)]),
       answered,
-      quote: quote ? { id: quote.id, hash: quote.hash, total_cents: quote.total_cents, expires_at: quote.expires_at, ...J<any>(quote.body) } : null,
+      // A4: on a demo clock the quote has no real-time countdown; it says when it runs out on that clock.
+      quote: quote ? { id: quote.id, hash: quote.hash, total_cents: quote.total_cents, ...J<any>(quote.body), expires_at: a.sim_now && quote.expires_wall ? null : quote.expires_at, expires_on_clock: a.sim_now && quote.expires_wall ? fmtWall(quote.expires_wall) : null } : null,
       order,
       shipping: J<any>(nl?.shipping),
       runs: runs.map((x: any) => ({ id: x.id, subject: x.subject, status: x.status })),

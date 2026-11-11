@@ -489,6 +489,8 @@ ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_number_key;
 CREATE UNIQUE INDEX IF NOT EXISTS orders_account_number ON orders(account_id, number);
 -- Which workspace a PayPal object belongs to, written when the object is created (for events that don't echo custom_id).
 CREATE TABLE IF NOT EXISTS paypal_refs (resource_id TEXT PRIMARY KEY, ws_id TEXT, kind TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+-- A4: a demo account's quote runs out on its own demo clock (wall time, "YYYY-MM-DDTHH:MM"), not the server's.
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS expires_wall TEXT;
 `;
 
 let shared: Db | null = null;

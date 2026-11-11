@@ -25,7 +25,7 @@ interface PlanData {
   recipient: { id: string; name: string; is_self: boolean };
   plan: null | { id: string; version: number; status: string; slots: Slot[]; questions: { key: string; text: string; why: string; choices: { value: string; label: string }[] }[]; total_cents: number; items_cents: number; shipping_cents: number; shipping: string; budget_cents: number | null; arrival: string | null; feasible: boolean; gap: string | null; note: string | null; considered: number };
   open: boolean;
-  quote: null | { id: string; hash: string; total_cents: number; expires_at: string; lines: { title: string; qty: number; unit_cents: number }[]; merchant: { name: string } };
+  quote: null | { id: string; hash: string; total_cents: number; expires_at: string | null; expires_on_clock?: string | null; lines: { title: string; qty: number; unit_cents: number }[]; merchant: { name: string } };
   order: { id: string; number: string; status: string; total_cents: number } | null;
 }
 
@@ -172,7 +172,7 @@ export default function Plan() {
                             <Txt weight="bold" size={14}>
                               Quote from {q.merchant?.name?.replace(/\s*\(.*\)$/, "") ?? "the shop"}
                             </Txt>
-                            <Countdown until={q.expires_at} onEnd={() => void st.reload()} />
+                            {q.expires_at ? <Countdown until={q.expires_at} onEnd={() => void st.reload()} /> : <Txt size={12} color={c.ink2}>Good until {q.expires_on_clock} on the demo clock</Txt>}
                           </View>
                           {q.lines.map((l, k) => (
                             <KV key={k} rows={[[`${l.qty > 1 ? `${l.qty} × ` : ""}${l.title}`, money(l.unit_cents * l.qty)]]} />

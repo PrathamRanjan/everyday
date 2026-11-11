@@ -31,6 +31,16 @@ async function gated(m: MoneyMove, run?: Awaited<ReturnType<typeof startRun>> | 
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 export const QUOTE_MINUTES = 15;
 
+/**
+ * A4: a quote's deadline. On a demo account (one with its own clock) it is measured on that clock, so a quote the
+ * seed left open is still good when the visitor arrives hours later, and runs out only when they move the clock past
+ * it. A real account (no demo clock) uses real time.
+ */
+export function quoteExpired(a: Account, qu: { expires_at: Date | string; expires_wall?: string | null }): boolean {
+  if (a.sim_now && qu.expires_wall) return nowOf(a).getTime() >= wall(qu.expires_wall).getTime();
+  return new Date(qu.expires_at).getTime() < Date.now();
+}
+
 async function merchantRow(q: Queryable, id: string) {
   const m = (await q.query<any>("SELECT * FROM merchants WHERE id = $1", [id])).rows[0];
   return { ...m, caps: J<any>(m.caps), shipping: J<any>(m.shipping), return_policy: J<ReturnPolicy & { partial_pct: number; swap: boolean }>(m.return_policy) };
@@ -83,7 +93,8 @@ export async function quotePlan(a: Account, intentId: string) {
     const hash = sha256Hex(canonicalJson(body));
     await q.query("UPDATE quotes SET status = 'superseded' WHERE plan_id = $1 AND status = 'open'", [p.id]);
     const id = newId("quo");
-    await q.query("INSERT INTO quotes (id, plan_id, merchant_id, body, total_cents, hash, expires_at, status) VALUES ($1,$2,$3,$4,$5,$6, now() + ($7 || ' minutes')::interval, 'open')", [id, p.id, m.id, JSON.stringify(body), body.total_cents, hash, String(QUOTE_MINUTES)]);
+    const expWall = a.sim_now ? wallIso(new Date(nowOf(a).getTime() + QUOTE_MINUTES * 60_000)) : null;
+    await q.query("INSERT INTO quotes (id, plan_id, merchant_id, body, total_cents, hash, expires_at, status, expires_wall) VALUES ($1,$2,$3,$4,$5,$6, now() + ($7 || ' minutes')::interval, 'open', $8)", [id, p.id, m.id, JSON.stringify(body), body.total_cents, hash, String(QUOTE_MINUTES), expWall]);
     await logEvent(q, a, "intent", i.id, "quote.created", `Quote ${money(body.total_cents)} from ${m.name} for plan v${p.version} (expires in ${QUOTE_MINUTES} min)`);
     return id;
   });
@@ -111,7 +122,7 @@ async function orderFromQuote(a: Account, quoteId: string, hash: string) {
     if (existing) return existing;
     if (qu.hash !== hash) throw new GtError("This quote changed. Review the new one before approving.", "stale", 409);
     if (qu.status !== "open") throw new GtError("This quote is no longer open. Get a fresh quote.", "stale", 409);
-    if (new Date(qu.expires_at) < new Date()) {
+    if (quoteExpired(a, qu)) {
       await q.query("UPDATE quotes SET status = 'expired' WHERE id = $1", [qu.id]);
       throw new GtError("This quote expired. Get a fresh quote: prices and stock are re-checked.", "expired", 409);
     }

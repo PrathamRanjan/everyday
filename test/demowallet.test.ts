@@ -162,3 +162,40 @@ describe("the demo's saved wallet", () => {
     expect((await new Client(base).get("/api/ui/session")).json.demo_wallet.state).toBe("ok");
   });
 });
+
+describe("A4: quote expiry on the demo clock", () => {
+  it("a demo quote outlives real time and runs out only when the demo clock passes it", async () => {
+    const maya = await login(`acc:${s.account}`);
+    const q = await quote(maya);
+    expect(q.expires_wall).toBe("2026-11-09T09:15");
+    // Real time has passed the server deadline: on a demo account that doesn't matter.
+    await db.query("UPDATE quotes SET expires_at = now() - interval '2 hours' WHERE id = $1", [q.id]);
+    // Move the demo clock a working day on: the quote is now past its time on that clock.
+    expect((await maya.post("/demo/clock", { step: "day" })).status).toBe(302);
+    const r = await maya.post(`/quotes/${q.id}/approve-demo`, { hash: q.hash });
+    expect(msgOf(r, "err")).toMatch(/This quote expired/);
+    // The plan no longer offers it (the refusal rolls back, so the row itself may still say open).
+    const intent = (await one("SELECT intent_id FROM plans WHERE id = $1", [q.plan_id])).intent_id;
+    expect((await maya.get(`/api/ui/plans/${intent}`)).json.quote).toBeNull();
+  });
+  it("before the clock moves, the same quote still pays", async () => {
+    const maya = await login(`acc:${s.account}`);
+    const q = await quote(maya);
+    await db.query("UPDATE quotes SET expires_at = now() - interval '2 hours' WHERE id = $1", [q.id]);
+    const intent = (await one("SELECT intent_id FROM plans WHERE id = $1", [q.plan_id])).intent_id;
+    const shown = (await maya.get(`/api/ui/plans/${intent}`)).json.quote;
+    expect(shown).toMatchObject({ id: q.id, expires_at: null, expires_on_clock: "Mon 9 Nov 09:15" });
+    const r = await maya.post(`/quotes/${q.id}/approve-demo`, { hash: q.hash });
+    expect(msgOf(r, "ok")).toMatch(/^Paid from the demo's saved sandbox wallet/);
+  });
+});
+
+describe("A4: health check", () => {
+  it("checks the database and names the build", async () => {
+    const saved = config.commit;
+    config.commit = "abc1234";
+    const h = await (await fetch(`${base}/healthz`)).json();
+    config.commit = saved;
+    expect(h).toMatchObject({ ok: true, db: { ok: true }, commit: "abc1234" });
+  });
+});

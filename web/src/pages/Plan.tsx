@@ -32,7 +32,7 @@ interface PlanData {
   open: boolean;
   pairs: [PairItem, PairItem][];
   answered: number;
-  quote: null | { id: string; hash: string; total_cents: number; expires_at: string; lines: { title: string; qty: number; unit_cents: number }[]; shipping: { method: string; cents: number }; items_cents: number; merchant: { name: string } };
+  quote: null | { id: string; hash: string; total_cents: number; expires_at: string | null; expires_on_clock?: string | null; lines: { title: string; qty: number; unit_cents: number }[]; shipping: { method: string; cents: number }; items_cents: number; merchant: { name: string } };
   order: { id: string; number: string; status: string; total_cents: number } | null;
   shipping: { standard_days: number; standard_cents: number; express_days: number; express_cents: number; free_over_cents: number };
   runs: { id: string; subject: string; status: string }[];
@@ -333,7 +333,7 @@ export default function Plan() {
                               <span className="inline-flex items-center gap-1.5 font-semibold">
                                 <Timer className="size-4" /> Quote from {q.merchant?.name?.replace(/\s*\(.*\)$/, "") ?? "the shop"}
                               </span>
-                              <Countdown until={q.expires_at} onEnd={st.reload} />
+                              {q.expires_at ? <Countdown until={q.expires_at} onEnd={st.reload} /> : <span className="text-xs text-ink-2">Good until {q.expires_on_clock} on the demo clock</span>}
                             </div>
                             <ul className="space-y-1 text-sm">
                               {q.lines.map((l, k) => (

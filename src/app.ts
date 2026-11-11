@@ -53,12 +53,16 @@ export function createApp() {
     next();
   });
   app.use("/static", express.static(join(root, "public"), { maxAge: 0, setHeaders: (res, file) => { if (/[\\/]safety[\\/]/.test(file)) res.setHeader("Cache-Control", "public, max-age=86400"); } }));
+  // A4: a real database round trip and the build's commit id, for uptime checks and "which build is live".
   app.get("/healthz", async (_req, res) => {
+    const t = Date.now();
+    res.set("Cache-Control", "no-store");
     try {
-      await (await getDb()).query("SELECT 1");
-      res.json({ ok: true });
+      const db = await getDb();
+      await db.query("SELECT 1 FROM settings LIMIT 1");
+      res.json({ ok: true, db: { ok: true, kind: db.kind, ms: Date.now() - t }, commit: config.commit || null });
     } catch (e) {
-      res.status(500).json({ ok: false, error: (e as Error).message });
+      res.status(503).json({ ok: false, db: { ok: false, error: (e as Error).message }, commit: config.commit || null });
     }
   });
   // A1: every request below acts inside the visitor's own demo workspace (or the workspace-less world).
