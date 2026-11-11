@@ -17,7 +17,7 @@ import { nowOf } from "../store.js";
 
 /** Every screen the app renders. Anything else that a browser asks for as a page also gets the app (its 404 screen). */
 export const PAGES: RegExp[] = [
-  /^\/login$/, /^\/today$/, /^\/discover$/, /^\/captures\/[\w-]+$/, /^\/plans$/, /^\/plans\/[\w-]+$/, /^\/purchases$/, /^\/orders\/[\w-]+$/,
+  /^\/login$/, /^\/today$/, /^\/discover$/, /^\/captures\/[\w-]+$/, /^\/plans$/, /^\/plans\/[\w-]+$/, /^\/purchases$/, /^\/receipts$/, /^\/orders\/[\w-]+$/,
   /^\/you$/, /^\/things$/, /^\/guard$/, /^\/passport$/, /^\/safety$/, /^\/safety\/model-card$/, /^\/channels$/, /^\/traces$/, /^\/trace\/[\w-]+$/,
   /^\/merchant$/, /^\/merchant\/money$/, /^\/merchant\/approvals$/, /^\/judge$/, /^\/demo$/, /^\/console$/, /^\/console\/evidence$/, /^\/console\/eval$/, /^\/telegram$/,
   /^\/ask$/, /^\/proof$/, /^\/ai$/, /^\/paypal$/, /^\/who-can-move-money$/, /^\/accessibility$/, /^\/agents$/,
@@ -26,7 +26,7 @@ export const PAGES: RegExp[] = [
 /** Which page module renders each path, so the shell can preload that chunk instead of waiting for the main script. */
 const PAGE_MODULE: [RegExp, string][] = [
   [/^\/login$/, "Login"], [/^\/today$/, "Today"], [/^\/discover$/, "Discover"], [/^\/captures\//, "Capture"], [/^\/plans$/, "Plans"], [/^\/plans\//, "Plan"],
-  [/^\/purchases$/, "Purchases"], [/^\/orders\//, "Order"], [/^\/(you|things)$/, "You"], [/^\/guard$/, "Guard"], [/^\/passport$/, "Passport"], [/^\/safety/, "Safety"],
+  [/^\/purchases$/, "Purchases"], [/^\/receipts$/, "Receipts"], [/^\/orders\//, "Order"], [/^\/(you|things)$/, "You"], [/^\/guard$/, "Guard"], [/^\/passport$/, "Passport"], [/^\/safety/, "Safety"],
   [/^\/channels$/, "Channels"], [/^\/trace/, "Traces"], [/^\/merchant/, "Merchant"], [/^\/(judge|demo)$/, "Demo"], [/^\/(console|telegram)/, "Console"], [/^\/ask$/, "Ask"],
   [/^\/(proof|ai|paypal|who-can-move-money|accessibility|agents)$/, "Public"],
 ];

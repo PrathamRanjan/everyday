@@ -10,6 +10,7 @@ import { safetyRoutes } from "./web/safety.js";
 import { askRoutes } from "./web/ask.js";
 import { judgeRoutes } from "./web/judge.js";
 import { publicRoutes } from "./web/public.js";
+import { receiptRoutes } from "./web/receipts.js";
 import { shopperRoutes } from "./web/shopper.js";
 import { guardRoutes } from "./web/guard.js";
 import { traceRoutes } from "./web/trace.js";
@@ -36,7 +37,8 @@ export function createApp() {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  app.use(express.json({ limit: "1mb" }));
+  // The receipt photo upload has its own, larger limit (src/web/receipts.ts).
+  app.use((req, res, next) => (req.path === "/api/ui/receipts/read" ? next() : express.json({ limit: "1mb" })(req, res, next)));
   app.use(express.urlencoded({ extended: false, limit: "200kb" }));
   app.use(cookieParser());
   // The phone app's browser build runs on Expo's dev server, another origin. It may call the API with a device key;
@@ -84,6 +86,7 @@ export function createApp() {
   app.use(askRoutes());
   app.use(judgeRoutes());
   app.use(publicRoutes());
+  app.use(receiptRoutes());
   app.use(apiRoutes());
   app.use(mcpRoutes());
   app.use(opsRoutes());

@@ -62,6 +62,14 @@ export const PATHS: { id: string; title: string; minutes: number; no_login: bool
       { key: "scam_held", label: STEPS.scam_held, how: "The polite \"we've moved banks\" message is held, with the reasons.", href: "/safety" },
     ],
   },
+  {
+    id: "receipt",
+    title: "Add a receipt from another shop",
+    minutes: 1,
+    no_login: true,
+    why: "Things bought elsewhere get the same watch: the model reads the receipt, code keeps only what it can point to on it, and works out the return and warranty dates. Nothing is saved until you check it.",
+    steps: [{ key: "receipt_added", label: STEPS.receipt_added, how: "Press Use the sample receipt, then Read it, check the lines and press Save.", href: "/receipts" }],
+  },
 ];
 
 /** What is live and what is simulated, from this instance's real settings now. */

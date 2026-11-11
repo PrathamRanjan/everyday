@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, RotateCcw, Route, ShieldCheck, ShoppingBag, Sun, SunMoon, Wallet, WifiOff } from "lucide-react";
+import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, ReceiptText, RotateCcw, Route, ShieldCheck, ShoppingBag, Sun, SunMoon, Wallet, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // Loaded just after the first paint: the popover and the phone menu bring positioning and dialog code.
 const DisplayHelp = lazy(() => import("./DisplayHelp").then((m) => ({ default: m.DisplayHelp })));
@@ -25,6 +25,7 @@ function navFor(kind: "shopper" | "merchant" | null, needs: number): { main: Ite
       ],
       more: [
         { to: "/you", label: "Things I own", icon: <Package /> },
+        { to: "/receipts", label: "Add a receipt", icon: <ReceiptText /> },
         { to: "/passport", label: "Wallet and repeat buys", icon: <Wallet /> },
         { to: "/guard", label: "Rules and approvals", icon: <Gavel />, tour: "nav-guard" },
         { to: "/safety", label: "Scam protection", icon: <ShieldCheck /> },

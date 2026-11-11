@@ -16,7 +16,7 @@ import { getDb } from "../db.js";
 import { GtError } from "../lib/util.js";
 import { currentWs } from "../ws.js";
 
-export type Purpose = "capture_frame" | "read_request" | "plan_question" | "compile_policy" | "shopper_question" | "classify" | "eval";
+export type Purpose = "capture_frame" | "read_receipt" | "read_request" | "plan_question" | "compile_policy" | "shopper_question" | "classify" | "eval";
 
 export interface ImagePart {
   type: "image";

@@ -14,6 +14,7 @@ const Discover = p(() => import("@/pages/Discover"));
 const Capture = p(() => import("@/pages/Capture"));
 const Plans = p(() => import("@/pages/Plans"));
 const Plan = p(() => import("@/pages/Plan"));
+const Receipts = p(() => import("@/pages/Receipts"));
 const Purchases = p(() => import("@/pages/Purchases"));
 const Order = p(() => import("@/pages/Order"));
 const You = p(() => import("@/pages/You"));
@@ -70,6 +71,7 @@ export function App() {
             <Route path="/plans" element={<Plans />} />
             <Route path="/plans/:id" element={<Plan />} />
             <Route path="/purchases" element={<Purchases />} />
+            <Route path="/receipts" element={<Receipts />} />
             <Route path="/orders/:id" element={<Order />} />
             <Route path="/you" element={<You />} />
             <Route path="/things" element={<You />} />

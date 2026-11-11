@@ -201,7 +201,7 @@ describe("Everyday acceptance journey", () => {
     // The new front end: every screen URL serves the app shell, and each screen's data endpoint answers the right
     // party with no server error. Party boundaries hold: no session is 401, a merchant can't read shopper data.
     const runId = (await ui(maya, "/traces")).runs[0].id as string;
-    const screens = ["/login", "/today", "/discover", `/captures/${cap.id}`, "/plans", `/plans/${intent.id}`, "/purchases", `/orders/${order.id}`, "/you", "/things", "/guard", "/passport", "/safety", "/safety/model-card", "/channels", "/traces", `/trace/${runId}`, "/merchant", "/merchant/money", "/merchant/approvals", "/judge", "/demo", "/console", "/console/evidence", "/console/eval", "/telegram", "/ask", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
+    const screens = ["/login", "/today", "/discover", `/captures/${cap.id}`, "/plans", `/plans/${intent.id}`, "/purchases", "/receipts", `/orders/${order.id}`, "/you", "/things", "/guard", "/passport", "/safety", "/safety/model-card", "/channels", "/traces", `/trace/${runId}`, "/merchant", "/merchant/money", "/merchant/approvals", "/judge", "/demo", "/console", "/console/evidence", "/console/eval", "/telegram", "/ask", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
     for (const u of screens) {
       const r = await anon.get(u);
       expect(r.status, u).toBe(200);
@@ -231,7 +231,7 @@ describe("Everyday acceptance journey", () => {
     expect((await ui(nl, "/merchant/money")).totals.orders).toBeGreaterThan(0);
     expect((await ui(nl, "/merchant/approvals")).chain.ok).toBe(true);
     const judge = await ui(anon, "/judge");
-    expect(judge.paths.map((p: any) => p.id)).toEqual(["money", "buy", "scam"]);
+    expect(judge.paths.map((p: any) => p.id)).toEqual(["money", "buy", "scam", "receipt"]);
     expect(judge.live.length).toBeGreaterThan(8);
     expect(judge.pages.map((p: any) => p.href)).toContain("/proof");
     // A3.2: the pages that need no sign-in.
@@ -245,6 +245,14 @@ describe("Everyday acceptance journey", () => {
     const web = await maya.get(`/api/ui/plans/${intent.id}/web`);
     expect(web.status).toBe(200);
     expect(web.json.label).toMatch(/not purchasable in this demo/);
+    // B6: receipts in. The sample is served; reading with no model says so and offers the form; a typed line saves with its dates.
+    expect((await maya.get("/api/ui/receipts/sample")).json.text).toMatch(/BrightDesk/);
+    const rr = await maya.req("POST", "/api/ui/receipts/read", { json: { text: "1 x Desk lamp $20.00" } });
+    expect(rr.status).toBe(422);
+    expect(rr.json).toMatchObject({ manual: true });
+    const rs = await maya.req("POST", "/api/ui/receipts/save", { json: { how: "manual", lines: [{ title: "Desk lamp", category: null, price_cents: 2000, purchase_date: "2026-11-01", merchant: "Elsewhere", return_days: 30, warranty_years: 1 }] } });
+    expect(rs.status).toBe(200);
+    expect(rs.json.items[0]).toMatchObject({ title: "Desk lamp", return_until: "2026-12-01", warranty_until: "2027-11-01" });
     // The phone QR link refuses a token it didn't sign.
     const join = await anon.get("/demo/join?t=forged");
     expect(join.status).toBe(302);
