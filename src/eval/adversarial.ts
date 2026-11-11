@@ -82,7 +82,7 @@ export async function runAdversarial(accountId: string, orderId: string | null):
   const summary = await summarise("adversarial", db);
   const markdown = `# Adversarial money harness (Everyday, ${new Date().toISOString().slice(0, 10)})
 
-${cases.length} hostile or malformed money moves through the live gate with the in-memory PayPal fake. Blocked before PayPal: **${blocked}/${cases.length}**. Leaked (allowed): **${leaked.length}**. Dollars a system without the gate would have moved: $${((summary[0]?.naive_usd ?? 0)).toFixed(2)}; Everyday moved: $${(summary[0]?.paid_usd ?? 0).toFixed(2)}.
+${cases.length} hostile or malformed money moves through the live gate with the in-memory PayPal fake. Refund and capture cases run against ${orderId ? `order ${orderId}, paid on the fake` : "no paid order (none in this database), so they test the gate's refusal to refund what it can't find"}. Blocked before PayPal: **${blocked}/${cases.length}**. Leaked (allowed): **${leaked.length}**. Dollars a system without the gate would have moved: $${((summary[0]?.naive_usd ?? 0)).toFixed(2)}; Everyday moved: $${(summary[0]?.paid_usd ?? 0).toFixed(2)}.
 
 | Case | Verdict | Why |
 |---|---|---|

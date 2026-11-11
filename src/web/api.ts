@@ -500,7 +500,23 @@ export function apiRoutes() {
   r.get("/api/ui/evidence", send(async () => {
     demoOnly();
     const db = await getDb();
-    const [cap, adv, ai, chain] = await Promise.all([summarise("capture"), summarise("adversarial"), aiUsageSummary(), verifyChain()]);
+    const [cap0, adv0, ai, chain] = await Promise.all([summarise("capture"), summarise("adversarial"), aiUsageSummary(), verifyChain()]);
+    // A5.6: an instance that hasn't run a suite itself shows the committed result file, with its date and what ran.
+    const file = (suite: string) => {
+      try {
+        return existsSync(`eval/${suite}.json`) ? (JSON.parse(readFileSync(`eval/${suite}.json`, "utf8")) as { run_on: string; provider: string; arms: any[] }) : null;
+      } catch {
+        return null;
+      }
+    };
+    const fc = cap0.length ? null : file("capture");
+    const fa = adv0.length ? null : file("adversarial");
+    const cap = cap0.length ? cap0 : (fc?.arms ?? []);
+    const adv = adv0.length ? adv0 : (fa?.arms ?? []);
+    const runs = {
+      capture: cap0.length ? { source: "this instance", run_on: null, provider: null } : fc ? { source: "eval/capture.json (committed result file)", run_on: fc.run_on, provider: fc.provider } : null,
+      adversarial: adv0.length ? { source: "this instance", run_on: null, provider: null } : fa ? { source: "eval/adversarial.json (committed result file)", run_on: fa.run_on, provider: fa.provider } : null,
+    };
     const tj = existsSync("eval/techjam.md") ? readFileSync("eval/techjam.md", "utf8") : null;
     // A1: this workspace's own records (each visitor's demo counts its own).
     const real = (await db.query<any>(`WITH acc AS (SELECT id FROM accounts WHERE ws_id IS NOT DISTINCT FROM $1), ord AS (SELECT id FROM orders WHERE account_id IN (SELECT id FROM acc))
@@ -516,7 +532,7 @@ export function apiRoutes() {
       (SELECT count(*) FROM approvals WHERE status = 'pending' AND (owner_id IN (SELECT id FROM acc) OR owner_id = $2))::int AS approvals_pending,
       (SELECT count(*) FROM agent_requests WHERE ws_id IS NOT DISTINCT FROM $1)::int AS agent_requests,
       (SELECT count(*) FROM captures WHERE reader <> 'rules' AND account_id IN (SELECT id FROM acc))::int AS model_captures`, [currentWs(), merchantOwner()])).rows[0];
-    return { real, capture: cap, adversarial: adv, ai, chain: { ok: chain.ok, rows: chain.rows, head: chain.head, broken_at: chain.broken_at ?? null }, techjam: tj, paypal: Boolean(config.paypal.clientId), provider: providerLabel(), channel3: channel3Ready(), telegram: telegramReady(), push: pushReady(), has_openai: hasOpenAI() };
+    return { real, capture: cap, adversarial: adv, runs, ai, chain: { ok: chain.ok, rows: chain.rows, head: chain.head, broken_at: chain.broken_at ?? null }, techjam: tj, paypal: Boolean(config.paypal.clientId), provider: providerLabel(), channel3: channel3Ready(), telegram: telegramReady(), push: pushReady(), has_openai: hasOpenAI() };
   }));
 
   r.get("/api/ui/eval", send(async (req) => {

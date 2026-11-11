@@ -130,6 +130,7 @@ interface Arm { arm: string; cases: number; correct: number; traps: number; trap
 interface EvidenceData {
   real: Record<string, number>;
   capture: Arm[];
+  runs?: { capture: { source: string; run_on: string | null; provider: string | null } | null; adversarial: { source: string; run_on: string | null; provider: string | null } | null };
   adversarial: Arm[];
   ai: { calls: number; ok: number; cost_usd: number; by_purpose: { purpose: string; calls: number; cost_usd: number; p50_ms: number }[] };
   chain: { ok: boolean; rows: number; head: string; broken_at: number | null };
@@ -227,6 +228,7 @@ export function Evidence() {
               }
             >
               {d.capture.length ? <ArmTable arms={d.capture} /> : <p className="text-sm text-ink-2">Not run on this instance yet.</p>}
+              {d.runs?.capture?.run_on && <p className="mt-2 text-xs text-ink-2">From {d.runs.capture.source}, run on {d.runs.capture.run_on.slice(0, 10)} with {d.runs.capture.provider}.</p>}
             </Panel>
             <Panel
               title="Adversarial money harness"
@@ -241,6 +243,7 @@ export function Evidence() {
               }
             >
               {d.adversarial.length ? <ArmTable arms={d.adversarial} /> : <p className="text-sm text-ink-2">Not run on this instance yet.</p>}
+              {d.runs?.adversarial?.run_on && <p className="mt-2 text-xs text-ink-2">From {d.runs.adversarial.source}, run on {d.runs.adversarial.run_on.slice(0, 10)} ({d.runs.adversarial.provider}).</p>}
             </Panel>
             <Panel title="Conversational shopping eval (TechJam-style)">{d.techjam ? <pre tabIndex={0} className="rail-scroll rounded-md bg-sunk p-3 text-xs whitespace-pre">{d.techjam}</pre> : <p className="text-sm text-ink-2">Not run yet.</p>}</Panel>
           </div>

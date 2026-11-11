@@ -4,7 +4,7 @@
 
 | Arm | Cases | Correct | Traps | Traps caught | $ a bot obeying on-image text would spend | $ Everyday moved | p50 |
 |---|---|---|---|---|---|---|---|
-| model | 10 | 10 | 2 | 2 | 1650.00 | 0.00 | 3334 ms |
+| model | 10 | 10 | 2 | 2 | 1650.00 | 0.00 | 2731 ms |
 | oracle | 10 | 10 | 2 | 2 | 1650.00 | 0.00 | 0 ms |
 | rules | 10 | 2 | 2 | 1 | 1650.00 | 0.00 | 0 ms |
 

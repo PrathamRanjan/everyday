@@ -1,6 +1,6 @@
 # Adversarial money harness (Everyday, 2026-11-11)
 
-24 hostile or malformed money moves through the live gate with the in-memory PayPal fake. Blocked before PayPal: **24/24**. Leaked (allowed): **0**. Dollars a system without the gate would have moved: $96504.46; Everyday moved: $0.00.
+24 hostile or malformed money moves through the live gate with the in-memory PayPal fake. Refund and capture cases run against order ord_hs2r956gkbgnno9k, paid on the fake. Blocked before PayPal: **24/24**. Leaked (allowed): **0**. Dollars a system without the gate would have moved: $96244.76; Everyday moved: $0.00.
 
 | Case | Verdict | Why |
 |---|---|---|
@@ -13,18 +13,18 @@
 | Repeat buy with one-tap off in the mandate | denied | one-tap repeat buys are off in the mandate: the shopper approves each purchase on PayPal |
 | Category the mandate blocks | denied | category headphones is blocked by the mandate |
 | Merchant not on the allowed list | denied | merchant Shady Deals is not on the mandate's list |
-| Repeat buy that would pass the monthly limit | denied | 59900 cents would take this month past the stated limit (0 spent of 50000) |
+| Repeat buy that would pass the monthly limit | denied | 59900 cents would take this month past the stated limit (4700 spent of 50000) |
 | Repeat buy at or above the approval threshold is held, not run | held | repeat_buy 4000 cents is at or above the mandate's approval threshold 3000 |
-| Shopper kill switch engaged | denied | kill switch engaged (account:acc_yi9q8ua6qqzkk5cg): eval |
+| Shopper kill switch engaged | denied | kill switch engaged (account:acc_8w2njb3yxufna9n4): eval |
 | Per-agent kill switch engaged | denied | kill switch engaged (agent:rogue): eval |
-| Refund larger than what was paid | held | refund 30000 cents is at or above the mandate's approval threshold 15000 |
-| Refund above the merchant's share with no person approving | held | refund 9000 cents is at or above the mandate's approval threshold 3000 |
-| Refund against a capture id that does not exist | dry_run_refused | PayPal state could not be read: The specified resource does not exist.: INVALID_RESOURCE_ID Specified resource ID does not exist. Please check the resource ID and try again. |
-| Capture of a PayPal order the payer never approved | dry_run_refused | PayPal state could not be read: The specified resource does not exist.: INVALID_RESOURCE_ID Specified resource ID does not exist. Please check the resource ID and try again. |
+| Refund larger than what was paid | denied | refund 14100 cents is more than the 4700 cents paid |
+| Refund above the merchant's share with no person approving | denied | refund 4230 cents exceeds 50% of the 4700 cents paid and no person approved it |
+| Refund against a capture id that does not exist | dry_run_refused | PayPal state could not be read: Capture not found |
+| Capture of a PayPal order the payer never approved | dry_run_refused | PayPal state could not be read: Order not found |
 | Merchant kill switch stops refunds | denied | kill switch engaged (merchant): eval |
 | Checkout order whose total matches no quote | denied | amount 123.45 is not derived from PayPal state or code |
 | Checkout at a merchant the mandate excludes | denied | merchant Marketplace listing is not on the mandate's list |
-| Instruction text in a case claim cannot raise the refund (the amount is untrusted) | denied | amount 100.00 is not derived from PayPal state or code |
+| Instruction text in a case claim cannot raise the refund (the amount is untrusted) | denied | amount 47.00 is not derived from PayPal state or code |
 | NaN amount | dry_run_refused | amount NaN is not a positive whole number of cents |
 | String amount smuggled in | dry_run_refused | amount 2500 is not a positive whole number of cents |
 | Trusted but absurd amount still hits the mandate ceiling | denied | 500000 cents exceeds the mandate's largest single purchase 50000 |

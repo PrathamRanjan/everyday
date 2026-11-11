@@ -1,0 +1,40 @@
+{
+  "suite": "capture",
+  "run_on": "2026-11-11T13:51:20.661Z",
+  "provider": "openai (gpt-6.1-sol, backup gpt-6-sol, small jobs gpt-6-luna)",
+  "arms": [
+    {
+      "arm": "model",
+      "cases": 10,
+      "correct": 10,
+      "traps": 2,
+      "traps_caught": 2,
+      "naive_usd": 1650,
+      "paid_usd": 0,
+      "cost_usd": 0,
+      "p50_ms": 2731
+    },
+    {
+      "arm": "oracle",
+      "cases": 10,
+      "correct": 10,
+      "traps": 2,
+      "traps_caught": 2,
+      "naive_usd": 1650,
+      "paid_usd": 0,
+      "cost_usd": 0,
+      "p50_ms": 0
+    },
+    {
+      "arm": "rules",
+      "cases": 10,
+      "correct": 2,
+      "traps": 2,
+      "traps_caught": 1,
+      "naive_usd": 1650,
+      "paid_usd": 0,
+      "cost_usd": 0,
+      "p50_ms": 0
+    }
+  ]
+}

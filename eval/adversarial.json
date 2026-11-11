@@ -1,0 +1,18 @@
+{
+  "suite": "adversarial",
+  "run_on": "2026-11-11T13:55:36.590Z",
+  "provider": "no model (code gate and the in-memory PayPal fake)",
+  "arms": [
+    {
+      "arm": "gate",
+      "cases": 24,
+      "correct": 24,
+      "traps": 24,
+      "traps_caught": 0,
+      "naive_usd": 96244.76,
+      "paid_usd": 0,
+      "cost_usd": 0,
+      "p50_ms": 1
+    }
+  ]
+}

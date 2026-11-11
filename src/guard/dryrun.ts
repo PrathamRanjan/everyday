@@ -102,6 +102,9 @@ export async function dryRun(m: MoneyMove, run?: Run | null, q?: Queryable): Pro
     const lineId = m.entity === "case" ? (await db.query<{ line_id: string }>("SELECT line_id FROM cases WHERE id = $1", [m.entityId])).rows[0]?.line_id : m.entityId;
     const line = lineId ? (await db.query<{ unit_cents: number; qty: number }>("SELECT unit_cents, qty FROM order_lines WHERE id = $1", [lineId])).rows[0] : null;
     const paid = line ? Number(line.unit_cents) * Number(line.qty) : orderId ? Number((await db.query<{ g: number }>("SELECT coalesce(gross_cents, total_cents) AS g FROM orders WHERE id = $1", [orderId])).rows[0]?.g ?? 0) : 0;
+    // Code decides money: a refund needs a paid amount Everyday can find, and is never more than that amount.
+    if (!(paid > 0)) return refuse(`refund ${m.cents} cents: Everyday can't find what was paid for ${m.entity} ${m.entityId}`, "denied");
+    if (m.cents > paid) return refuse(`refund ${m.cents} cents is more than the ${paid} cents paid`, "denied");
     if (paid > 0 && m.cents > Math.round((paid * rules.max_refund_pct) / 100) && !(await approvedFor(m.entity, m.entityId, m.action, m.cents, db))) return refuse(`refund ${m.cents} cents exceeds ${rules.max_refund_pct}% of the ${paid} cents paid and no person approved it`, "denied");
   }
   checks.push("within the mandate");
