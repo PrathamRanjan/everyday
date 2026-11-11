@@ -8,6 +8,16 @@ A personal buying and ownership assistant. A shared Reel/TikTok/Short becomes a 
 
 Spec: https://claude.ai/artifact/TZVLZwxENw3CTmxr7LMYGN
 
+## For judges: try it in 60 seconds
+
+1. Open https://pph-everyday.onrender.com and press **Try the live demo**. You get your own private copy of the demo (Maya, her shop, real PayPal sandbox payments, deleted 48 hours after your last visit). It lands on **Ask** with a question typed; press **Ask**.
+2. Open **/judge** for four paths, each one to three minutes, that tick themselves from what really happens: **Get money back** (a price drop claimed, approved by the shop, the refund read back from PayPal), **Ask for something and buy it** (paid from the demo's saved sandbox wallet, no PayPal login), **Check a scam message**, and **Add a receipt from another shop** (read by the model, checked by code).
+3. **/proof** has the evaluation results and the robot judge's last walk through those paths; **/ai** lists every model call; **/paypal** lists every PayPal API in use, with live ids.
+
+What the AI does, what code decides and what PayPal moves are labelled on every screen that touches money. Sandbox only: no real money.
+
+Product search beyond the demo shop uses **Channel3**: on a plan, "Also found on the web" lists real products, each checked in code against the same must-haves and budget, and labelled "Found on the web; not purchasable in this demo" (a link to the retailer, never a checkout here).
+
 ## Built and tested
 
 - **Capture** (Telegram adapter + app): Instagram/TikTok/YouTube links normalised to one record per item; every capture states its evidence basis (link only, seeded demo clip, screenshot read by a model, or description). Object selection; Telegram account linking with one-time codes and a secret-token webhook.

@@ -18,6 +18,6 @@ Object.assign(
 Object.assign(
   ELSEWHERE,
   Object.fromEntries(
-    ["POST /demo/start", "GET /demo/join/:token", "GET /api/ui/workspace", "GET /admin/demo", "POST /admin/demo/showcase", "POST /admin/demo/reset-all"].map((r) => [r, "walked in test/workspaces.test.ts"]),
+    ["POST /demo/start", "GET /demo/join/:token", "GET /api/ui/workspace", "GET /admin/demo", "POST /admin/demo/showcase", "POST /admin/demo/reset-all", "POST /admin/robot-judge"].map((r) => [r, "walked in test/workspaces.test.ts"]),
   ),
 );

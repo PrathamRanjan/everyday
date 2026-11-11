@@ -57,3 +57,15 @@ services:
         fromDatabase:
           name: ev-db
           property: connectionString
+
+  # Wave 5: requests /healthz every 10 minutes (database round trip plus the build's commit id). A Render cron job
+  # is billed; it is created only when the owner applies this blueprint. The free-plan demo service has no cron.
+  - type: cron
+    name: ev-uptime
+    runtime: node
+    plan: starter
+    schedule: "*/10 * * * *"
+    buildCommand: "true"
+    startCommand: node -e "fetch(process.env.APP_URL + '/healthz').then(async (r) => { const j = await r.json(); console.log(r.status, JSON.stringify(j)); if (!r.ok || !j.ok) process.exit(1); })"
+    envVars:
+      - fromGroup: ev-shared

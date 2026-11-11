@@ -1,0 +1,63 @@
+# Wave 5: the robot judge walks every /judge path on the live site each night and stores the run there (/proof shows
+# it). It does nothing until the owner adds the EV_ADMIN_KEY secret. A failed run messages the owner on Telegram when
+# TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_CHAT are set.
+#
+# The 10-minute health check below is off by default: on Render's free plan a request every 10 minutes keeps the
+# service awake all month (about 720 of the 750 free instance hours the owner's services share). Set the repository
+# variable KEEP_AWAKE to "true" only after moving this service to an always-on instance, or if those hours are spare.
+name: robot judge
+on:
+  schedule:
+    - cron: "17 6 * * *"
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  SITE: https://pph-everyday.onrender.com
+jobs:
+  health:
+    if: github.event.schedule == '*/10 * * * *' && vars.KEEP_AWAKE == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl -fsS --max-time 60 "$SITE/healthz"
+  robot:
+    if: github.event.schedule != '*/10 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EV_ADMIN_KEY: ${{ secrets.EV_ADMIN_KEY }}
+    steps:
+      - name: Needs the operator key
+        if: env.EV_ADMIN_KEY == ''
+        run: echo "No EV_ADMIN_KEY secret, so the robot judge is off." && exit 0
+      - uses: actions/checkout@v4
+        if: env.EV_ADMIN_KEY != ''
+      - uses: actions/setup-node@v4
+        if: env.EV_ADMIN_KEY != ''
+        with:
+          node-version: 22
+      - name: Install the browser
+        if: env.EV_ADMIN_KEY != ''
+        working-directory: e2e
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Wake the site
+        if: env.EV_ADMIN_KEY != ''
+        run: curl -fsS --max-time 120 "$SITE/healthz"
+      - name: Walk every path
+        id: walk
+        if: env.EV_ADMIN_KEY != ''
+        working-directory: e2e
+        env:
+          E2E_URL: ${{ env.SITE }}
+          ROBOT_POST: "1"
+        run: npx playwright test tests/robot-judge.spec.ts
+      - name: Tell the owner
+        if: failure() && env.EV_ADMIN_KEY != ''
+        env:
+          TG: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ secrets.TELEGRAM_OWNER_CHAT }}
+        run: |
+          [ -n "$TG" ] && [ -n "$CHAT" ] || { echo "No Telegram secrets; the failure is on this run's page and on /proof."; exit 0; }
+          curl -fsS "https://api.telegram.org/bot$TG/sendMessage" --data-urlencode "chat_id=$CHAT" --data-urlencode "text=Everyday robot judge failed: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID (details on $SITE/proof)" > /dev/null

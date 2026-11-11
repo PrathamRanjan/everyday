@@ -73,11 +73,15 @@ function suite(name: string, title: string, what: string) {
   return { name, title, what, run_on: j.run_on, provider: j.provider, arms: j.arms, cases };
 }
 
-export function proofData() {
+export async function proofData() {
   const tj = readJson("techjam.json");
   const th = readJson("decisions/thresholds.json");
   const ans = readJson("decisions/answers.json");
-  const robot = readJson("robot-judge.json");
+  // The robot judge: the newer of the run stored on this site (nightly, POST /admin/robot-judge) and the committed file.
+  const fileRun = readJson("robot-judge.json");
+  const kept = await (await getDb()).query<{ value: string }>("SELECT value FROM settings WHERE key = 'robot_judge'").then((r) => (r.rows[0] ? JSON.parse(r.rows[0].value) : null), () => null);
+  const pick = kept && (!fileRun || String(kept.run_on) > String(fileRun.run_on)) ? { ...kept, stored: "This run was sent to the site by the nightly job." } : fileRun ? { ...fileRun, stored: "This run is the one committed with this build (eval/robot-judge.json)." } : null;
+  const robot = pick;
   return {
     built_from: "Committed result files in eval/, written by the scripts that ran each check (npm run eval:*, npm run calibrate).",
     models: { read: config.ai.models.read, backup: config.ai.models.backup, small: config.ai.models.classify ?? DECISIONS_MODEL, decisions: DECISIONS_MODEL, connected: hasOpenAI() },

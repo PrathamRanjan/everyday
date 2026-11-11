@@ -64,7 +64,7 @@ interface ProofData {
   techjam: null | { title: string; what: string; run_on: string; systems: { system: string; cases: number; hit_rate_10: number; mrr: number; conversion: number; correct_abstain: number; false_abstain: number; avg_turns: number; technical_score: number }[]; cases: { id: string; kind: string; query: string; target: string | null; everyday: { hit10: boolean; rr: number; turns: number; converted: boolean; abstained: boolean; asked: string[] } | null; baseline: { hit10: boolean; rr: number } | null }[] };
   decisions: null | { title: string; what: string; run_on: string; model: string; thresholds: { name: string; clear_below: number; hold_above: number; held_out?: { n: number; precision: number; recall: number; false_clear: number; refused: number } }[]; not_calibrated: string[]; cases: { text: string; labels: Record<string, number>; answers: Record<string, number | null> | null }[] };
   model_card: { rows: { set: string; n: string; auc: string; caught_at_1pct: string; what: string }[]; note: string };
-  robot_judge: null | { run_on: string; target: string; paths: { id: string; ok: boolean; ms: number; failed_step?: string | null }[] };
+  robot_judge: null | { run_on: string; target: string; by: string; ok: boolean; stored: string; paths: { id: string; title: string; ok: boolean; seconds: number; error: string | null; steps: { key: string; label: string; done: boolean }[] }[] };
   not_measured: string[];
 }
 
@@ -221,12 +221,14 @@ export default function Proof() {
               {d.robot_judge ? (
                 <>
                   <p className="mb-2 text-sm">
-                    Last run {when(d.robot_judge.run_on)} on {d.robot_judge.target}.
+                    Last run {when(d.robot_judge.run_on)} on {d.robot_judge.target}, by a {d.robot_judge.by}. It starts a fresh demo and walks every path on the judge page; a step counts only if it ticked itself from what really happened. {d.robot_judge.stored}
                   </p>
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-2 text-sm">
                     {d.robot_judge.paths.map((p) => (
                       <li key={p.id}>
-                        <Ok ok={p.ok} label={p.ok ? "completed" : "failed"} /> {p.id} in {(p.ms / 1000).toFixed(1)} s{p.failed_step ? `; stopped at ${p.failed_step}` : ""}
+                        <Ok ok={p.ok} label={p.ok ? "completed" : "failed"} /> {p.title} in {p.seconds} s
+                        {p.error && <span className="block text-ink-2">Stopped: {p.error}</span>}
+                        <span className="block text-ink-2">{p.steps.map((s) => `${s.done ? "✓" : "✗"} ${s.label}`).join(" · ")}</span>
                       </li>
                     ))}
                   </ul>

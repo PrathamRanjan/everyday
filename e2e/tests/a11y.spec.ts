@@ -14,7 +14,7 @@ const checks: Check[] = [];
 const target = process.env.E2E_URL ?? "http://localhost:4111";
 
 const PUBLIC = ["/", "/login", "/judge", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
-const SHOPPER = ["/today", "/ask", "/discover", "/plans", "/purchases", "/you", "/guard", "/passport", "/safety", "/channels", "/traces"];
+const SHOPPER = ["/today", "/ask", "/discover", "/plans", "/purchases", "/receipts", "/you", "/guard", "/passport", "/safety", "/channels", "/traces"];
 const MERCHANT = ["/merchant", "/merchant/money", "/merchant/approvals"];
 
 const scan = async (page: Page, label: string) => {

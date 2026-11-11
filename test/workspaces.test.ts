@@ -202,5 +202,15 @@ describe("private demo workspaces", () => {
     expect((await op.post("/admin/demo/reset-all", { sure: "1" })).location).toMatch(/ok=/);
     expect(await workspaceById(A.ws)).toBeNull();
     expect((await new Client(base).post("/admin/demo/reset-all", { sure: "1" })).location).toBe("/admin");
+    // Wave 5: the robot judge's run is stored only with the operator key in the header, and /proof shows it.
+    const run = { run_on: "2099-01-01T00:00:00.000Z", target: "https://example.test", by: "robot", paths: [{ id: "scam", title: "Check a scam message", ok: true, seconds: 9, error: null, steps: [{ key: "scam_checked", label: "Checked", done: true }] }] };
+    const anonPost = await new Client(base).req("POST", "/admin/robot-judge", { json: run });
+    expect(anonPost.status).toBe(302);
+    expect((await new Client(base).req("POST", "/admin/robot-judge", { json: { run_on: 1 }, headers: { "x-everyday-operator": "operator-ws-key" } })).status).toBe(400);
+    const stored = await new Client(base).req("POST", "/admin/robot-judge", { json: run, headers: { "x-everyday-operator": "operator-ws-key" } });
+    expect(stored.json).toMatchObject({ stored: true, ok: true });
+    const proof = (await new Client(base).get("/api/public/proof")).json.robot_judge;
+    expect(proof).toMatchObject({ run_on: "2099-01-01T00:00:00.000Z", ok: true });
+    expect(proof.stored).toMatch(/nightly job/);
   }, 60_000);
 });

@@ -39,6 +39,9 @@ export function adminRoutes() {
   r.use("/admin", (req, res, next) => {
     if (!config.adminKey) return res.status(404).type("text").send("Not found");
     if (req.path === "/" || req.path === "/login" || isAdmin(req)) return next();
+    // The robot judge's nightly job sends its run with the operator key in a header (no cookie, no browser).
+    const key = req.get("x-everyday-operator");
+    if (req.path === "/robot-judge" && req.method === "POST" && key && same(key, config.adminKey!)) return next();
     res.redirect("/admin");
   });
 
@@ -94,6 +97,14 @@ ${req.query.ok ? `<p class="ok">${esc(req.query.ok)}</p>` : ""}${req.query.err ?
 ${req.query.ok ? `<p class="ok">${esc(req.query.ok)}</p>` : ""}${req.query.err ? `<p class="bad">${esc(req.query.err)}</p>` : ""}
 <p><a href="/admin/paypal/wallet">The saved wallet</a></p>`,
     );
+  });
+  r.post("/admin/robot-judge", async (req, res) => {
+    const b = req.body ?? {};
+    const okPath = (p: any) => p && typeof p.id === "string" && typeof p.ok === "boolean" && Array.isArray(p.steps);
+    if (typeof b.run_on !== "string" || !Array.isArray(b.paths) || !b.paths.every(okPath)) return res.status(400).json({ error: "invalid", message: "Not a robot-judge run" });
+    const run = { run_on: b.run_on, target: String(b.target ?? "").slice(0, 200), by: String(b.by ?? "robot").slice(0, 120), ok: b.paths.every((p: any) => p.ok), paths: b.paths.slice(0, 12).map((p: any) => ({ id: String(p.id).slice(0, 40), title: String(p.title ?? p.id).slice(0, 120), ok: Boolean(p.ok), seconds: Number(p.seconds) || 0, error: p.error ? String(p.error).slice(0, 240) : null, steps: p.steps.slice(0, 10).map((s: any) => ({ key: String(s.key).slice(0, 40), label: String(s.label ?? s.key).slice(0, 160), done: Boolean(s.done) })) })) };
+    await (await getDb()).query("INSERT INTO settings (key, value) VALUES ('robot_judge', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [JSON.stringify(run)]);
+    res.json({ stored: true, ok: run.ok });
   });
   r.post("/admin/demo/showcase", async (_req, res) => {
     const ws = await rebuildShowcase();
