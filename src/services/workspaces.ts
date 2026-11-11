@@ -19,7 +19,7 @@ import { getDb, type Queryable } from "../db.js";
 import { newId } from "../lib/ids.js";
 import { GtError } from "../lib/util.js";
 import { accountById, type Account } from "../store.js";
-import { merchantOwner, withWs } from "../ws.js";
+import { merchantOwner, withSeeding, withWs } from "../ws.js";
 import { seedAll } from "./seed.js";
 import { demoWallet, walletUsable } from "./demowallet.js";
 import { approveQuoteFromDemoWallet, quotePlan, deliverLine, shipLine } from "./orders.js";
@@ -155,7 +155,7 @@ async function seedMoneyOnce(id: string): Promise<Progress> {
   if (!ws?.account_id) return {};
   // Once per build: a finished (or started) seed is never paid again.
   if (ws.progress.finished || ws.progress.steps?.length || ws.progress.note) return ws.progress;
-  return withWs(id, async () => {
+  return withSeeding(id, async () => {
     const a = await accountById(db, ws.account_id!);
     const steps: NonNullable<Progress["steps"]> = SEED_BUYS.map((b) => ({ label: b.label, state: "waiting" as const }));
     const p: Progress = { payments_planned: SEED_BUYS.length, payments_confirmed: 0, payments_failed: 0, steps, note: null, finished: false };

@@ -4,7 +4,7 @@
  * merely opened. Outside a demo workspace (tests, `npm run seed`) nothing is recorded.
  */
 import { getDb, type Queryable } from "../db.js";
-import { currentWs } from "../ws.js";
+import { currentWs, isSeeding } from "../ws.js";
 
 export const STEPS = {
   money_back_seen: "Saw the money you can still get back",
@@ -21,7 +21,7 @@ export const STEPS = {
 export type Step = keyof typeof STEPS;
 
 export async function tick(step: Step, detail: Record<string, unknown> = {}, q?: Queryable, ws: string | null = currentWs()): Promise<void> {
-  if (!ws) return;
+  if (!ws || isSeeding()) return;
   try {
     const db = q ?? (await getDb());
     await db.query("INSERT INTO ws_checklist (ws_id, step, detail) VALUES ($1,$2,$3) ON CONFLICT (ws_id, step) DO NOTHING", [ws, step, JSON.stringify(detail)]);

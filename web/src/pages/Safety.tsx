@@ -58,7 +58,7 @@ export default function Safety() {
                     <Label htmlFor="pc2">Second contact</Label>
                     <Input id="pc2" value={c2 ?? d.protected.contacts[1] ?? ""} onChange={(e) => setC2(e.target.value)} className="min-h-11 bg-card" />
                   </div>
-                  <Button type="submit" variant={d.protected.on ? "outline" : "default"} className="justify-self-start" disabled={Boolean(busy)}>
+                  <Button type="submit" variant={d.protected.on ? "outline" : "default"} className="h-auto min-h-11 max-w-full justify-self-start py-2 whitespace-normal" disabled={Boolean(busy)}>
                     <Busy on={busy === "prot"}>{null}</Busy>
                     {d.protected.on ? "Turn protected mode off" : "Turn protected mode on"}
                   </Button>

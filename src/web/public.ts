@@ -139,7 +139,9 @@ async function paypalData() {
     if (c) ids.capture = { id: c.paypal_id, at: c.updated_at };
     if (r) ids.refund = { id: r.paypal_id, at: r.updated_at, note: r.paypal_status ? `PayPal says ${r.paypal_status}` : undefined };
     if (r?.paypal_status === "COMPLETED") ids.refund_read = { id: r.paypal_id, at: r.updated_at, note: "read back as COMPLETED" };
-    if (c && config.paypal.demoVaultToken) ids.vault = { id: null, at: c.updated_at, note: "The saved wallet paid this showcase's purchases; its token stays private." };
+    const wal = (await db.query<any>("SELECT o.created_at AS at FROM orders o WHERE o.account_id = $1 AND o.paid_via = 'demo_wallet' ORDER BY o.created_at DESC LIMIT 1", [ws.account_id])).rows[0];
+    if (wal) ids.vault = { id: null, at: wal.at, note: "The saved sandbox wallet paid this showcase's purchases; its token stays private." };
+    else if (c && config.paypal.demoVaultToken) ids.vault = { id: null, at: c.updated_at, note: "The saved wallet paid this showcase's purchases; its token stays private." };
     const wh = (await db.query<any>("SELECT id, event_type, received_at FROM webhook_events WHERE ws_id = $1 AND verified ORDER BY received_at DESC LIMIT 1", [ws.id])).rows[0];
     if (wh) ids.webhook = { id: wh.id, at: wh.received_at, note: wh.event_type };
     const tr = (await db.query<any>("SELECT t.tracking_number, t.created_at, t.paypal_status FROM trackers t JOIN orders o ON o.id = t.order_id WHERE o.account_id = $1 ORDER BY t.created_at DESC LIMIT 1", [ws.account_id])).rows[0];

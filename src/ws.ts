@@ -10,10 +10,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Queryable } from "./db.js";
 
-const als = new AsyncLocalStorage<{ ws: string | null }>();
+const als = new AsyncLocalStorage<{ ws: string | null; seeding?: boolean }>();
 
 export const currentWs = (): string | null => als.getStore()?.ws ?? null;
 export const withWs = <T>(ws: string | null, fn: () => T): T => als.run({ ws }, fn);
+/** The seed's own purchases run in the workspace but are not the visitor's doing (the judge checklist skips them). */
+export const withSeeding = <T>(ws: string | null, fn: () => T): T => als.run({ ws, seeding: true }, fn);
+export const isSeeding = (): boolean => als.getStore()?.seeding === true;
 /** Switches the workspace for the rest of the current async context (used by middleware after sign-in is known). */
 export const enterWs = (ws: string | null) => als.enterWith({ ws });
 
