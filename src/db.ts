@@ -491,6 +491,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS orders_account_number ON orders(account_id, nu
 CREATE TABLE IF NOT EXISTS paypal_refs (resource_id TEXT PRIMARY KEY, ws_id TEXT, kind TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 -- A4: a demo account's quote runs out on its own demo clock (wall time, "YYYY-MM-DDTHH:MM"), not the server's.
 ALTER TABLE quotes ADD COLUMN IF NOT EXISTS expires_wall TEXT;
+-- A3.2/A5.2: which workspace a model call belongs to (the /ai page reads the showcase's), and Decisions thresholds.
+ALTER TABLE ai_calls ADD COLUMN IF NOT EXISTS ws_id TEXT;
+CREATE INDEX IF NOT EXISTS ai_calls_ws ON ai_calls(ws_id, id DESC);
+CREATE TABLE IF NOT EXISTS decision_thresholds (
+  name TEXT PRIMARY KEY, clear_below DOUBLE PRECISION NOT NULL, hold_above DOUBLE PRECISION NOT NULL, calibrated_on TEXT,
+  n INTEGER NOT NULL DEFAULT 0, precision_at_hold DOUBLE PRECISION, recall_at_hold DOUBLE PRECISION, set_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- A3.1: the judge checklist ticks itself from events the server records in the visitor's workspace.
+CREATE TABLE IF NOT EXISTS ws_checklist (ws_id TEXT NOT NULL, step TEXT NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now(), detail JSONB, PRIMARY KEY (ws_id, step));
 `;
 
 let shared: Db | null = null;

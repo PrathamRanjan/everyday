@@ -19,6 +19,7 @@
     "eval:capture": "tsx --env-file-if-exists=.env scripts/eval-capture.ts",
     "eval:techjam": "tsx --env-file-if-exists=.env scripts/eval-techjam.ts",
     "eval:adversarial": "tsx --env-file-if-exists=.env scripts/eval-adversarial.ts",
+    "calibrate": "tsx --env-file-if-exists=.env scripts/calibrate.ts",
     "build:web": "npm --prefix web ci --include=dev --no-audit --no-fund && npm --prefix web run build"
   },
   "dependencies": {

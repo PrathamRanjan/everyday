@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAction, useApi } from "@/lib/api";
 import { addDays, day, money, when, words } from "@/lib/format";
 import { useSession, useToday } from "@/lib/session";
+import { ScamCheck } from "@/components/ScamCheck";
 
 interface Line {
   id: string;
@@ -369,6 +370,10 @@ export default function Order() {
                   </li>
                 ))}
               </ol>
+            </Panel>
+
+            <Panel title="Got a message about this?" sub="A text about a delivery fee, a seller asking you to pay somewhere else, a refund that needs your code: paste it here. Everyday never asks you to pay anywhere but PayPal's own page." className="mt-6">
+              <ScamCheck context={`order:${d.order.id}`} compact />
             </Panel>
           </div>
         );

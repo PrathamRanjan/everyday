@@ -1,0 +1,108 @@
+{
+  "run_on": "2026-11-11T14:10:50.658Z",
+  "model": "gpt-6-luna",
+  "thresholds": {
+    "names_a_payment_destination": {
+      "name": "names_a_payment_destination",
+      "clear_below": 0.3,
+      "hold_above": 0.5,
+      "calibrated_on": "eval/decisions/scam-set.json, tuning half (24 messages), 2026-11-11, gpt-6-luna",
+      "n": 24,
+      "precision_at_hold": 1,
+      "recall_at_hold": 1,
+      "set_at": "2026-11-11T14:10:50.658Z",
+      "held_out": {
+        "n": 24,
+        "precision": 1,
+        "recall": 1,
+        "false_clear": 0,
+        "refused": 0
+      }
+    },
+    "asks_for_payment": {
+      "name": "asks_for_payment",
+      "clear_below": 0.28,
+      "hold_above": 0.32,
+      "calibrated_on": "eval/decisions/scam-set.json, tuning half (24 messages), 2026-11-11, gpt-6-luna",
+      "n": 24,
+      "precision_at_hold": 1,
+      "recall_at_hold": 1,
+      "set_at": "2026-11-11T14:10:50.658Z",
+      "held_out": {
+        "n": 24,
+        "precision": 1,
+        "recall": 0.8333333333333334,
+        "false_clear": 2,
+        "refused": 0
+      }
+    },
+    "changed_payment_details": {
+      "name": "changed_payment_details",
+      "clear_below": 0.3,
+      "hold_above": 0.5,
+      "calibrated_on": "eval/decisions/scam-set.json, tuning half (24 messages), 2026-11-11, gpt-6-luna",
+      "n": 24,
+      "precision_at_hold": 1,
+      "recall_at_hold": 1,
+      "set_at": "2026-11-11T14:10:50.658Z",
+      "held_out": {
+        "n": 24,
+        "precision": 1,
+        "recall": 1,
+        "false_clear": 0,
+        "refused": 0
+      }
+    },
+    "pay_outside_paypal": {
+      "name": "pay_outside_paypal",
+      "clear_below": 0.02,
+      "hold_above": 0.15,
+      "calibrated_on": "eval/decisions/scam-set.json, tuning half (25 messages), 2026-11-11, gpt-6-luna",
+      "n": 25,
+      "precision_at_hold": 1,
+      "recall_at_hold": 0.8181818181818182,
+      "set_at": "2026-11-11T14:10:50.658Z",
+      "held_out": {
+        "n": 23,
+        "precision": 1,
+        "recall": 0.7,
+        "false_clear": 2,
+        "refused": 0
+      }
+    },
+    "impersonation": {
+      "name": "impersonation",
+      "clear_below": 0.3,
+      "hold_above": 0.95,
+      "calibrated_on": "eval/decisions/scam-set.json, tuning half (25 messages), 2026-11-11, gpt-6-luna",
+      "n": 25,
+      "precision_at_hold": 1,
+      "recall_at_hold": 0.6666666666666666,
+      "set_at": "2026-11-11T14:10:50.658Z",
+      "held_out": {
+        "n": 23,
+        "precision": 1,
+        "recall": 1,
+        "false_clear": 0,
+        "refused": 0
+      }
+    },
+    "urgency_or_secrecy": {
+      "name": "urgency_or_secrecy",
+      "clear_below": 0.3,
+      "hold_above": 0.93,
+      "calibrated_on": "eval/decisions/scam-set.json, tuning half (24 messages), 2026-11-11, gpt-6-luna",
+      "n": 24,
+      "precision_at_hold": 1,
+      "recall_at_hold": 1,
+      "set_at": "2026-11-11T14:10:50.658Z",
+      "held_out": {
+        "n": 24,
+        "precision": 0.75,
+        "recall": 1,
+        "false_clear": 0,
+        "refused": 0
+      }
+    }
+  }
+}

@@ -10,6 +10,7 @@ import { Amount, Busy, State } from "@/components/kit";
 import { useAction, useApi } from "@/lib/api";
 import { addDays, day, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { ScamCheck } from "@/components/ScamCheck";
 
 interface Preview {
   line: { title: string; cents: number; status: string; number: string; paid: boolean; capture_id: string | null; dates: { ordered: string | null; eta: string | null; delivered: string | null; return_days: number; protection_days: number } } | null;
@@ -166,6 +167,18 @@ export default function Landing() {
               <p className="mt-3 border-t border-rule pt-3 text-sm text-ink-2">{x.no}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="mt-20" aria-labelledby="try-scam">
+        <h2 id="try-scam" className="text-3xl font-medium">
+          Try the scam check
+        </h2>
+        <p className="prose-w mt-2 text-ink-2">
+          Paste any message a seller or a "courier" sent you. A trained model checks it on this device first (nothing leaves your browser for that score), then rules, a second reader and a look for pay-to details. The strictest wins, and nothing that names somewhere to pay is ever shown as clear.
+        </p>
+        <div className="mt-6 max-w-3xl rounded-lg border border-rule bg-card p-5">
+          <ScamCheck context="landing" demo="Hi, hope you're well. Just a heads-up that we've moved banks this month, so please send this month's payment to our new PayPal: accounts.dept@outlook.com. Thanks so much!" />
         </div>
       </section>
 

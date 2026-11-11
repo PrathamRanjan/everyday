@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, ShieldAlert, ShieldCheck, UserCheck } from "lucide-react";
 import { Busy, Empty, Loaded, PageHead, Panel, Stat, State } from "@/components/kit";
-import { SpeakableText } from "@/components/forms";
+import { ScamCheck } from "@/components/ScamCheck";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,129 +18,6 @@ interface SafetyData {
   demo_scam: string;
   tactics: { key: string; words: string }[];
 }
-interface RuleResult { level: "hold" | "caution" | "clear"; reasons: string[]; tactics: string[]; risk?: number; error?: string }
-interface ModelResult { p_scam: number; level: "hold" | "caution" | "clear"; tactics: Record<string, number> }
-
-let guardPromise: Promise<{ score: (t: string) => Promise<ModelResult> }> | null = null;
-const ORT = "https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.22.0/";
-/** The fine-tuned scam text model, int8 ONNX, scored in this browser with onnxruntime-web. The text never leaves the device for this score. */
-function loadModel() {
-  if (guardPromise) return guardPromise;
-  guardPromise = (async () => {
-    const w = window as any;
-    if (!w.ort)
-      await new Promise<void>((res, rej) => {
-        const s = document.createElement("script");
-        s.src = `${ORT}ort.min.js`;
-        s.onload = () => res();
-        s.onerror = () => rej(new Error("onnxruntime-web did not load"));
-        document.head.appendChild(s);
-      });
-    w.ort.env.wasm.wasmPaths = ORT;
-    const mod = await import(/* @vite-ignore */ "/static/safety/guard-client.js" as string);
-    return mod.loadGuard({ modelUrl: "/static/safety/model/model_quantized.onnx", tokenizerUrl: "/static/safety/model/tokenizer.json", headsUrl: "/static/safety/model/heads.json", ort: w.ort });
-  })();
-  guardPromise.catch(() => (guardPromise = null));
-  return guardPromise;
-}
-
-const LEVEL = { hold: ["Hold: don't pay yet", "border-stop bg-stop-bg text-stop"], caution: ["Caution: check before you pay", "border-wait bg-wait-bg text-wait"], clear: ["No scam signals found", "border-done bg-done-bg text-done"] } as const;
-
-function Checker({ demo, tactics }: { demo: string; tactics: SafetyData["tactics"] }) {
-  const [text, setText] = useState("");
-  const [status, setStatus] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [out, setOut] = useState<{ rules: RuleResult | null; model: ModelResult | null; modelErr: string | null; ms: number } | null>(null);
-  const words = Object.fromEntries(tactics.map((t) => [t.key, t.words]));
-  const check = async () => {
-    if (!text.trim()) return;
-    setBusy(true);
-    setOut(null);
-    let rules: RuleResult | null = null;
-    let model: ModelResult | null = null;
-    let modelErr: string | null = null;
-    let ms = 0;
-    setStatus("Checking the rules…");
-    try {
-      const r = await fetch("/safety/scan", { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify({ text }) });
-      rules = await r.json();
-    } catch (e) {
-      rules = { level: "clear", reasons: [], tactics: [], error: (e as Error).message };
-    }
-    try {
-      setStatus(guardPromise ? "Scoring in your browser…" : "Loading the model into your browser (23 MB, once)…");
-      const g = await loadModel();
-      const t0 = performance.now();
-      model = await g.score(text);
-      ms = performance.now() - t0;
-    } catch (e) {
-      modelErr = (e as Error).message;
-    }
-    setOut({ rules, model, modelErr, ms });
-    setStatus("");
-    setBusy(false);
-  };
-  const r = out?.rules;
-  const m = out?.model;
-  const modelOnly = m?.level === "caution" && (!r?.level || r.level === "clear") && !Object.values(m?.tactics ?? {}).some((p) => p >= 0.5);
-  const level = out ? ([r?.level, m?.level].includes("hold") ? "hold" : modelOnly ? "clear" : [r?.level, m?.level].includes("caution") ? "caution" : "clear") : null;
-  const found = new Set([...(r?.tactics ?? []), ...Object.entries(m?.tactics ?? {}).filter(([, p]) => p >= 0.5).map(([k]) => k)]);
-  return (
-    <div className="grid gap-3">
-      <Label htmlFor="scan">Paste a seller's reply, a marketplace message or a text about a parcel</Label>
-      <SpeakableText id="scan" value={text} onChange={setText} rows={5} placeholder="Paste the message here" />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={check} disabled={busy || !text.trim()}>
-          <Busy on={busy}>{null}</Busy>Check this message
-        </Button>
-        <Button variant="outline" onClick={() => setText(demo)}>
-          Paste the demo scam
-        </Button>
-        <span className="text-sm text-ink-2" aria-live="polite">
-          {status}
-        </span>
-      </div>
-      {out && level && (
-        <div aria-live="polite" className="grid gap-3">
-          <div role="status" className={cn("rounded-lg border p-3 font-semibold", LEVEL[level][1])}>
-            {LEVEL[level][0]}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Stat label="Text model (here)" value={m ? `${Math.round(m.p_scam * 100)}%` : "—"} hint={m ? `${out.ms.toFixed(0)} ms, on this device` : (out.modelErr ?? "not run")} />
-            <Stat label="Rules (server)" value={r?.level ?? "—"} hint={r?.reasons?.length ? `${r.reasons.length} reason${r.reasons.length > 1 ? "s" : ""}` : (r?.error ?? "no rule fired")} />
-            <Stat label="Risk model" value={r?.risk !== undefined ? `${Math.round(r.risk * 100)}%` : "—"} hint="trained on synthetic data" />
-          </div>
-          {found.size > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold">What this message does</h3>
-              <ul className="mt-1 list-disc pl-5 text-sm">
-                {[...found].map((k) => (
-                  <li key={k}>{words[k] ?? k}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {r?.reasons?.length ? (
-            <div>
-              <h3 className="text-sm font-semibold">Why</h3>
-              <ul className="mt-1 list-disc pl-5 text-sm">
-                {r.reasons.map((x) => (
-                  <li key={x}>{x}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <p className="text-sm text-ink-2">
-            What to do: pay only to details you confirmed by phone on a number you already had. Never share codes. If in doubt, hold the payment and ask someone.{" "}
-            {modelOnly && m ? `The text model was a little unsure (${Math.round(m.p_scam * 100)}%) but found no scam tactic and no rule fired, so this isn't flagged. ` : ""}
-            {level === "clear" ? "A clear result isn't a guarantee: at this setting the model catches about three in four scams." : ""}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Safety() {
   const st = useApi<SafetyData>("/api/ui/safety");
   const { run, busy } = useAction(st.reload);
@@ -155,14 +32,14 @@ export default function Safety() {
             title="A second pair of eyes"
             lede={
               <>
-                Rules in code, a scam text model that runs in your browser, and a payment-risk score. The strictest wins, and none of them can approve a payment. <Link className="underline underline-offset-4" to="/safety/model-card">How it was tested</Link>.
+                Rules in code, a scam text model that runs in your browser, a second reader (OpenAI's Decisions API) and a check for pay-to details. The strictest wins, and none of them can approve a payment. <Link className="underline underline-offset-4" to="/safety/model-card">How it was tested</Link>.
               </>
             }
             needs={d.holds.filter((h) => h.status === "pending").length ? `${d.holds.filter((h) => h.status === "pending").length} payment held` : undefined}
           />
           <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-            <Panel title="Check a message" sub="The model scores it on this device; the words never leave your browser for that score.">
-              <Checker demo={d.demo_scam} tactics={d.tactics} />
+            <Panel title="Check a message" sub="Four checks, strictest wins: a model on this device (the words don't leave your browser for it), rules, a second reader on the server, and a look for any pay-to details.">
+              <ScamCheck demo={d.demo_scam} tactics={d.tactics} />
             </Panel>
             <div className="space-y-6">
               <Panel id="protected" title={<span className="inline-flex items-center gap-2"><UserCheck className="size-5" />Protected mode {d.protected.on && <State s="active" label="on" />}</span>} sub="The first payment to any new seller waits for you, holds are explained calmly with no timers, and a trusted contact hears about every hold.">

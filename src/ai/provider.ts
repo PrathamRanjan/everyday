@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 import { config } from "../config.js";
 import { getDb } from "../db.js";
 import { GtError } from "../lib/util.js";
+import { currentWs } from "../ws.js";
 
 export type Purpose = "capture_frame" | "read_request" | "plan_question" | "compile_policy" | "shopper_question" | "classify" | "eval";
 
@@ -74,6 +75,8 @@ export function setProviderFetch(f: typeof fetch | null) {
   fetchImpl = f ?? ((i, init) => fetch(i, init));
 }
 
+/** The fetch the model calls use (the tests swap it); shared with the Decisions client and the agent loop. */
+export const providerFetch = () => fetchImpl;
 export const hasOpenAI = () => config.ai.provider === "openai" && Boolean(config.ai.openaiKey);
 export const providerLabel = () => (hasOpenAI() ? `openai (${config.ai.models.read}, backup ${config.ai.models.backup}, small jobs ${config.ai.models.classify})` : "no model key (tests or offline evaluation only)");
 
@@ -212,9 +215,9 @@ async function audit(row: { purpose: string; model: string; via: string; inputHa
   try {
     const db = await getDb();
     const r = await db.query<{ id: number }>(
-      `INSERT INTO ai_calls (purpose, model, via, input_hash, output_hash, tokens_in, tokens_out, cost_usd, latency_ms, ok, error, output, run_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
-      [row.purpose, row.model, row.via, row.inputHash, row.outputHash, row.tokensIn, row.tokensOut, row.costUsd, row.latencyMs, row.ok, row.error, row.ok ? JSON.stringify(row.output) : null, row.runId],
+      `INSERT INTO ai_calls (purpose, model, via, input_hash, output_hash, tokens_in, tokens_out, cost_usd, latency_ms, ok, error, output, run_id, ws_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+      [row.purpose, row.model, row.via, row.inputHash, row.outputHash, row.tokensIn, row.tokensOut, row.costUsd, row.latencyMs, row.ok, row.error, row.ok ? JSON.stringify(row.output) : null, row.runId, currentWs()],
     );
     return r.rows[0]?.id ?? null;
   } catch {

@@ -9,7 +9,9 @@ export const TACTICS = ["impersonation", "urgency_secrecy", "changed_details", "
 export type Tactic = (typeof TACTICS)[number];
 
 const SEEDS: Record<Tactic, RegExp> = {
-  changed_details: /\b(new|updated?|changed?)\b.{0,40}\b(bank|account|acct|iban|beneficiary|payout|payment details|paypal (email|address|account)|upi id)\b|\b(bank|account) (details|number) (has|have) changed/i,
+  // A6.3: new/updated/changed/different/switched/moved and a bank, account, details, PayPal, remittance, IBAN or
+  // beneficiary word within 60 characters, in either order; "the old one is being closed"; "use this account instead".
+  changed_details: /(?<!\b(?:create|open|register|sign up for|make)\s(?:a\s|an\s)?)\b(new|updated?|chang(?:e|ed|ing)|different|switch(?:ed|ing)?|mov(?:e|ed|ing))\b.{0,60}?\b(banks?|banking|bank account|account|acct|(?:payment|bank|banking|account|remittance) details|paypal|remittance|iban|beneficiary|payout|upi id)\b|\b(banks?|bank account|(?:payment|bank|account) details|paypal|remittance|iban|beneficiary)\b.{0,60}?\b(has|have|is|are|was|were)\s+(?:been\s+)?(updated|changed|switched|moved)\b|\bold (?:one|account|bank(?: account)?|paypal)\b.{0,40}\b(?:being |been |is |will be )?closed\b|\buse (?:this|the following|our) (?:account|paypal|bank|email|iban)(?: instead)?\b|\b(bank|account) (details|number) (has|have) changed/i,
   off_platform: /\b(whatsapp|telegram|signal|outside (of )?(paypal|the app|platform)|pay (me )?directly|bank transfer instead|cash ?app|zelle|western union|moneygram)\b/i,
   gift_cards_crypto: /\b(gift ?cards?|itunes|google play card|steam card|bitcoin|btc|usdt|crypto|wallet address)\b/i,
   fee_to_release: /\b(processing|release|clearance|delivery|customs|handling|admin|unlock|activation) fee\b|pay .{0,20}\bto (release|claim|unlock|receive)\b/i,
