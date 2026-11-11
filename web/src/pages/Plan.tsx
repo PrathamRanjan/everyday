@@ -161,6 +161,66 @@ function SlotCard({ s, recipient }: { s: Slot; recipient: PlanData["recipient"] 
   );
 }
 
+interface WebPicks {
+  source: "channel3" | "cache" | "catalog" | "off";
+  note: string;
+  query: string;
+  label: string;
+  must: string[];
+  budget_cents: number | null;
+  picks: { title: string; brand: string | null; merchant: string | null; price_cents: number | null; currency: string; url: string | null; image: string | null; rating: { value: number; count: number } | null; checks: { word: string; state: "shown" | "likely" | "not_shown"; how: string }[]; budget: string; verdict: "fits" | "unconfirmed" | "ruled_out"; why: string }[];
+  at: string;
+}
+const VERDICT = { fits: ["Fits what you asked", "text-done"], unconfirmed: ["Check with the seller", "text-wait"], ruled_out: ["Ruled out", "text-stop"] } as const;
+
+/** B6: the second buying tier. Web results checked in code against the same must-haves; a hand-off, never a checkout. */
+function WebTier({ intentId }: { intentId: string }) {
+  const st = useApi<WebPicks>(`/api/ui/plans/${intentId}/web`);
+  if (st.loading && !st.data) return <Panel title="Also found on the web"><p className="text-sm text-ink-2">Searching Channel3 and checking each listing…</p></Panel>;
+  const d = st.data;
+  if (!d) return null;
+  return (
+    <Panel id="web" title="Also found on the web" sub={`${d.label}. Searched Channel3 for “${d.query}”; each listing is checked in code for ${d.must.length ? d.must.join(", ") : "what you asked"}${d.budget_cents ? ` and your ${money(d.budget_cents)} budget` : ""}.`}>
+      {!d.picks.length ? (
+        <p className="text-sm text-ink-2">{d.note}</p>
+      ) : (
+        <ul className="space-y-3">
+          {d.picks.map((x, n) => (
+            <li key={n} className={cn("rounded-md border p-3 text-sm", x.verdict === "fits" ? "border-done/50" : "border-rule")}>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-medium">{x.title}</span>
+                <span className="num">{x.price_cents !== null ? (x.currency === "USD" ? money(x.price_cents) : `${(x.price_cents / 100).toFixed(2)} ${x.currency}`) : "no price"}</span>
+              </div>
+              <div className="text-xs text-ink-2">
+                {[x.brand, x.merchant, x.rating ? `${x.rating.value.toFixed(1)}★ (${x.rating.count})` : null].filter(Boolean).join(" · ")}
+              </div>
+              <p className={cn("mt-1 font-semibold", VERDICT[x.verdict][1])}>
+                {VERDICT[x.verdict][0]}: <span className="font-normal text-ink">{x.why}</span>
+              </p>
+              {x.checks.length > 0 && (
+                <ul className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                  {x.checks.map((c) => (
+                    <li key={c.word} className={c.state === "shown" ? "text-done" : c.state === "likely" ? "text-wait" : "text-stop"}>
+                      {c.state === "shown" ? "✓" : c.state === "likely" ? "?" : "✗"} {c.word}: {c.how}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {x.url && (
+                <a href={x.url} target="_blank" rel="noopener nofollow noreferrer" className="mt-2 inline-flex min-h-11 items-center gap-1 font-semibold underline underline-offset-4">
+                  Open at {x.merchant ?? "the retailer"} <ExternalLink className="size-3.5" />
+                  <span className="sr-only">(opens a new tab; not purchasable in this demo)</span>
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 text-xs text-ink-2">Only the demo shop above is paid through PayPal here. These listings are a hand-off: Everyday can't watch their price or open a claim on them.</p>
+    </Panel>
+  );
+}
+
 export default function Plan() {
   const { id } = useParams();
   const st = useApi<PlanData>(`/api/ui/plans/${id}`);
@@ -275,6 +335,8 @@ export default function Plan() {
                 ) : (
                   <Empty title="No plan yet.">The planner runs when the request is saved. Refresh in a moment.</Empty>
                 )}
+
+                {p && <WebTier intentId={i.id} />}
 
                 {d.pairs.length > 0 && (
                   <Panel title="Which would you rather have?" sub={d.recipient.is_self ? "One tap teaches the ranking your taste. It never changes the budget or the rules." : `For ${d.recipient.name}. This teaches ${d.recipient.name}'s ranking, not yours.`}>

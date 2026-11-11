@@ -34,7 +34,7 @@ export const PATHS: { id: string; title: string; minutes: number; no_login: bool
     no_login: true,
     why: "The part no close rival has: Everyday watches what you bought and gets money back inside the shop's own promise, with the refund read back from PayPal.",
     steps: [
-      { key: "price_drop_claimed", label: STEPS.price_drop_claimed, how: "On Today, the headphones are cheaper than you paid. Press Claim.", href: "/today" },
+      { key: "price_drop_claimed", label: STEPS.price_drop_claimed, how: "Today opens with the money you can still get back: something you bought is cheaper now. Press Ask for … back.", href: "/today" },
       { key: "refund_confirmed", label: STEPS.refund_confirmed, how: "As the shop, approve the claim (Orders, then the case). Everyday sends the refund and shows it only once PayPal confirms it.", href: "/merchant" },
       { key: "ask_answered", label: STEPS.ask_answered, how: "Ask the assistant to check with PayPal itself. Watch the AI work rail.", href: "/ask?q=Did%20PayPal%20confirm%20my%20refund%3F&go=1" },
     ],

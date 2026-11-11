@@ -496,6 +496,10 @@ ALTER TABLE ai_calls ADD COLUMN IF NOT EXISTS ws_id TEXT;
 CREATE INDEX IF NOT EXISTS ai_calls_ws ON ai_calls(ws_id, id DESC);
 -- A3.2: /ai shows what each call was about (the first words of the text it read), in the workspace it belongs to.
 ALTER TABLE ai_calls ADD COLUMN IF NOT EXISTS input_summary TEXT;
+-- B6: the web tier of a plan (Channel3 results checked in code), cached per request.
+-- B6: "claim price drops for me": off until the shopper turns it on.
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS auto_claim BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS web_picks (intent_id TEXT PRIMARY KEY, body JSONB NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS decision_thresholds (
   name TEXT PRIMARY KEY, clear_below DOUBLE PRECISION NOT NULL, hold_above DOUBLE PRECISION NOT NULL, calibrated_on TEXT,
   n INTEGER NOT NULL DEFAULT 0, precision_at_hold DOUBLE PRECISION, recall_at_hold DOUBLE PRECISION, set_at TIMESTAMPTZ NOT NULL DEFAULT now()

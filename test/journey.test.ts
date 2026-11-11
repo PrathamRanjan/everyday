@@ -159,11 +159,24 @@ describe("Everyday acceptance journey", () => {
     // Price protection: the dock's price drops; Maya claims the difference under the policy she bought with.
     const dock = await one("SELECT * FROM order_lines WHERE order_id = $1 AND slot = 'dock'", [order.id]);
     ok(await nl.post(`/merchant/products/${dock.product_id}/price`, { price: ((dock.unit_cents - 1000) / 100).toFixed(2) }));
+    // B6: Today leads with it.
+    const mb = (await ui(maya, "/today")).money_back;
+    expect(mb.claim_now_cents).toBe(1000);
+    expect(mb.lines.find((l: any) => l.kind === "price_drop")?.line_id).toBe(dock.id);
+    expect(mb.items.length).toBeGreaterThan(0);
     ok(await maya.post(`/lines/${dock.id}/price-protection`));
+    expect((await ui(maya, "/today")).money_back).toMatchObject({ claim_now_cents: 0, in_progress_cents: 1000 });
     const pp = await one("SELECT * FROM cases WHERE issue = 'price_drop'");
     expect(pp).toMatchObject({ status: "awaiting_merchant", refund_cents: 1000 });
     ok(await nl.post(`/merchant/cases/${pp.id}`, { approve: "1", note: "Price matched" }));
     expect((await one("SELECT refunded_cents FROM orders WHERE id = $1", [order.id])).refunded_cents).toBe(2000 + 1500 + 1000);
+    // B6: "claim price drops for me": turning it on claims a further drop without asking; the shop still decides.
+    ok(await nl.post(`/merchant/products/${dock.product_id}/price`, { price: ((dock.unit_cents - 1500) / 100).toFixed(2) }));
+    ok(await maya.post("/you/auto-claim", { on: "1" }));
+    const auto = await one("SELECT * FROM cases WHERE issue = 'price_drop' AND status = 'awaiting_merchant'");
+    expect(auto.refund_cents).toBe(500);
+    ok(await nl.post(`/merchant/cases/${auto.id}`, { approve: "0", note: "Declined in the test" }));
+    ok(await maya.post("/you/auto-claim", { on: "0" }));
 
     // Owned items: add one, ask whether to repair it, then mark one given away.
     ok(await maya.post("/you/owned", { title: "Kettle", category: "kettle", brand_model: "Breville IQ", price: "120" }));
@@ -228,6 +241,10 @@ describe("Everyday acceptance journey", () => {
       if (key) expect(Array.isArray(r.json[key]), path).toBe(true);
     }
     expect((await anon.get("/api/ui/ask/tools")).json.tools.length).toBeGreaterThan(5);
+    // B6: the plan's web tier answers (no Channel3 key in tests, so it says so).
+    const web = await maya.get(`/api/ui/plans/${intent.id}/web`);
+    expect(web.status).toBe(200);
+    expect(web.json.label).toMatch(/not purchasable in this demo/);
     // The phone QR link refuses a token it didn't sign.
     const join = await anon.get("/demo/join?t=forged");
     expect(join.status).toBe(302);

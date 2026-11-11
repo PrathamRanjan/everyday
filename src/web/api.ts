@@ -169,7 +169,9 @@ export function apiRoutes() {
     const mine = await owned(db, a);
     const now = wallIso(nowOf(a)).slice(0, 10);
     const soon = mine.filter((o) => o.status === "owned" && o.return_until && o.return_until >= now).map((o) => ({ id: o.id, title: o.title, return_until: o.return_until, warranty_until: o.warranty_until, acquired: o.acquired })).sort((x, y) => String(x.return_until).localeCompare(String(y.return_until))).slice(0, 4);
-    return { first: a.name.split(" ")[0], today: now, clock: fmtWall(nowOf(a)), items, calendar: cal, spending: sp, inbox, held: held.slice(0, 4).map(approvalView), soon };
+    const { moneyBack } = await import("../services/money-back.js");
+    const back = await moneyBack(db, a);
+    return { first: a.name.split(" ")[0], today: now, clock: fmtWall(nowOf(a)), items, calendar: cal, spending: sp, inbox, held: held.slice(0, 4).map(approvalView), soon, money_back: back };
   }));
 
   r.get("/api/ui/discover", send(async (req) => {
@@ -201,6 +203,12 @@ export function apiRoutes() {
     return { plans: rows, recipients };
   }));
 
+  // B6: the plan's web tier (Channel3), checked in code against the same must-haves; a labelled hand-off, never a checkout.
+  r.get("/api/ui/plans/:id/web", send(async (req) => {
+    const a = await shopperOf(req);
+    const { webPicksFor } = await import("../services/web-picks.js");
+    return webPicksFor(a, String(req.params.id), { refresh: req.query.refresh === "1" });
+  }));
   r.get("/api/ui/plans/:id", send(async (req) => {
     const a = await shopperOf(req);
     const db = await getDb();

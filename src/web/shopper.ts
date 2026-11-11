@@ -139,6 +139,18 @@ export function shopperRoutes() {
     back(res, req.get("referer")?.split("?")[0] ?? "/purchases", `Swapped to ${offer.title}${offer.diff_cents ? `; ${money(offer.diff_cents)} refunded to your PayPal` : ""}.`);
   }, true));
 
+  // B6: "claim price drops for me". Turning it on claims every drop the shop's promise covers right away; the worker
+  // claims later ones. The shop still approves each claim.
+  r.post("/you/auto-claim", shopper(async (req, res, a) => {
+    const on = req.body.on === "1";
+    const db = await getDb();
+    await db.query("UPDATE accounts SET auto_claim = $2 WHERE id = $1", [a.id, on]);
+    if (!on) return back(res, "/today", "Price drops won't be claimed for you; they'll show here to claim.");
+    const { autoClaim } = await import("../services/money-back.js");
+    const r = await autoClaim(a);
+    back(res, "/today", r.claimed.length ? `On. Asked the shop for ${r.claimed.map((c) => `${money(c.amount_cents)} (${c.number})`).join(", ")}. You'll see it once they approve and PayPal confirms.` : "On. Everyday will claim the next price drop the shop's promise covers.");
+  }, true));
+
   r.post("/lines/:id/price-protection", shopper(async (req, res, a) => {
     const c = await claimPriceProtection(a, req.params.id);
     back(res, (req.get("referer")?.split("?")[0] ?? "/purchases") + "#cases", `${c.number}: asked Northlight for ${money(c.amount_cents)}. You'll see it here once they approve and PayPal confirms.`);

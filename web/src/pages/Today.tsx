@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, CalendarClock, ChevronRight, HelpCircle, PackageCheck, PlayCircle, Siren, X } from "lucide-react";
+import { AlertTriangle, BadgeDollarSign, CalendarClock, ChevronRight, HelpCircle, PackageCheck, PlayCircle, Siren, X } from "lucide-react";
 import { Lifeline, type Band, type Mark } from "@/components/Lifeline";
 import { ApprovalCard, type ApprovalView } from "@/components/Approval";
-import { Amount, Empty, GoLink, Loaded, PageHead, Panel } from "@/components/kit";
+import { Amount, Busy, Empty, GoLink, Loaded, PageHead, Panel } from "@/components/kit";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { useApi } from "@/lib/api";
-import { daysBetween, day, plural, when } from "@/lib/format";
+import { useAction, useApi } from "@/lib/api";
+import { daysBetween, day, money, plural, when } from "@/lib/format";
 import { seenTour, startTour, tourActive } from "@/tours/tours";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,119 @@ interface TodayData {
   inbox: { id: number; text: string; at: string; flag: { serious: boolean; words: string[] } | null }[];
   held: ApprovalView[];
   soon: { id: string; title: string; return_until: string; warranty_until: string | null; acquired: string }[];
+  money_back: MoneyBack;
+}
+interface MoneyBack {
+  auto_claim: boolean;
+  claim_now_cents: number;
+  in_progress_cents: number;
+  if_returned_cents: number;
+  lines: { kind: "price_drop" | "claim_open" | "return"; title: string; amount_cents: number | null; until: string | null; detail: string; href: string; line_id: string | null }[];
+  items: { id: string; title: string; bought: string; return_until: string | null; promise_until: string | null; warranty_until: string | null; next: string; href: string | null }[];
+}
+
+/** B6: the first screen leads with the money you can still get back, then one line per thing you own. */
+function MoneyBackPanel({ m, reload }: { m: MoneyBack; reload: () => Promise<void> }) {
+  const { run, busy } = useAction(reload);
+  const drops = m.lines.filter((l) => l.kind === "price_drop");
+  const rest = m.lines.filter((l) => l.kind !== "price_drop");
+  return (
+    <Panel
+      id="money-back"
+      title={
+        <span className="inline-flex items-center gap-2">
+          <BadgeDollarSign className="size-5 text-done" />
+          Money you can still get back
+        </span>
+      }
+      sub="From the shop's own promises on what you bought. The shop approves each claim; it counts once PayPal confirms the refund."
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <div className="font-display text-3xl text-done">
+            <Amount cents={m.claim_now_cents} />
+          </div>
+          <div className="text-xs text-ink-2">to claim now</div>
+        </div>
+        <div>
+          <div className="font-display text-3xl">
+            <Amount cents={m.in_progress_cents} />
+          </div>
+          <div className="text-xs text-ink-2">already asked for</div>
+        </div>
+        <div>
+          <div className="font-display text-3xl text-ink-2">
+            <Amount cents={m.if_returned_cents} />
+          </div>
+          <div className="text-xs text-ink-2">if you return things still in their window</div>
+        </div>
+      </div>
+      {drops.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {drops.map((l) => (
+            <li key={l.line_id} className="flex flex-wrap items-center gap-3 rounded-md border border-done/40 bg-done-bg p-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{l.title}</p>
+                <p className="text-xs text-ink-2">{l.detail}</p>
+              </div>
+              <Button size="sm" className="h-auto min-h-11 whitespace-normal" disabled={Boolean(busy)} onClick={() => run(`c-${l.line_id}`, `/lines/${l.line_id}/price-protection`, undefined, { stay: true })}>
+                <Busy on={busy === `c-${l.line_id}`}>{null}</Busy>Ask for {money(l.amount_cents ?? 0)} back
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {rest.length > 0 && (
+        <ul className="mt-3 divide-y divide-rule border-t border-rule text-sm">
+          {rest.map((l, i) => (
+            <li key={i}>
+              <Link to={l.href} className="flex min-h-11 items-start gap-3 py-2 hover:underline">
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{l.title}</span> <span className="text-ink-2">{l.detail}</span>
+                </span>
+                {l.amount_cents !== null && <Amount cents={l.amount_cents} className="shrink-0" />}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!m.lines.length && <p className="mt-3 text-sm text-ink-2">Nothing to get back right now. Everything you bought is shown below with the dates that matter.</p>}
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-rule pt-3">
+        <Button variant={m.auto_claim ? "outline" : "default"} size="sm" className="h-auto min-h-11 whitespace-normal" disabled={Boolean(busy)} onClick={() => run("auto", "/you/auto-claim", { on: m.auto_claim ? "0" : "1" }, { stay: true })}>
+          <Busy on={busy === "auto"}>{null}</Busy>
+          {m.auto_claim ? "Stop claiming price drops for me" : "Claim price drops for me"}
+        </Button>
+        <span className="text-xs text-ink-2">{m.auto_claim ? "On: a drop inside the shop's promise is claimed without asking you." : "Off: drops show here for you to claim."}</span>
+      </div>
+      {m.items.length > 0 && (
+        <>
+          <h3 className="mt-5 mb-2 text-sm font-semibold">What you own, and what happens next</h3>
+          <ul className="space-y-2 text-sm">
+            {m.items.map((it) => (
+              <li key={it.id} className="rounded-md border border-rule p-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  {it.href ? (
+                    <Link to={it.href} className="font-medium hover:underline">
+                      {it.title}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{it.title}</span>
+                  )}
+                  <span className="num text-xs text-ink-2">
+                    Bought {day(it.bought)}
+                    {it.return_until ? ` · return by ${day(it.return_until)}` : ""}
+                    {it.promise_until ? ` · price promise to ${day(it.promise_until)}` : ""}
+                    {it.warranty_until ? ` · warranty to ${day(it.warranty_until)}` : ""}
+                  </span>
+                </div>
+                <p className="text-xs text-ink-2">{it.next}</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Panel>
+  );
 }
 
 const ICON: Record<string, React.ReactNode> = { recall: <Siren />, approve: <PackageCheck />, question: <HelpCircle />, gap: <AlertTriangle /> };
@@ -80,12 +193,13 @@ export default function Today() {
               <PageHead
                 eyebrow={<span className="num">{d.clock}</span>}
                 title={`${greet(d.clock)}, ${d.first}.`}
-                lede={needs ? `${plural(needs, "thing needs", "things need")} you. Everything else is in hand.` : "Nothing needs you today."}
+                lede={`${d.money_back?.claim_now_cents ? `You can get ${money(d.money_back.claim_now_cents)} back today. ` : ""}${needs ? `${plural(needs, "thing needs", "things need")} you. Everything else is in hand.` : "Nothing else needs you today."}`}
               />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
               <div className="min-w-0 space-y-6">
+                {d.money_back && <MoneyBackPanel m={d.money_back} reload={st.reload} />}
                 {d.held.map((a) => (
                   <ApprovalCard key={a.id} a={a} reload={st.reload} next="/today" />
                 ))}

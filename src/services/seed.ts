@@ -34,7 +34,7 @@ export async function seedAll(opts: { anchor?: string; ws?: string | null } = {}
   });
 }
 
-const TABLES = ["device_keys", "agent_trace", "agent_runs", "approvals", "audit_chain", "policies", "kill_switches", "provenance", "channel_messages", "party_links", "push_subscriptions", "judge_sessions", "eval_runs", "agent_requests", "ai_calls", "purchase_history", "vault_tokens", "repeat_buys", "disputes", "trackers", "channel3_cache", "events", "inbox", "price_watches", "owned_items", "cases", "payment_ops", "order_lines", "orders", "quotes", "plans", "intents", "captures", "price_history", "products", "merchants", "pref_events", "pref_models", "profile_facts", "recipients", "link_codes", "channel_links", "accounts", "recalls", "jobs_queue", "demo_faults", "workspaces", "paypal_refs"];
+const TABLES = ["web_picks", "ws_checklist", "device_keys", "agent_trace", "agent_runs", "approvals", "audit_chain", "policies", "kill_switches", "provenance", "channel_messages", "party_links", "push_subscriptions", "judge_sessions", "eval_runs", "agent_requests", "ai_calls", "purchase_history", "vault_tokens", "repeat_buys", "disputes", "trackers", "channel3_cache", "events", "inbox", "price_watches", "owned_items", "cases", "payment_ops", "order_lines", "orders", "quotes", "plans", "intents", "captures", "price_history", "products", "merchants", "pref_events", "pref_models", "profile_facts", "recipients", "link_codes", "channel_links", "accounts", "recalls", "jobs_queue", "demo_faults", "workspaces", "paypal_refs"];
 
 export function demoAnchor(tz: string, instant = new Date()) {
   const now = wallNow(tz, instant);

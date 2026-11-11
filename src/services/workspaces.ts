@@ -18,7 +18,8 @@ import { config } from "../config.js";
 import { getDb, type Queryable } from "../db.js";
 import { newId } from "../lib/ids.js";
 import { GtError } from "../lib/util.js";
-import { accountById, type Account } from "../store.js";
+import { accountById, nowIso, type Account } from "../store.js";
+import { setPrice } from "./life.js";
 import { merchantOwner, withSeeding, withWs } from "../ws.js";
 import { seedAll } from "./seed.js";
 import { demoWallet, walletUsable } from "./demowallet.js";
@@ -123,8 +124,9 @@ async function buildRows(id: string) {
 }
 
 /** The goals the seed buys for real. Each runs the planner, the quote (by hash) and the saved-wallet payment. */
-const SEED_BUYS: { text: string; then: "delivered" | "shipped"; label: string }[] = [
-  { text: "a desk lamp under $80", then: "delivered", label: "Desk lamp, paid and delivered" },
+const SEED_BUYS: { text: string; then: "delivered" | "shipped"; label: string; dropCents?: number }[] = [
+  // B6: after delivery the shop records a lower price (sample data), so a price drop waits to be claimed.
+  { text: "a desk lamp under $80", then: "delivered", label: "Desk lamp, paid and delivered", dropCents: 700 },
   { text: "a wireless mouse under $60", then: "shipped", label: "Mouse, paid and on its way" },
 ];
 /** One goal left at the quote for the visitor to approve: the thing that needs them now. */
@@ -179,6 +181,10 @@ async function seedMoneyOnce(id: string): Promise<Progress> {
           for (const l of lines) {
             await shipLine(l.id);
             if (b.then === "delivered") await deliverLine(l.id, "seeded");
+          }
+          if (b.dropCents) {
+            const l = (await db.query<{ product_id: string; unit_cents: number }>("SELECT product_id, unit_cents FROM order_lines WHERE order_id = $1 LIMIT 1", [o.id])).rows[0];
+            if (l && l.unit_cents > b.dropCents) await setPrice(l.product_id, l.unit_cents - b.dropCents, nowIso(a));
           }
           steps[i] = { label: b.label, state: "done", capture_id: o.capture_id, order: o.number };
           p.payments_confirmed!++;
@@ -254,6 +260,7 @@ async function deleteRows(db: Awaited<ReturnType<typeof getDb>>, id: string) {
       [`DELETE FROM trackers WHERE order_id IN ${orders}`, [acc]],
       [`DELETE FROM disputes WHERE order_id IN ${orders}`, [acc]],
       [`DELETE FROM payment_ops WHERE order_id IN ${orders}`, [acc]],
+      [`DELETE FROM web_picks WHERE intent_id IN ${intents}`, [acc]],
       [`DELETE FROM cases WHERE order_id IN ${orders}`, [acc]],
       [`DELETE FROM owned_items WHERE account_id = ${A}`, [acc]],
       [`DELETE FROM order_lines WHERE order_id IN ${orders}`, [acc]],
