@@ -3,6 +3,7 @@ import { ChevronRight, ShoppingBag } from "lucide-react";
 import { Amount, Empty, GoLink, Loaded, PageHead, Panel, State } from "@/components/kit";
 import { useApi } from "@/lib/api";
 import { day, when } from "@/lib/format";
+import { t, tn } from "@/i18n";
 
 interface PurchasesData {
   orders: { id: string; number: string; status: string; total_cents: number; gross_cents: number | null; refunded_cents: number; repaired: boolean; created_at: string; placed_at: string | null; capture_id: string | null; paypal_order_id: string | null; lines: { title: string; status: string; eta: string | null }[] }[];
@@ -17,7 +18,7 @@ export default function Purchases() {
         const due = d.orders.filter((o) => o.status === "created");
         return (
           <div className="ev-rise">
-            <PageHead eyebrow="Bought" title="What you bought" lede={paid.length ? `${paid.length} paid, each read back from PayPal.` : "Nothing paid yet."} needs={due.length ? `${due.length} not paid yet` : undefined} />
+            <PageHead eyebrow={t("Bought")} title={t("What you bought")} lede={paid.length ? t("{0} paid, each read back from PayPal.", paid.length) : t("Nothing paid yet.")} needs={due.length ? t("{0} not paid yet", due.length) : undefined} />
             <Panel tight>
               <div data-tour="purchases">
                 {d.orders.length ? (
@@ -30,15 +31,15 @@ export default function Purchases() {
                             <span className="num mt-0.5 flex flex-wrap gap-x-2 text-xs text-ink-2">
                               <span className="id">{o.number}</span>
                               <span>{when(o.placed_at ?? o.created_at)}</span>
-                              {o.lines.find((l) => l.eta && l.status !== "delivered") && <span>arrives {day(o.lines.find((l) => l.eta)!.eta)}</span>}
-                              {o.repaired && <span className="text-done">recovered from PayPal</span>}
+                              {o.lines.find((l) => l.eta && l.status !== "delivered") && <span>{tn("arrives {0}", day(o.lines.find((l) => l.eta)!.eta))}</span>}
+                              {o.repaired && <span className="text-done">{t("recovered from PayPal")}</span>}
                             </span>
                           </span>
                           <span className="flex flex-col items-end gap-1">
                             <Amount cents={o.gross_cents ?? o.total_cents} strong />
                             {o.refunded_cents ? (
                               <span className="num text-xs text-done">
-                                −<Amount cents={o.refunded_cents} /> back
+                                −<Amount cents={o.refunded_cents} />{" "}{t("back")}
                               </span>
                             ) : null}
                           </span>
@@ -50,8 +51,8 @@ export default function Purchases() {
                   </ul>
                 ) : (
                   <div className="p-4 sm:p-5">
-                    <Empty icon={<ShoppingBag className="size-6" />} title="No purchases yet." action={<GoLink to="/plans">Open a plan</GoLink>}>
-                      When you approve a plan on PayPal, the order appears here with its dates.
+                    <Empty icon={<ShoppingBag className="size-6" />} title={t("No purchases yet.")} action={<GoLink to="/plans">{t("Open a plan")}</GoLink>}>
+                      {t("When you approve a plan on PayPal, the order appears here with its dates.")}
                     </Empty>
                   </div>
                 )}

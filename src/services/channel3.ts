@@ -23,6 +23,8 @@ export interface ExternalProduct {
   attributes?: Record<string, string[]>;
   category?: string | null;
   rating?: { value: number; count: number } | null;
+  /** The most the retailer pays for a referral, as Channel3 reports it (0.07 = 7%). Everyday earns nothing from it in this demo. */
+  commission_rate?: number | null;
 }
 
 let fetchImpl: typeof fetch | null = null;
@@ -38,7 +40,7 @@ export async function searchProducts(query: string, q?: Queryable): Promise<{ re
   const key = query.trim().toLowerCase().slice(0, 200);
   if (!key) return { results: [], source: "catalog", note: "Empty query." };
   const cached = (await db.query<any>("SELECT results, source, fetched_at FROM channel3_cache WHERE query = $1", [key])).rows[0];
-  const fresh = cached && Array.isArray(cached.results) && cached.results.every((r: ExternalProduct) => r.source !== "channel3" || "key_features" in r);
+  const fresh = cached && Array.isArray(cached.results) && cached.results.every((r: ExternalProduct) => r.source !== "channel3" || "commission_rate" in r);
   if (cached && fresh && Date.now() - new Date(cached.fetched_at).getTime() < TTL_MS && cached.source === "channel3") return { results: cached.results, source: "cache", note: "Channel3 results from the cache (under six hours old)." };
   if (channel3Ready()) {
     try {
@@ -67,6 +69,7 @@ export async function searchProducts(query: string, q?: Queryable): Promise<{ re
           key_features: Array.isArray(p.key_features) ? p.key_features.filter((x: unknown) => typeof x === "string").slice(0, 12).map((x: string) => x.slice(0, 160)) : [],
           attributes: p.structured_attributes && typeof p.structured_attributes === "object" ? Object.fromEntries(Object.entries(p.structured_attributes).slice(0, 20).map(([k, v]) => [String(k).slice(0, 60), (Array.isArray(v) ? v : [v]).map((x) => String(x).slice(0, 80)).slice(0, 8)])) : {},
           category: p.category?.title ? String(p.category.title).slice(0, 80) : null,
+          commission_rate: Number.isFinite(Number(offer?.max_commission_rate)) && offer?.max_commission_rate !== null ? Math.min(1, Math.max(0, Number(offer.max_commission_rate))) : null,
           rating: p.ratings?.value ? { value: Number(p.ratings.value), count: Number(p.ratings.count ?? 0) } : null,
         };
       });

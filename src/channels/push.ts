@@ -4,6 +4,8 @@ import { config } from "../config.js";
 import { getDb } from "../db.js";
 import { enqueue } from "../jobs.js";
 import { newId } from "../lib/ids.js";
+import { isLang } from "../i18n/index.js";
+import { display } from "../i18n/display.js";
 
 export const pushReady = () => Boolean(config.channels.vapidPublic && config.channels.vapidPrivate);
 
@@ -15,12 +17,17 @@ export async function subscribe(party: Party, partyId: string, subscription: unk
 export async function pushTo(party: Party, partyId: string, payload: { title: string; body: string; url?: string }) {
   const db = await getDb();
   const subs = (await db.query<{ id: string }>("SELECT id FROM push_subscriptions WHERE party = $1 AND party_id = $2", [party, partyId])).rows;
-  for (const s of subs) await enqueue(db, "send_push", { subscriptionId: s.id, payload }, new Date(), `push:${s.id}:${Date.now()}`);
+  const { partyLang } = await import("./index.js");
+  const lang = await partyLang(db, party, partyId);
+  for (const s of subs) await enqueue(db, "send_push", { subscriptionId: s.id, payload: { ...payload, lang } }, new Date(), `push:${s.id}:${Date.now()}`);
   await db.query("INSERT INTO channel_messages (id, channel, direction, address, body, status) VALUES ($1,'push','out',$2,$3,$4)", [newId("msg"), `${party}:${partyId}`, `${payload.title}: ${payload.body}`, subs.length && pushReady() ? "queued" : "simulated"]);
 }
 
-export async function sendPush(subscriptionId: string, payload: { title: string; body: string; url?: string }) {
+export async function sendPush(subscriptionId: string, raw: { title: string; body: string; url?: string; lang?: string | null }) {
   if (!pushReady()) return;
+  // B6: in the reader's language as it goes out.
+  const l = isLang(raw.lang) ? raw.lang : "en";
+  const payload = { title: display(raw.title, l), body: display(raw.body, l), url: raw.url };
   const db = await getDb();
   const row = (await db.query<{ subscription: any }>("SELECT subscription FROM push_subscriptions WHERE id = $1", [subscriptionId])).rows[0];
   if (!row) return;

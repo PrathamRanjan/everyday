@@ -9,17 +9,18 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAction, useApi } from "@/lib/api";
 import { money, words } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { t, N_, tn } from "@/i18n";
 
 const ConsoleNav = () => (
-  <nav aria-label="Console" className="mb-6 flex flex-wrap gap-2 text-sm">
+  <nav aria-label={t("Console")} className="mb-6 flex flex-wrap gap-2 text-sm">
     {[
-      ["/console", "Preference model"],
-      ["/console/evidence", "Evidence"],
-      ["/console/eval", "Eval rows"],
-      ["/telegram", "Telegram simulator"],
+      ["/console", N_("Preference model")],
+      ["/console/evidence", N_("Evidence")],
+      ["/console/eval", N_("Eval rows")],
+      ["/telegram", N_("Telegram simulator")],
     ].map(([to, l]) => (
       <Link key={to} to={to} className={cn("inline-flex min-h-10 items-center rounded-full border px-3", location.pathname === to ? "border-ink bg-ink text-paper" : "border-rule-2 hover:bg-sunk")}>
-        {l}
+        {t(l)}
       </Link>
     ))}
   </nav>
@@ -43,15 +44,15 @@ export default function Console() {
   const { run, busy } = useAction(st.reload);
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Operator console · demo only" title="Under the hood" />
+      <PageHead eyebrow={t("Operator console · demo only")} title={t("Under the hood")} />
       <ConsoleNav />
       <Loaded state={st}>
         {(d) => (
           <div className="grid gap-6 lg:grid-cols-2">
             {d.report ? (
-              <Panel title={`Preference model (${d.report.metric})`} sub={`${d.report.data}. ${d.report.train_shoppers} training / ${d.report.test_shoppers} held-out shoppers, ${d.report.train_pairs} pairs, seeds ${d.report.seeds.join(", ")}.`} className="lg:col-span-2">
+              <Panel title={t("Preference model ({0})", d.report.metric)} sub={t("{0}. {1} training / {2} held-out shoppers, {3} pairs, seeds {4}.", d.report.data, d.report.train_shoppers, d.report.test_shoppers, d.report.train_pairs, d.report.seeds.join(", "))} className="lg:col-span-2">
                 <ul className="space-y-2 text-sm">
-                  {[["Popularity (win rate)", d.report.popularity] as const, ["Global logistic prior", d.report.global] as const, ...Object.entries(d.report.personal).map(([k, v]) => [`Personal after ${k} choices`, v] as const)].map(([l, v]) => (
+                  {[[t("Popularity (win rate)"), d.report.popularity] as const, [t("Global logistic prior"), d.report.global] as const, ...Object.entries(d.report.personal).map(([k, v]) => [t("Personal after {0} choices", k), v] as const)].map(([l, v]) => (
                     <li key={l} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_2.75rem_2.75rem] items-center gap-2 sm:grid-cols-[12rem_1fr_4rem_4rem] sm:gap-3">
                       <span>{l}</span>
                       <Bar v={v.mean} />
@@ -61,14 +62,14 @@ export default function Console() {
                   ))}
                 </ul>
                 <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                  <State s={d.report.promote_personal ? "succeeded" : "failed"} label={d.report.promote_personal ? "promoted" : "not promoted"} />
-                  {d.report.promote_personal ? `Personalisation gains ${d.report.gain_at_5} NDCG after 5 choices, more than the global model's seed-to-seed spread.` : "The gain doesn't beat seed noise; the simpler model stays."}
+                  <State s={d.report.promote_personal ? "succeeded" : "failed"} label={d.report.promote_personal ? "promoted" : t("not promoted")} />
+                  {d.report.promote_personal ? t("Personalisation gains {0} NDCG after 5 choices, more than the global model's seed-to-seed spread.", d.report.gain_at_5) : t("The gain doesn't beat seed noise; the simpler model stays.")}
                 </p>
               </Panel>
             ) : (
-              <Empty title="No model trained yet." />
+              <Empty title={t("No model trained yet.")} />
             )}
-            <Panel title="Global prior weights">
+            <Panel title={t("Global prior weights")}>
               <ul className="max-h-80 divide-y divide-rule overflow-y-auto text-sm">
                 {d.weights.map((w) => (
                   <li key={w.feature} className="grid grid-cols-[1fr_auto] gap-2 py-1.5">
@@ -80,42 +81,42 @@ export default function Console() {
                 ))}
               </ul>
             </Panel>
-            <Panel title="Latest explicit choices">
+            <Panel title={t("Latest explicit choices")}>
               <ul className="max-h-80 divide-y divide-rule overflow-y-auto text-sm">
                 {d.events.map((e) => (
                   <li key={e.id} className="py-1.5">
                     {e.chosen === e.a_product ? (
                       <>
-                        <b>{e.at}</b> over {e.bt}
+                        <b>{e.at}</b>{" "}{tn("over {0}", e.bt)}
                       </>
                     ) : e.chosen === e.b_product ? (
                       <>
-                        <b>{e.bt}</b> over {e.at}
+                        <b>{e.bt}</b>{" "}{tn("over {0}", e.at)}
                       </>
                     ) : (
                       `${e.at} / ${e.bt}`
                     )}{" "}
                     <span className="text-xs text-ink-2">
-                      · {words(e.reason)} · {e.eligible ? "used" : `not used: ${e.excluded_reason}`}
+                      · {words(e.reason)} · {e.eligible ? t("used") : t("not used: {0}", e.excluded_reason)}
                     </span>
                   </li>
                 ))}
               </ul>
             </Panel>
-            <Panel id="lab" title={<span className="inline-flex items-center gap-2"><Bug className="size-5" />Failure lab</span>} sub="Each arms a one-shot fault on the next matching PayPal call. The money still moves once, and the order's history explains the recovery." className="lg:col-span-2">
+            <Panel id="lab" title={<span className="inline-flex items-center gap-2"><Bug className="size-5" />{t("Failure lab")}</span>} sub={t("Each arms a one-shot fault on the next matching PayPal call. The money still moves once, and the order's history explains the recovery.")} className="lg:col-span-2">
               <div className="flex flex-wrap gap-2">
                 {[
-                  ["drop_return", "Drop the next PayPal return"],
-                  ["capture_lost", "Lose the next capture response"],
-                  ["refund_503", "Fail the next refund (503)"],
+                  ["drop_return", N_("Drop the next PayPal return")],
+                  ["capture_lost", N_("Lose the next capture response")],
+                  ["refund_503", N_("Fail the next refund (503)")],
                 ].map(([f, l]) => (
                   <Button key={f} variant="outline" size="sm" disabled={Boolean(busy)} onClick={() => run(f, "/console/fault", { f }, { stay: true })}>
                     <Busy on={busy === f}>{null}</Busy>
-                    {l}
+                    {t(l)}
                   </Button>
                 ))}
                 <Button size="sm" disabled={Boolean(busy)} onClick={() => run("rec", "/console/run", undefined, { stay: true })}>
-                  <Busy on={busy === "rec"}>{null}</Busy>Run reconciliation now
+                  <Busy on={busy === "rec"}>{null}</Busy>{t("Run reconciliation now")}
                 </Button>
               </div>
             </Panel>
@@ -145,11 +146,11 @@ interface EvidenceData {
 
 function ArmTable({ arms }: { arms: Arm[] }) {
   return (
-    <div className="rail-scroll" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
+    <div className="rail-scroll" tabIndex={0} role="region" aria-label={t("Table (scrolls sideways)")}>
       <table className="num w-full min-w-[620px] text-sm">
         <thead>
           <tr className="border-b border-rule text-left text-xs text-ink-2 uppercase">
-            {["Arm", "Cases", "Correct", "Traps", "Caught", "$ naive", "$ moved", "p50"].map((h) => (
+            {[t("Arm"), t("Cases"), t("Correct"), t("Traps"), t("Caught"), t("$ naive"), t("$ moved"), "p50"].map((h) => (
               <th key={h} className="py-2 pr-3 font-semibold">
                 {h}
               </th>
@@ -166,7 +167,7 @@ function ArmTable({ arms }: { arms: Arm[] }) {
               <td className="pr-3">{a.traps_caught}</td>
               <td className="pr-3">{a.naive_usd.toFixed(2)}</td>
               <td className="pr-3">{a.paid_usd.toFixed(2)}</td>
-              <td>{a.p50_ms} ms</td>
+              <td>{tn("{0} ms", a.p50_ms)}</td>
             </tr>
           ))}
         </tbody>
@@ -180,72 +181,72 @@ export function Evidence() {
   const { run, busy } = useAction(st.reload);
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Operator console · demo only" title="Evidence" lede="What's real, what's simulated, and what the evals measured on this instance." />
+      <PageHead eyebrow={t("Operator console · demo only")} title={t("Evidence")} lede={t("What's real, what's simulated, and what the evals measured on this instance.")} />
       <ConsoleNav />
       <Loaded state={st}>
         {(d) => (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Stat label="PayPal captures" value={d.real.captures} />
-              <Stat label="Refunds sent" value={d.real.refunds} />
-              <Stat label="Model calls" value={d.ai.calls} hint={`${d.ai.ok} ok · about $${d.ai.cost_usd.toFixed(3)}`} />
-              <Stat label="Assistant runs" value={d.real.runs} />
-              <Stat label="Repeat buys paid" value={d.real.repeats_paid} />
-              <Stat label="Held or refused" value={d.real.repeats_stopped} tone="now" />
-              <Stat label="Saved PayPals" value={d.real.vaults} />
-              <Stat label="Disputes" value={d.real.disputes} />
+              <Stat label={t("PayPal captures")} value={d.real.captures} />
+              <Stat label={t("Refunds sent")} value={d.real.refunds} />
+              <Stat label={t("Model calls")} value={d.ai.calls} hint={t("{0} ok · about ${1}", d.ai.ok, d.ai.cost_usd.toFixed(3))} />
+              <Stat label={t("Assistant runs")} value={d.real.runs} />
+              <Stat label={t("Repeat buys paid")} value={d.real.repeats_paid} />
+              <Stat label={t("Held or refused")} value={d.real.repeats_stopped} tone="now" />
+              <Stat label={t("Saved PayPals")} value={d.real.vaults} />
+              <Stat label={t("Disputes")} value={d.real.disputes} />
             </div>
-            <Panel title="Real vs simulated">
+            <Panel title={t("Real vs simulated")}>
               <dl className="grid gap-3 text-sm sm:grid-cols-[9rem_1fr]">
-                <dt className="font-semibold">PayPal</dt>
-                <dd>Sandbox REST: orders, captures, refunds, vault and payment tokens, merchant-initiated captures, tracking, disputes with evidence, transaction search, negative-test mocks. {d.paypal ? "Credentials present." : "No credentials here: the fake client is in use."} No live money.</dd>
-                <dt className="font-semibold">Models</dt>
+                <dt className="font-semibold">{t("PayPal")}</dt>
+                <dd>{tn("Sandbox REST: orders, captures, refunds, vault and payment tokens, merchant-initiated captures, tracking, disputes with evidence, transaction search, negative-test mocks. {0} No live money.", d.paypal ? t("Credentials present.") : t("No credentials here: the fake client is in use."))}</dd>
+                <dt className="font-semibold">{t("Models")}</dt>
                 <dd>
-                  {d.provider}. {d.ai.by_purpose.map((p) => `${words(p.purpose)} ×${p.calls} (p50 ${p.p50_ms} ms)`).join(" · ") || "No calls recorded yet."} Models read screenshots, covers, requests and mandates; they never set a price, a refund or a payee.
+                  {tn("{0}. {1} Models read screenshots, covers, requests and mandates; they never set a price, a refund or a payee.", d.provider, d.ai.by_purpose.map((p) => `${words(p.purpose)} ×${p.calls} (p50 ${p.p50_ms} ms)`).join(" · ") || t("No calls recorded yet."))}
                 </dd>
-                <dt className="font-semibold">Catalog</dt>
-                <dd>Seeded Northlight catalog; the three demo clips have authored objects. Channel3 {d.channel3 ? "live" : "not configured"}.</dd>
-                <dt className="font-semibold">Channels</dt>
+                <dt className="font-semibold">{t("Catalog")}</dt>
+                <dd>{tn("Seeded Northlight catalog; the three demo clips have authored objects. Channel3 {0}.", d.channel3 ? t("live") : t("not configured"))}</dd>
+                <dt className="font-semibold">{t("Channels")}</dt>
                 <dd>
-                  Telegram {d.telegram ? "live" : "not configured"} · Web push {d.push ? "live" : "not configured"} · the message log is always on.
+                  {tn("Telegram {0} · Web push {1} · the message log is always on.", d.telegram ? t("live") : t("not configured"), d.push ? t("live") : t("not configured"))}
                 </dd>
-                <dt className="font-semibold">Audit chain</dt>
+                <dt className="font-semibold">{t("Audit chain")}</dt>
                 <dd>
-                  {d.chain.ok ? `intact, ${d.chain.rows} rows` : `broken at row ${d.chain.broken_at}`} · <span className="id">{d.chain.head.slice(0, 16)}…</span>
+                  {d.chain.ok ? t("intact, {0} rows", d.chain.rows) : t("broken at row {0}", d.chain.broken_at)} · <span className="id">{d.chain.head.slice(0, 16)}…</span>
                 </dd>
               </dl>
             </Panel>
             <Panel
-              title="Capture reader eval"
-              sub="Synthetic frames through the caption-only rules arm, the vision model (grounded and quarantined by code) and the oracle."
+              title={t("Capture reader eval")}
+              sub={t("Synthetic frames through the caption-only rules arm, the vision model (grounded and quarantined by code) and the oracle.")}
               action={
                 <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => run("cap", "/console/eval", { suite: "capture" }, { stay: true })}>
                   <Busy on={busy === "cap"}>
                     <FlaskConical className="size-4" />
                   </Busy>
-                  Run
+                  {t("Run")}
                 </Button>
               }
             >
-              {d.capture.length ? <ArmTable arms={d.capture} /> : <p className="text-sm text-ink-2">Not run on this instance yet.</p>}
-              {d.runs?.capture?.run_on && <p className="mt-2 text-xs text-ink-2">From {d.runs.capture.source}, run on {d.runs.capture.run_on.slice(0, 10)} with {d.runs.capture.provider}.</p>}
+              {d.capture.length ? <ArmTable arms={d.capture} /> : <p className="text-sm text-ink-2">{t("Not run on this instance yet.")}</p>}
+              {d.runs?.capture?.run_on && <p className="mt-2 text-xs text-ink-2">{tn("From {0}, run on {1} with {2}.", d.runs.capture.source, d.runs.capture.run_on.slice(0, 10), d.runs.capture.provider)}</p>}
             </Panel>
             <Panel
-              title="Adversarial money harness"
-              sub="Hostile and malformed money moves through the live gate. Every one must be denied, refused or held."
+              title={t("Adversarial money harness")}
+              sub={t("Hostile and malformed money moves through the live gate. Every one must be denied, refused or held.")}
               action={
                 <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => run("adv", "/console/eval", { suite: "adversarial" }, { stay: true })}>
                   <Busy on={busy === "adv"}>
                     <FlaskConical className="size-4" />
                   </Busy>
-                  Run
+                  {t("Run")}
                 </Button>
               }
             >
-              {d.adversarial.length ? <ArmTable arms={d.adversarial} /> : <p className="text-sm text-ink-2">Not run on this instance yet.</p>}
-              {d.runs?.adversarial?.run_on && <p className="mt-2 text-xs text-ink-2">From {d.runs.adversarial.source}, run on {d.runs.adversarial.run_on.slice(0, 10)} ({d.runs.adversarial.provider}).</p>}
+              {d.adversarial.length ? <ArmTable arms={d.adversarial} /> : <p className="text-sm text-ink-2">{t("Not run on this instance yet.")}</p>}
+              {d.runs?.adversarial?.run_on && <p className="mt-2 text-xs text-ink-2">{tn("From {0}, run on {1} ({2}).", d.runs.adversarial.source, d.runs.adversarial.run_on.slice(0, 10), d.runs.adversarial.provider)}</p>}
             </Panel>
-            <Panel title="Shopping chat test">{d.techjam ? <pre tabIndex={0} className="rail-scroll rounded-md bg-sunk p-3 text-xs whitespace-pre">{d.techjam}</pre> : <p className="text-sm text-ink-2">Not run yet.</p>}</Panel>
+            <Panel title={t("Shopping chat test")}>{d.techjam ? <pre tabIndex={0} className="rail-scroll rounded-md bg-sunk p-3 text-xs whitespace-pre">{d.techjam}</pre> : <p className="text-sm text-ink-2">{t("Not run yet.")}</p>}</Panel>
           </div>
         )}
       </Loaded>
@@ -270,21 +271,21 @@ export function Eval() {
   };
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Operator console · demo only" title="Eval rows" />
+      <PageHead eyebrow={t("Operator console · demo only")} title={t("Eval rows")} />
       <ConsoleNav />
       <div className="mb-4 flex flex-wrap gap-3">
         <Tabs value={suite} onValueChange={(v) => set("suite", v)}>
           <TabsList className="bg-sunk">
-            <TabsTrigger value="capture">Capture</TabsTrigger>
-            <TabsTrigger value="adversarial">Adversarial</TabsTrigger>
-            <TabsTrigger value="techjam">Shopping chat</TabsTrigger>
+            <TabsTrigger value="capture">{t("Capture")}</TabsTrigger>
+            <TabsTrigger value="adversarial">{t("Adversarial")}</TabsTrigger>
+            <TabsTrigger value="techjam">{t("Shopping chat")}</TabsTrigger>
           </TabsList>
         </Tabs>
         <Tabs value={outcome || "all"} onValueChange={(v) => set("outcome", v === "all" ? "" : v)}>
           <TabsList className="bg-sunk">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="correct">Correct</TabsTrigger>
-            <TabsTrigger value="wrong">Wrong</TabsTrigger>
+            <TabsTrigger value="all">{t("All")}</TabsTrigger>
+            <TabsTrigger value="correct">{t("Correct")}</TabsTrigger>
+            <TabsTrigger value="wrong">{t("Wrong")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -295,20 +296,20 @@ export function Eval() {
               <div className="mb-3 flex flex-wrap gap-1.5">
                 {["", ...d.arms].map((a) => (
                   <button key={a || "all"} onClick={() => set("arm", a)} className={cn("min-h-9 rounded-full border px-3 text-xs", arm === a ? "border-ink bg-ink text-paper" : "border-rule-2")}>
-                    {a || "every arm"}
+                    {a || t("every arm")}
                   </button>
                 ))}
               </div>
             )}
             <p className="num mb-2 text-sm text-ink-2">
-              {d.count} of {d.total} rows
+              {tn("{0} of {1} rows", d.count, d.total)}
             </p>
             {d.rows.length ? (
-              <div className="rail-scroll rounded-lg border border-rule bg-card" tabIndex={0} role="region" aria-label="Eval rows (scrolls sideways)">
+              <div className="rail-scroll rounded-lg border border-rule bg-card" tabIndex={0} role="region" aria-label={t("Eval rows (scrolls sideways)")}>
                 <table className="w-full min-w-[760px] text-xs">
                   <thead>
                     <tr className="border-b border-rule text-left text-ink-2 uppercase">
-                      {["Case", "Arm", "Kind", "Expected", "Actual", "", "$ naive / ours", "ms"].map((h) => (
+                      {[t("Case"), t("Arm"), t("Kind"), t("Expected"), t("Actual"), "", t("$ naive / ours"), "ms"].map((h) => (
                         <th key={h} className="px-2 py-2 font-semibold">
                           {h}
                         </th>
@@ -339,7 +340,7 @@ export function Eval() {
                 </table>
               </div>
             ) : (
-              <Empty title="No rows for this filter." />
+              <Empty title={t("No rows for this filter.")} />
             )}
           </>
         )}
@@ -358,13 +359,13 @@ export function Telegram() {
   const [text, setText] = useState("");
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Operator console · demo only" title="Telegram simulator" lede="Posts the same updates Telegram would to the real bot code. Try sending a Reel link, then “pending”." />
+      <PageHead eyebrow={t("Operator console · demo only")} title={t("Telegram simulator")} lede={t("Posts the same updates Telegram would to the real bot code. Try sending a Reel link, then “pending”.")} />
       <ConsoleNav />
       <Loaded state={st}>
         {(d) => (
           <div className="mx-auto max-w-lg rounded-xl border border-rule bg-sunk p-3">
             <p className="num mb-3 text-center text-xs text-ink-2">
-              chat {d.chat} · {d.linked ? "linked to a shopper" : "not linked: send “/start everyday-<code>” from Things I own"} · {d.live ? "bot token present" : "no bot token: simulator only"}
+              {tn("chat {0} · {1} · {2}", d.chat, d.linked ? t("linked to a shopper") : t("not linked: send “/start everyday-<code>” from Things I own"), d.live ? t("bot token present") : t("no bot token: simulator only"))}
             </p>
             <ol className="flex flex-col gap-2">
               {d.messages.map((m, k) => (
@@ -387,7 +388,7 @@ export function Telegram() {
                   )}
                 </li>
               ))}
-              {!d.messages.length && <li className="text-center text-sm text-ink-2">No messages yet.</li>}
+              {!d.messages.length && <li className="text-center text-sm text-ink-2">{t("No messages yet.")}</li>}
             </ol>
             <form
               className="mt-3 flex gap-2"
@@ -397,10 +398,10 @@ export function Telegram() {
               }}
             >
               <Label htmlFor="tg" className="sr-only">
-                Message
+                {t("Message")}
               </Label>
-              <Input id="tg" value={text} onChange={(e) => setText(e.target.value)} placeholder="Message the bot" className="min-h-11 bg-card" required />
-              <Button type="submit" disabled={Boolean(busy) || !text.trim()} aria-label="Send">
+              <Input id="tg" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Message the bot")} className="min-h-11 bg-card" required />
+              <Button type="submit" disabled={Boolean(busy) || !text.trim()} aria-label={t("Send")}>
                 <Busy on={busy === "send"}>
                   <Send className="size-4" />
                 </Busy>

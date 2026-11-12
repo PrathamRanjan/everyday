@@ -6,12 +6,14 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/copy-mediapipe.mjs && tsc -b && vite build",
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource-variable/noto-sans-devanagari": "^5.3.0",
     "@fontsource-variable/public-sans": "^5.3.0",
+    "@mediapipe/tasks-vision": "1.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

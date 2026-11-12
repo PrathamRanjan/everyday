@@ -4,6 +4,7 @@ import { Empty, Loaded, PageHead, Panel, State } from "@/components/kit";
 import { useApi } from "@/lib/api";
 import { when } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { t, tn } from "@/i18n";
 
 interface Run { id: string; subject: string; actor: string; agent_id: string | null; status: string; started_at: string; ended_at: string | null; entity: string | null; entity_id: string | null; steps?: number }
 interface Step { step: number; actor: string; tool: string | null; args: unknown; policy: string | null; gate: string | null; result: unknown; pp_request_id: string | null; pp_debug_id: string | null; duration_ms: number | null; at: string }
@@ -14,7 +15,7 @@ export default function Traces() {
     <Loaded state={st}>
       {(d) => (
         <div className="ev-rise">
-          <PageHead eyebrow="What the assistant did" title="Every step, on the record" lede="Each run shows who acted — the model, code, the gate or PayPal — what the gate said, and PayPal's request id so it can be matched in the sandbox." />
+          <PageHead eyebrow={t("What the assistant did")} title={t("Every step, on the record")} lede={t("Each run shows who acted — the model, code, the gate or PayPal — what the gate said, and PayPal's request id so it can be matched in the sandbox.")} />
           <Panel tight>
             {d.runs.length ? (
               <ul className="divide-y divide-rule">
@@ -25,7 +26,7 @@ export default function Traces() {
                         <span className="block truncate font-medium">{r.subject}</span>
                         <span className="num block text-xs text-ink-2">
                           {r.actor} · {when(r.started_at)}
-                          {r.steps !== undefined ? ` · ${r.steps} steps` : ""}
+                          {r.steps !== undefined ? t(" · {0} steps", r.steps) : ""}
                         </span>
                       </span>
                       <State s={r.status} />
@@ -36,7 +37,7 @@ export default function Traces() {
               </ul>
             ) : (
               <div className="p-4 sm:p-5">
-                <Empty title="No runs yet.">Plans, checkouts, refunds and repeat buys each leave a trace here.</Empty>
+                <Empty title={t("No runs yet.")}>{t("Plans, checkouts, refunds and repeat buys each leave a trace here.")}</Empty>
               </div>
             )}
           </Panel>
@@ -70,23 +71,22 @@ export function Trace() {
         return (
           <div className="ev-rise">
             <Link to="/traces" className="mb-4 inline-flex min-h-11 items-center gap-1 text-sm text-ink-2 hover:text-ink">
-              <ArrowLeft className="size-4" /> All runs
+              <ArrowLeft className="size-4" />{" "}{t("All runs")}
             </Link>
             <PageHead
               eyebrow={
                 <span className="inline-flex flex-wrap items-center gap-2">
                   {r.actor}
-                  {r.agent_id && <span className="id">{r.agent_id}</span>} · started {when(r.started_at)}
-                  {r.ended_at && ` · ended ${when(r.ended_at)}`}
+                  {r.agent_id && <span className="id">{r.agent_id}</span>}{" "}{tn("· started {0}{1}", when(r.started_at), r.ended_at && t(" · ended {0}", when(r.ended_at)))}
                   <State s={r.status} />
                 </span>
               }
               title={r.subject}
-              lede="Secrets and image bytes are redacted."
+              lede={t("Secrets and image bytes are redacted.")}
               actions={
                 back !== "/traces" ? (
                   <Link to={back} className="text-sm font-semibold underline underline-offset-4">
-                    Open {r.entity === "intent" ? "the plan" : r.entity === "order" ? "the order" : "it"}
+                    {tn("Open {0}", r.entity === "intent" ? t("the plan") : r.entity === "order" ? t("the order") : t("it"))}
                   </Link>
                 ) : undefined
               }
@@ -103,7 +103,7 @@ export function Trace() {
                         {s.tool && <span className="font-medium">{s.tool}</span>}
                         <span className="num ml-auto text-xs text-ink-2">
                           #{s.step}
-                          {s.duration_ms !== null ? ` · ${s.duration_ms} ms` : ""}
+                          {s.duration_ms !== null ? t(" · {0} ms", s.duration_ms) : ""}
                         </span>
                       </div>
                       {s.gate && s.gate !== "n/a" && (
@@ -114,13 +114,12 @@ export function Trace() {
                       )}
                       {s.pp_request_id && (
                         <p className="id mt-1 text-xs text-ink-2">
-                          PayPal request {s.pp_request_id}
-                          {s.pp_debug_id ? ` · debug ${s.pp_debug_id}` : ""}
+                          {tn("PayPal request {0}{1}", s.pp_request_id, s.pp_debug_id ? t(" · debug {0}", s.pp_debug_id) : "")}
                         </p>
                       )}
                       {(show(s.args) || show(s.result)) && (
                         <details className="mt-2" data-detail>
-                          <summary className="min-h-9 cursor-pointer text-xs font-semibold">Details</summary>
+                          <summary className="min-h-9 cursor-pointer text-xs font-semibold">{t("Details")}</summary>
                           {show(s.args) && <pre className="mt-1 max-h-48 overflow-auto rounded bg-sunk p-2 text-[11px] whitespace-pre-wrap">{show(s.args)}</pre>}
                           {show(s.result) && <pre className="mt-1 max-h-48 overflow-auto rounded bg-sunk p-2 text-[11px] whitespace-pre-wrap">{show(s.result)}</pre>}
                         </details>

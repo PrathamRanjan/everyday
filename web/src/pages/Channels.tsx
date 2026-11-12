@@ -12,6 +12,7 @@ import { when } from "@/lib/format";
 import { subscribePush } from "@/lib/passkey";
 import { Devices } from "@/components/Devices";
 import { cn } from "@/lib/utils";
+import { t, tn } from "@/i18n";
 
 interface ChannelsData {
   address: string;
@@ -35,12 +36,12 @@ export default function Channels() {
     <Loaded state={st}>
       {(d) => (
         <div className="ev-rise">
-          <PageHead eyebrow="Messages" title="Messages and alerts" lede="Approvals, delays, price drops and refunds reach you with buttons. This log shows exactly what each channel sent." />
+          <PageHead eyebrow={t("Messages")} title={t("Messages and alerts")} lede={t("Approvals, delays, price drops and refunds reach you with buttons. This log shows exactly what each channel sent.")} />
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-            <Panel title={d.simulator ? "Message log and simulator" : "Your messages"} sub={d.simulator ? "Demo only: view and reply as any party, with the same code the phone channels use." : undefined}>
+            <Panel title={d.simulator ? t("Message log and simulator") : t("Your messages")} sub={d.simulator ? t("Demo only: view and reply as any party, with the same code the phone channels use.") : undefined}>
               {d.simulator && d.addresses.length > 0 && (
                 <div className="mb-4 grid gap-1.5">
-                  <Label htmlFor="addr">Conversation</Label>
+                  <Label htmlFor="addr">{t("Conversation")}</Label>
                   <Select value={d.address} onValueChange={(v) => setSp({ address: v })}>
                     <SelectTrigger id="addr" className="min-h-11 w-full bg-card sm:w-80">
                       <SelectValue />
@@ -56,16 +57,16 @@ export default function Channels() {
                 </div>
               )}
               {d.messages.length ? (
-                <ol className="flex flex-col-reverse gap-3" aria-label="Messages, newest last">
+                <ol className="flex flex-col-reverse gap-3" aria-label={t("Messages, newest last")}>
                   {d.messages.map((m) => (
                     <li key={m.id} className={cn("max-w-[88%] rounded-lg border p-3 text-sm", m.direction === "out" ? "self-start border-rule bg-card" : "self-end border-ink/20 bg-sunk")}>
                       <p className="num mb-1 text-[11px] text-ink-2">
-                        {m.channel} · {m.direction === "in" ? "received" : "sent"} · {when(m.created_at)} · {m.status}
+                        {m.channel} · {m.direction === "in" ? t("received") : t("sent")} · {when(m.created_at)} · {m.status}
                       </p>
                       {m.flag && (
                         <p role="alert" className={cn("mb-1 flex gap-1.5 text-xs font-semibold", m.flag.serious ? "text-stop" : "text-wait")}>
                           <ShieldAlert className="size-3.5 shrink-0" />
-                          This message {m.flag.words.join(", and ")}. Everyday only acts on its own buttons and commands.
+                          {tn("This message {0}. Everyday only acts on its own buttons and commands.", m.flag.words.join(", and "))}
                         </p>
                       )}
                       <p className="break-words whitespace-pre-wrap">{m.body}</p>
@@ -82,8 +83,8 @@ export default function Channels() {
                   ))}
                 </ol>
               ) : (
-                <Empty icon={<MessageSquare className="size-6" />} title="No messages yet.">
-                  When a plan is ready, a delivery slips or a refund lands, the message appears here.
+                <Empty icon={<MessageSquare className="size-6" />} title={t("No messages yet.")}>
+                  {t("When a plan is ready, a delivery slips or a refund lands, the message appears here.")}
                 </Empty>
               )}
               {d.address && (
@@ -95,10 +96,10 @@ export default function Channels() {
                   }}
                 >
                   <Label htmlFor="reply" className="sr-only">
-                    Reply
+                    {t("Reply")}
                   </Label>
-                  <Input id="reply" value={text} onChange={(e) => setText(e.target.value)} maxLength={500} required placeholder="Reply (try: pending, orders, watch, stop, cases)" className="min-h-11 bg-card" />
-                  <Button type="submit" disabled={Boolean(busy) || !text.trim()} aria-label="Send">
+                  <Input id="reply" value={text} onChange={(e) => setText(e.target.value)} maxLength={500} required placeholder={t("Reply (try: pending, orders, watch, stop, cases)")} className="min-h-11 bg-card" />
+                  <Button type="submit" disabled={Boolean(busy) || !text.trim()} aria-label={t("Send")}>
                     <Busy on={busy === "reply"}>
                       <Send className="size-4" />
                     </Busy>
@@ -108,20 +109,20 @@ export default function Channels() {
             </Panel>
             <aside className="space-y-6">
               {d.who !== "console" && (
-                <Panel title="On your phone">
+                <Panel title={t("On your phone")}>
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <span>Telegram</span>
-                      <State s={d.telegram_linked ? "active" : d.telegram_ready ? "pending" : "stale"} label={d.telegram_linked ? "connected" : d.telegram_ready ? "not connected" : "bot not configured here"} />
+                      <span>{t("Telegram")}</span>
+                      <State s={d.telegram_linked ? "active" : d.telegram_ready ? "pending" : "stale"} label={d.telegram_linked ? "connected" : d.telegram_ready ? t("not connected") : t("bot not configured here")} />
                     </div>
                     {d.telegram_ready && (
                       <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => run("tg", "/connect/telegram")}>
-                        <Send className="size-4" /> {d.telegram_linked ? "Connect another chat" : "Connect Telegram"}
+                        <Send className="size-4" /> {d.telegram_linked ? t("Connect another chat") : t("Connect Telegram")}
                       </Button>
                     )}
                     <div className="flex items-center justify-between gap-2 border-t border-rule pt-3">
-                      <span>Browser notifications</span>
-                      <State s={d.push_ready ? "pending" : "stale"} label={d.push_ready ? "available" : "not configured here"} />
+                      <span>{t("Browser notifications")}</span>
+                      <State s={d.push_ready ? "pending" : "stale"} label={d.push_ready ? "available" : t("not configured here")} />
                     </div>
                     {d.push_ready && "serviceWorker" in navigator && (
                       <Button
@@ -142,7 +143,7 @@ export default function Channels() {
                         <Busy on={pushBusy}>
                           <Bell className="size-4" />
                         </Busy>
-                        Turn on notifications
+                        {t("Turn on notifications")}
                       </Button>
                     )}
                   </div>

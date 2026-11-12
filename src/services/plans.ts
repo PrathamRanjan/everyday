@@ -11,6 +11,7 @@ import { accountById, J, logEvent, notify, nowOf, selfRecipient, type Account } 
 import { catalog, CATEGORY_LABEL, type Product } from "./catalog.js";
 import { featuresOf, medianPrice, modelFor, recordChoice } from "./ml.js";
 import { dateForDay, readRequest, type Reading, type RequestRead } from "../ai/request.js";
+import { budgetCentsAnyLang, dateFromDay, dayAnyLang } from "../i18n/parse.js";
 import { tick } from "./checklist.js";
 
 // ---------- Parsing a goal ----------
@@ -48,7 +49,12 @@ export interface Reqs {
 export function parseGoal(text: string, now: Date) {
   const t = text.toLowerCase();
   const budget = t.match(/(?:\$\s?|budget(?: of)?\s?\$?|under\s\$?|for\s\$)(\d[\d,]*)(?:\.\d{2})?\b/);
-  const budget_cents = budget ? Number(budget[1].replace(/,/g, "")) * 100 : null;
+  // B3.2: a budget or a day in Hindi, Bahasa Indonesia or Portuguese is read by code too.
+  // "R$ 300" is reais, not dollars: a budget in another currency is reported, never read as dollars.
+  const other = budgetCentsAnyLang(text);
+  const foreign_currency = other.foreign;
+  // The careful reader (decimal commas, US$) wins when it found an amount; "budget of 80" is left to the English one.
+  const budget_cents = foreign_currency ? null : (other.cents ?? (budget ? Number(budget[1].replace(/,/g, "")) * 100 : null));
   let deadline: string | null = null;
   const d = t.match(new RegExp(`\\b(?:by|before|on|for)?\\s*(this |next )?(${DAYS.join("|")})\\b`));
   if (d) {
@@ -56,6 +62,10 @@ export function parseGoal(text: string, now: Date) {
     if (d[1]?.trim() === "next" && delta < 7) delta += 7;
     deadline = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + delta)).toISOString().slice(0, 10);
   } else if (/\btomorrow\b/.test(t)) deadline = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)).toISOString().slice(0, 10);
+  else {
+    const any = dayAnyLang(text);
+    if (any) deadline = dateFromDay(any, now);
+  }
   const owned: string[] = [];
   for (const m of t.matchAll(/\b(?:already (?:own|have)|i (?:own|have|got)|we have|keep(?:ing)? my(?: existing)?)\s+(?:an?\s+|my\s+|the\s+)?([a-z ]{3,30}?)(?:[.,;!]|$| and | but )/g)) {
     const hit = CAT_WORDS.find(([re]) => re.test(m[1]));
@@ -71,7 +81,7 @@ export function parseGoal(text: string, now: Date) {
   const style_words = ["wood", "oak", "black", "white", "minimal", "warm", "cosy", "cozy", "quiet", "playful", "premium", "compact"].filter((w) => t.includes(w));
   // Items the person names are what gets planned; the full desk template is only for an open "set up my desk" ask.
   const named = cats.length > 0 && !(setup && cats.length >= 3);
-  return { mentioned, goal: (setup && !named ? "desk_setup" : "single") as Reqs["goal"], budget_cents, deadline, owned, replace, categories: named ? cats : setup ? [] : cats, require_ergonomic: /\b(comfortable|comfort|ergonomic|back pain|posture|long hours)\b/.test(t), style_words, recipient: t.match(/\bfor my (sister|brother|mum|mom|dad|friend|partner|son|daughter)\b/)?.[1] ?? null };
+  return { mentioned, foreign_currency, goal: (setup && !named ? "desk_setup" : "single") as Reqs["goal"], budget_cents, deadline, owned, replace, categories: named ? cats : setup ? [] : cats, require_ergonomic: /\b(comfortable|comfort|ergonomic|back pain|posture|long hours)\b/.test(t), style_words, recipient: t.match(/\bfor my (sister|brother|mum|mom|dad|friend|partner|son|daughter)\b/)?.[1] ?? null };
 }
 
 // ---------- Context ----------
@@ -158,6 +168,8 @@ export async function createIntent(account: Account, input: { text: string; capt
     const g = m
       ? { ...parseGoal("", now), goal: "single" as Reqs["goal"], categories: [m.category], mentioned: [m.category], budget_cents: m.budget_cents, deadline: m.deadline, style_words: [] as string[] }
       : parseGoal(text, now);
+    // No silent guess: this demo's shop charges in US dollars, so a budget in another currency is sent back.
+    if ((g as { foreign_currency?: string | null }).foreign_currency && !g.budget_cents) throw new GtError(`This demo's shop charges in US dollars, so give the budget in dollars, like “under $80” (you wrote it in ${(g as { foreign_currency?: string | null }).foreign_currency}).`, "invalid");
     if (read.reader === "model") {
       g.owned = [...new Set([...g.owned, ...read.owns])];
       g.replace = [...new Set([...g.replace, ...read.replace])];

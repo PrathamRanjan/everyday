@@ -8,9 +8,12 @@ import { App } from "./App";
 import { PrefsProvider } from "./lib/prefs";
 import { SessionProvider } from "./lib/session";
 import { registerSW } from "./lib/passkey";
+import { initLang, useLang } from "./i18n";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+/** B1.3: the root follows the language; because the tree is created here, every screen re-renders in place. */
+function Root() {
+  useLang();
+  return (
     <BrowserRouter>
       <PrefsProvider>
         <SessionProvider>
@@ -18,6 +21,14 @@ createRoot(document.getElementById("root")!).render(
         </SessionProvider>
       </PrefsProvider>
     </BrowserRouter>
-  </StrictMode>,
+  );
+}
+
+void initLang().then(() =>
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <Root />
+    </StrictMode>,
+  ),
 );
 void registerSW();

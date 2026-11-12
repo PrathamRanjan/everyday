@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAction, useApi } from "@/lib/api";
 import { day, money, words } from "@/lib/format";
+import { t, tn } from "@/i18n";
 
 interface PassportData {
   summary: {
@@ -43,30 +44,30 @@ export default function Passport() {
         const pick = d.buyable.find((b) => b.id === product);
         return (
           <div className="ev-rise">
-            <PageHead eyebrow="Wallet and repeat buys" title="Your PayPal, saved once" lede="Save PayPal once for repeat buys. Each one still passes your rules; above your approval line it waits for you." />
+            <PageHead eyebrow={t("Wallet and repeat buys")} title={t("Your PayPal, saved once")} lede={t("Save PayPal once for repeat buys. Each one still passes your rules; above your approval line it waits for you.")} />
             <div className="grid gap-6 lg:grid-cols-2">
-              <Panel title={<span className="inline-flex items-center gap-2"><Wallet className="size-5" />Saved PayPal</span>} sub="PayPal Vault (sandbox). Everyday stores a token, never your login or card.">
+              <Panel title={<span className="inline-flex items-center gap-2"><Wallet className="size-5" />{t("Saved PayPal")}</span>} sub={t("PayPal Vault (sandbox). Everyday stores a token, never your login or card.")}>
                 {d.vault?.status === "active" ? (
                   <div className="flex flex-wrap items-center gap-3">
                     <State s="active" label="saved" />
                     <span className="id text-sm text-ink-2" data-detail>
-                      token …{d.vault.last4}
+                      {tn("token …{0}", d.vault.last4)}
                     </span>
                     <Button size="sm" variant="outline" className="ml-auto" disabled={Boolean(busy)} onClick={() => run("rev", "/passport/vault/revoke", undefined, { stay: true })}>
-                      <Busy on={busy === "rev"}>{null}</Busy>Remove
+                      <Busy on={busy === "rev"}>{null}</Busy>{t("Remove")}
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <PayPalButton busy={busy === "vault"} onClick={() => run("vault", "/passport/vault")}>
-                      Save PayPal for repeat buys
+                      {t("Save PayPal for repeat buys")}
                     </PayPalButton>
-                    <p className="text-xs text-ink-2">You'll approve on PayPal's sandbox and come back here.</p>
+                    <p className="text-xs text-ink-2">{t("You'll approve on PayPal's sandbox and come back here.")}</p>
                   </div>
                 )}
               </Panel>
 
-              <Panel title={<span className="inline-flex items-center gap-2"><Repeat className="size-5" />Buy again</span>} sub="Runs through the same gate as everything else: kill switch, limits, your approval line, scam rules.">
+              <Panel title={<span className="inline-flex items-center gap-2"><Repeat className="size-5" />{t("Buy again")}</span>} sub={t("Runs through the same gate as everything else: kill switch, limits, your approval line, scam rules.")}>
                 <form
                   className="grid gap-3 sm:grid-cols-[1fr_5rem_auto] sm:items-end"
                   onSubmit={(e) => {
@@ -75,10 +76,10 @@ export default function Passport() {
                   }}
                 >
                   <div className="grid gap-1.5">
-                    <Label htmlFor="rb-p">Product</Label>
+                    <Label htmlFor="rb-p">{t("Product")}</Label>
                     <Select value={product} onValueChange={setProduct}>
                       <SelectTrigger id="rb-p" className="min-h-11 w-full bg-card">
-                        <SelectValue placeholder="Choose…" />
+                        <SelectValue placeholder={t("Choose…")} />
                       </SelectTrigger>
                       <SelectContent>
                         {d.buyable.map((b) => (
@@ -90,15 +91,15 @@ export default function Passport() {
                     </Select>
                   </div>
                   <div className="grid gap-1.5">
-                    <Label htmlFor="rb-q">Qty</Label>
+                    <Label htmlFor="rb-q">{t("Qty")}</Label>
                     <Input id="rb-q" type="number" min={1} max={20} inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} className="num min-h-11 bg-card" />
                   </div>
                   <Button type="submit" disabled={!product || Boolean(busy) || d.vault?.status !== "active"}>
                     <Busy on={busy === "rep"}>{null}</Busy>
-                    {pick ? `Buy for ${money(pick.price_cents * Math.max(1, Number(qty) || 1))}` : "Buy again"}
+                    {pick ? t("Buy for {0}", money(pick.price_cents * Math.max(1, Number(qty) || 1))) : t("Buy again")}
                   </Button>
                 </form>
-                {d.vault?.status !== "active" && <p className="mt-2 text-xs text-ink-2">Save PayPal first.</p>}
+                {d.vault?.status !== "active" && <p className="mt-2 text-xs text-ink-2">{t("Save PayPal first.")}</p>}
                 {d.repeats.length > 0 && (
                   <ul className="mt-4 divide-y divide-rule border-t border-rule text-sm">
                     {d.repeats.map((r) => (
@@ -114,18 +115,18 @@ export default function Passport() {
                 )}
               </Panel>
 
-              <TrustStrip className="lg:col-span-2" ai="Not involved in repeat buys." code="Checks your rules and approval line, then holds or refuses before PayPal." paypal="Charges the saved PayPal and returns a capture Everyday reads back." />
+              <TrustStrip className="lg:col-span-2" ai={t("Not involved in repeat buys.")} code={t("Checks your rules and approval line, then holds or refuses before PayPal.")} paypal={t("Charges the saved PayPal and returns a capture Everyday reads back.")} />
 
-              <Panel title="This year, in numbers" sub="Seeded demo history for Maya plus this demo's real sandbox orders." className="lg:col-span-2">
+              <Panel title={t("This year, in numbers")} sub={t("Seeded demo history for Maya plus this demo's real sandbox orders.")} className="lg:col-span-2">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <Stat label="Spent (seeded)" value={money(d.summary.spent)} />
-                  <Stat label="Got back (seeded)" value={money(d.summary.back)} tone="done" />
-                  <Stat label="Paid on PayPal here" value={money(d.summary.live.paid_live)} hint="real sandbox captures" />
-                  <Stat label="Refunded on PayPal here" value={money(d.summary.live.refunded_live)} tone="done" hint="read back from PayPal" />
+                  <Stat label={t("Spent (seeded)")} value={money(d.summary.spent)} />
+                  <Stat label={t("Got back (seeded)")} value={money(d.summary.back)} tone="done" />
+                  <Stat label={t("Paid on PayPal here")} value={money(d.summary.live.paid_live)} hint={t("real sandbox captures")} />
+                  <Stat label={t("Refunded on PayPal here")} value={money(d.summary.live.refunded_live)} tone="done" hint={t("read back from PayPal")} />
                 </div>
                 <div className="mt-5 grid gap-6 md:grid-cols-2">
                   <div>
-                    <h3 className="text-sm font-semibold">By kind</h3>
+                    <h3 className="text-sm font-semibold">{t("By kind")}</h3>
                     <ul className="mt-2 space-y-1.5">
                       {d.summary.by_category.map(([c, cents]) => (
                         <li key={c} className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-2 text-sm">
@@ -139,7 +140,7 @@ export default function Passport() {
                     </ul>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold">Money back, by how</h3>
+                    <h3 className="text-sm font-semibold">{t("Money back, by how")}</h3>
                     <ul className="mt-2 space-y-1.5 text-sm">
                       {d.summary.recovered.map((r) => (
                         <li key={r.kind} className="flex justify-between gap-2">
@@ -153,7 +154,7 @@ export default function Passport() {
                   </div>
                 </div>
                 <details className="mt-4 text-sm" data-detail>
-                  <summary className="min-h-9 cursor-pointer font-semibold">Every purchase ({d.summary.history.length})</summary>
+                  <summary className="min-h-9 cursor-pointer font-semibold">{tn("Every purchase ({0})", d.summary.history.length)}</summary>
                   <ul className="mt-2 divide-y divide-rule">
                     {d.summary.history.map((h) => (
                       <li key={h.id} className="grid grid-cols-[4.5rem_1fr_auto] gap-2 py-1.5">
@@ -177,13 +178,13 @@ export default function Passport() {
               </Panel>
 
               {d.recalls.length > 0 && (
-                <Panel title={<span className="inline-flex items-center gap-2 text-stop"><Siren className="size-5" />Recalls</span>}>
+                <Panel title={<span className="inline-flex items-center gap-2 text-stop"><Siren className="size-5" />{t("Recalls")}</span>}>
                   <ul className="space-y-2 text-sm">
                     {d.recalls.map((r, k) => (
                       <li key={k}>
                         <b>{r.item}</b>: {r.remedy}.{" "}
                         <a className="underline" href={r.url} target="_blank" rel="noopener nofollow noreferrer">
-                          Notice
+                          {t("Notice")}
                         </a>
                       </li>
                     ))}
@@ -191,7 +192,7 @@ export default function Passport() {
                 </Panel>
               )}
 
-              <Panel title="Look it up elsewhere" sub={d.channel3 ? "Live product search (Channel3). Results are links to buy with that shop, not here." : "No Channel3 key on this server: seeded catalog results."}>
+              <Panel title={t("Look it up elsewhere")} sub={d.channel3 ? t("Live product search (Channel3). Results are links to buy with that shop, not here.") : t("No Channel3 key on this server: seeded catalog results.")}>
                 <form
                   role="search"
                   className="flex gap-2"
@@ -201,10 +202,10 @@ export default function Passport() {
                   }}
                 >
                   <Label htmlFor="ext-q" className="sr-only">
-                    Search other shops
+                    {t("Search other shops")}
                   </Label>
-                  <Input id="ext-q" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="logitech mx master" className="min-h-11 bg-card" />
-                  <Button type="submit" variant="outline" aria-label="Search">
+                  <Input id="ext-q" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={t("logitech mx master")} className="min-h-11 bg-card" />
+                  <Button type="submit" variant="outline" aria-label={t("Search")}>
                     <Search className="size-4" />
                   </Button>
                 </form>
@@ -231,7 +232,7 @@ export default function Passport() {
                         ))}
                       </ul>
                     ) : (
-                      <Empty title="No results." />
+                      <Empty title={t("No results.")} />
                     )}
                   </>
                 )}

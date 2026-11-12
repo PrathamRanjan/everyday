@@ -1,6 +1,7 @@
 import { useId, useMemo } from "react";
 import { day, daysBetween, toDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { t, tn } from "@/i18n";
 
 /** Money and item states share one visual language (DESIGN_BRIEF.md). */
 export type Tone = "now" | "wait" | "done" | "back" | "stop" | "plain";
@@ -72,7 +73,7 @@ export function Lifeline({ marks, bands = [], today, deadline, compact = false, 
   const progressTo = Math.max(PAD, ...lastDone, Math.min(tx, W - PAD));
 
   return (
-    <figure className={cn("rail-scroll -mx-1 px-1", className)} data-lifeline tabIndex={0} role="group" aria-label="Timeline (scrolls sideways on small screens)">
+    <figure className={cn("rail-scroll -mx-1 px-1", className)} data-lifeline tabIndex={0} role="group" aria-label={t("Timeline (scrolls sideways on small screens)")}>
       <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full min-w-[520px]" role="img" aria-labelledby={`${uid}-t`}>
         <title id={`${uid}-t`}>{summary}</title>
         {/* the rail */}
@@ -90,7 +91,7 @@ export function Lifeline({ marks, bands = [], today, deadline, compact = false, 
           <g>
             <line x1={model.x(deadline)} x2={model.x(deadline)} y1={RAIL_Y - 16} y2={RAIL_Y + 8} stroke="var(--now)" strokeWidth={1.5} strokeDasharray="3 3" />
             <text x={model.x(deadline)} y={RAIL_Y - 20} textAnchor="middle" fontSize={11} fill="var(--now)" className="num" fontWeight={600}>
-              need by {day(deadline)}
+              {tn("need by {0}", day(deadline))}
             </text>
           </g>
         )}
@@ -121,7 +122,7 @@ export function Lifeline({ marks, bands = [], today, deadline, compact = false, 
           <line x1={tx} x2={tx} y1={RAIL_Y - 12} y2={H - 16} stroke="var(--ink)" strokeWidth={1} opacity={0.5} />
           <rect x={Math.min(W - 42, Math.max(2, tx - 20))} y={H - 16} width={40} height={14} rx={7} fill="var(--ink)" />
           <text x={Math.min(W - 22, Math.max(22, tx))} y={H - 6} textAnchor="middle" fontSize={9.5} fill="var(--paper)" fontWeight={700} letterSpacing={0.6}>
-            TODAY
+            {t("TODAY")}
           </text>
         </g>
         {/* marks */}

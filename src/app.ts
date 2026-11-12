@@ -22,6 +22,8 @@ import { adminRoutes } from "./web/admin.js";
 import { demoRoutes } from "./web/demo.js";
 import { wsOfRequest } from "./web/auth.js";
 import { withWs } from "./ws.js";
+import { currentWireLang, langOfRequest, withLang } from "./i18n/index.js";
+import { displayDeep } from "./i18n/display.js";
 import { touchWorkspace } from "./services/workspaces.js";
 import { serveApp, uiBridge } from "./web/spa.js";
 
@@ -75,7 +77,18 @@ export function createApp() {
     wsOfRequest(req).then(
       (ws) => {
         if (ws) void touchWorkspace(ws).catch(() => undefined);
-        withWs(ws, next);
+        withWs(ws, () =>
+          withLang(langOfRequest(req), () => {
+            // The same URL answers in different languages: no cache may hand one language's answer to another request.
+            if (req.path.startsWith("/api/")) res.set({ Vary: "x-everyday-lang, Cookie, Accept-Language", "Cache-Control": "private, no-store", "x-everyday-lang": currentWireLang(), "Access-Control-Expose-Headers": "x-everyday-lang" });
+            // B3.3: every JSON answer's display fields go out in the shopper's language (stored records stay English).
+            if (currentWireLang() !== "en") {
+              const json = res.json.bind(res);
+              res.json = (body: unknown) => json(displayDeep(body));
+            }
+            next();
+          }),
+        );
       },
       next,
     );

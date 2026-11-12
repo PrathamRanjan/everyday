@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { t } from "@/i18n";
 import { Shell } from "@/components/Shell";
 import { PageSkeleton } from "@/components/kit";
 import { useFlash } from "@/lib/api";
@@ -102,7 +103,7 @@ export function App() {
           </Routes>
         </Suspense>
       </Shell>
-      <Toaster />
+      <Toaster containerAriaLabel={t("Notifications")} />
     </>
   );
 }

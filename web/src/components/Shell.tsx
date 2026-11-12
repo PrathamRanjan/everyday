@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
+import { LangPicker } from "./LangPicker";
 import { toast } from "sonner";
 import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, ReceiptText, RotateCcw, Route, ShieldCheck, ShoppingBag, Sun, SunMoon, Wallet, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { usePrefs } from "@/lib/prefs";
 import { postAction } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { startTour } from "@/tours/tours";
+import { t } from "@/i18n";
 
 type Item = { to: string; label: string; icon: ReactNode; tour?: string; badge?: number };
 
@@ -18,44 +20,44 @@ function navFor(kind: "shopper" | "merchant" | null, needs: number): { main: Ite
   if (kind === "shopper")
     return {
       main: [
-        { to: "/today", label: "Today", icon: <CalendarClock />, tour: "nav-today", badge: needs },
-        { to: "/discover", label: "Find", icon: <Compass />, tour: "nav-discover" },
-        { to: "/plans", label: "Plans", icon: <Map />, tour: "nav-plans" },
-        { to: "/purchases", label: "Bought", icon: <ShoppingBag />, tour: "nav-purchases" },
+        { to: "/today", label: t("Today"), icon: <CalendarClock />, tour: "nav-today", badge: needs },
+        { to: "/discover", label: t("Find"), icon: <Compass />, tour: "nav-discover" },
+        { to: "/plans", label: t("Plans"), icon: <Map />, tour: "nav-plans" },
+        { to: "/purchases", label: t("Bought"), icon: <ShoppingBag />, tour: "nav-purchases" },
       ],
       more: [
-        { to: "/you", label: "Things I own", icon: <Package /> },
-        { to: "/receipts", label: "Add a receipt", icon: <ReceiptText /> },
-        { to: "/passport", label: "Wallet and repeat buys", icon: <Wallet /> },
-        { to: "/guard", label: "Rules and approvals", icon: <Gavel />, tour: "nav-guard" },
-        { to: "/safety", label: "Scam protection", icon: <ShieldCheck /> },
-        { to: "/channels", label: "Messages", icon: <MessageSquare /> },
-        { to: "/traces", label: "What the assistant did", icon: <Route /> },
+        { to: "/you", label: t("Things I own"), icon: <Package /> },
+        { to: "/receipts", label: t("Add a receipt"), icon: <ReceiptText /> },
+        { to: "/passport", label: t("Wallet and repeat buys"), icon: <Wallet /> },
+        { to: "/guard", label: t("Rules and approvals"), icon: <Gavel />, tour: "nav-guard" },
+        { to: "/safety", label: t("Scam protection"), icon: <ShieldCheck /> },
+        { to: "/channels", label: t("Messages"), icon: <MessageSquare /> },
+        { to: "/traces", label: t("What the assistant did"), icon: <Route /> },
       ],
     };
   if (kind === "merchant")
     return {
       main: [
-        { to: "/merchant", label: "Orders", icon: <Inbox />, badge: 0 },
-        { to: "/merchant/money", label: "Money", icon: <Wallet /> },
-        { to: "/merchant/approvals", label: "Approvals", icon: <Gavel />, badge: needs },
-        { to: "/channels", label: "Messages", icon: <MessageSquare /> },
+        { to: "/merchant", label: t("Orders"), icon: <Inbox />, badge: 0 },
+        { to: "/merchant/money", label: t("Money"), icon: <Wallet /> },
+        { to: "/merchant/approvals", label: t("Approvals"), icon: <Gavel />, badge: needs },
+        { to: "/channels", label: t("Messages"), icon: <MessageSquare /> },
       ],
-      more: [{ to: "/traces", label: "What the assistant did", icon: <Route /> }],
+      more: [{ to: "/traces", label: t("What the assistant did"), icon: <Route /> }],
     };
   return { main: [], more: [] };
 }
 
 const DEMO_LINKS: Item[] = [
-  { to: "/judge", label: "Judge mode", icon: <PlayCircle /> },
-  { to: "/demo", label: "Demo controls", icon: <RotateCcw /> },
-  { to: "/console", label: "Operator console", icon: <FlaskConical /> },
+  { to: "/judge", get label() { return t("Judge mode"); }, icon: <PlayCircle /> },
+  { to: "/demo", get label() { return t("Demo controls"); }, icon: <RotateCcw /> },
+  { to: "/console", get label() { return t("Operator console"); }, icon: <FlaskConical /> },
 ];
 
 function Badge({ n }: { n?: number }) {
   if (!n) return null;
   return (
-    <span className="num ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-now px-1.5 text-[11px] font-bold text-paper" aria-label={`${n} need you`}>
+    <span className="num ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-now px-1.5 text-[11px] font-bold text-paper" aria-label={t("{0} need you", n)}>
       {n}
     </span>
   );
@@ -71,7 +73,7 @@ export function Wordmark({ className }: { className?: string }) {
         <circle cx="15" cy="7" r="3.5" fill="var(--now)" />
         <circle cx="24" cy="7" r="2.5" fill="var(--card)" stroke="var(--ink-2)" strokeWidth="1.4" />
       </svg>
-      Everyday
+      {t("Everyday")}
     </span>
   );
 }
@@ -81,7 +83,7 @@ export function ThemeToggle() {
   const next = prefs.theme === "system" ? "light" : prefs.theme === "light" ? "dark" : "system";
   const Icon = prefs.theme === "light" ? Sun : prefs.theme === "dark" ? Moon : SunMoon;
   return (
-    <Button variant="ghost" size="icon-sm" onClick={() => set({ theme: next })} aria-label={`Theme: ${prefs.theme}. Switch to ${next}.`} title={`Theme: ${prefs.theme}`}>
+    <Button variant="ghost" size="icon-sm" onClick={() => set({ theme: next })} aria-label={t("Theme: {0}. Switch to {1}.", prefs.theme, next)} title={t("Theme: {0}", prefs.theme)}>
       <Icon className="size-4" />
     </Button>
   );
@@ -101,7 +103,7 @@ function DemoRibbon() {
     setBusy(k);
     try {
       const r = await postAction(path, data);
-      toast.success(r.ok ?? "Done");
+      toast.success(r.ok ?? t("Done"));
       await refresh();
       window.dispatchEvent(new Event("ev:changed"));
       if (k === "reset") nav("/today");
@@ -115,13 +117,13 @@ function DemoRibbon() {
   return (
     <div data-tour="ribbon" className="border-b border-rule bg-sunk text-xs text-ink-2">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 px-4">
-        <span className="font-semibold text-ink">Demo</span>
+        <span className="font-semibold text-ink">{t("Demo")}</span>
         <span>
-          PayPal <b className="font-semibold text-ink">{session?.paypal_env ?? boot?.paypal_env}</b>, test money only
+          {t("PayPal")}{" "}<b className="font-semibold text-ink">{session?.paypal_env ?? boot?.paypal_env}</b>{t(", test money only")}
         </span>
         {clock && (
           <span className="num">
-            · demo clock <b className="font-semibold text-ink">{clock}</b>
+            {t("· demo clock")}{" "}<b className="font-semibold text-ink">{clock}</b>
           </span>
         )}
         {session?.workspace?.progress_line && !session.workspace.finished && (
@@ -131,10 +133,10 @@ function DemoRibbon() {
           {clock && (
             <>
               <button className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("day", "/demo/clock", { step: "day" })}>
-                +1 day
+                {t("+1 day")}
               </button>
               <button className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => act("week", "/demo/clock", { step: "week" })}>
-                +1 week
+                {t("+1 week")}
               </button>
             </>
           )}
@@ -143,15 +145,15 @@ function DemoRibbon() {
               className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50"
               disabled={Boolean(busy)}
               onClick={() => {
-                if (confirm("Rebuild your own demo from the start? Only yours changes; nobody else's demo is touched.")) void act("reset", "/demo/reset");
+                if (confirm(t("Rebuild your own demo from the start? Only yours changes; nobody else's demo is touched."))) void act("reset", "/demo/reset");
               }}
             >
               <RotateCcw className="mr-1 inline size-3" />
-              Reset my demo
+              {t("Reset my demo")}
             </button>
           ) : session?.private_demos ? (
             <button className="min-h-11 rounded-full px-2.5 font-semibold text-ink hover:bg-card disabled:opacity-50" disabled={Boolean(busy)} onClick={() => void act("start", "/demo/start", {}).then(() => nav("/today"))}>
-              Try the live demo
+              {t("Try the live demo")}
             </button>
           ) : null}
         </span>
@@ -195,7 +197,7 @@ export function Shell({ children }: { children: ReactNode }) {
   };
   const tourKind = who?.kind === "merchant" ? "merchant" : "shopper";
   const menuButton = (
-    <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Menu">
+    <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label={t("Menu")}>
       <Menu className="size-5" />
     </Button>
   );
@@ -203,62 +205,63 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh bg-paper">
       <a href="#main" className="sr-only z-50 rounded bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
-        Skip to content
+        {t("Skip to content")}
       </a>
       <DemoRibbon />
       {offline && (
         <div role="status" className="flex items-center justify-center gap-2 bg-wait-bg px-4 py-1.5 text-sm text-wait">
-          <WifiOff className="size-4" /> You're offline. What's on screen may be out of date, and nothing can be paid or sent until you're back.
+          <WifiOff className="size-4" />{" "}{t("You're offline. What's on screen may be out of date, and nothing can be paid or sent until you're back.")}
         </div>
       )}
       <header className="sticky top-0 z-30 border-b border-rule bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
-          <Link to={who ? (who.kind === "merchant" ? "/merchant" : "/today") : "/"} className="mr-auto rounded-md" aria-label="Everyday home">
+          <Link to={who ? (who.kind === "merchant" ? "/merchant" : "/today") : "/"} className="mr-auto rounded-md" aria-label={t("Everyday home")}>
             <Wordmark />
           </Link>
           {who && (
             <span className="hidden text-sm text-ink-2 sm:inline">
-              {who.kind === "merchant" ? "Merchant · " : ""}
+              {who.kind === "merchant" ? t("Merchant · ") : ""}
               {who.first}
             </span>
           )}
           <Suspense
             fallback={
-              <Button variant="ghost" size="icon-sm" aria-label="Display and help" title="Display and help" disabled className="disabled:opacity-100">
+              <Button variant="ghost" size="icon-sm" aria-label={t("Display and help")} title={t("Display and help")} disabled className="disabled:opacity-100">
                 <Accessibility className="size-[18px]" />
               </Button>
             }
           >
             <DisplayHelp />
           </Suspense>
+          <LangPicker />
           <ThemeToggle />
           {who ? (
             <Suspense fallback={menuButton}>
-              <MenuSheet open={open} onOpenChange={setOpen} trigger={menuButton} title={who.name} description={who.kind === "merchant" ? "Merchant console" : "Shopper"}>
-                <nav className="flex flex-col gap-1 overflow-y-auto p-3" aria-label="More">
+              <MenuSheet open={open} onOpenChange={setOpen} trigger={menuButton} title={who.name} description={who.kind === "merchant" ? t("Merchant console") : t("Shopper")}>
+                <nav className="flex flex-col gap-1 overflow-y-auto p-3" aria-label={t("More")}>
                   {[...main, ...more].map((i) => (
                     <NavItem key={i.to} i={i} onClick={() => setOpen(false)} />
                   ))}
                   {session?.demo && (
                     <>
-                      <div className="eyebrow mt-4 px-3">Demo</div>
+                      <div className="eyebrow mt-4 px-3">{t("Demo")}</div>
                       {DEMO_LINKS.map((i) => (
                         <NavItem key={i.to} i={i} onClick={() => setOpen(false)} />
                       ))}
                     </>
                   )}
                   <button onClick={() => startTour(tourKind)} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
-                    <PlayCircle className="size-[18px]" /> Take the tour
+                    <PlayCircle className="size-[18px]" />{" "}{t("Take the tour")}
                   </button>
                   <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
-                    <LogOut className="size-[18px]" /> Sign out
+                    <LogOut className="size-[18px]" />{" "}{t("Sign out")}
                   </button>
                 </nav>
               </MenuSheet>
             </Suspense>
           ) : (
             <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
-              <Link to="/login">Sign in</Link>
+              <Link to="/login">{t("Sign in")}</Link>
             </Button>
           )}
         </div>
@@ -266,7 +269,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
       <div className={cn("mx-auto max-w-6xl px-4", who && "lg:grid lg:grid-cols-[220px_1fr] lg:gap-8")}>
         {who && (
-          <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] flex-col gap-1 overflow-y-auto py-6 lg:flex" aria-label="Main">
+          <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] flex-col gap-1 overflow-y-auto py-6 lg:flex" aria-label={t("Main")}>
             {main.map((i) => (
               <NavItem key={i.to} i={i} />
             ))}
@@ -276,7 +279,7 @@ export function Shell({ children }: { children: ReactNode }) {
             ))}
             {session?.demo && (
               <>
-                <div className="eyebrow mt-4 px-3">Demo</div>
+                <div className="eyebrow mt-4 px-3">{t("Demo")}</div>
                 {DEMO_LINKS.map((i) => (
                   <NavItem key={i.to} i={i} />
                 ))}
@@ -284,10 +287,10 @@ export function Shell({ children }: { children: ReactNode }) {
             )}
             <div className="mt-auto flex flex-col gap-1 pt-4">
               <button data-tour="take-tour" onClick={() => startTour(tourKind)} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
-                <PlayCircle className="size-[18px]" /> Take the tour
+                <PlayCircle className="size-[18px]" />{" "}{t("Take the tour")}
               </button>
               <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
-                <LogOut className="size-[18px]" /> Sign out
+                <LogOut className="size-[18px]" />{" "}{t("Sign out")}
               </button>
             </div>
           </aside>
@@ -300,7 +303,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </div>
 
       {who && (
-        <nav aria-label="Main" className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-paper/95 backdrop-blur lg:hidden">
+        <nav aria-label={t("Main")} className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-paper/95 backdrop-blur lg:hidden">
           <div className="mx-auto grid max-w-lg grid-cols-5">
             {main.map((i) => (
               <NavLink
@@ -323,7 +326,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <span className="flex h-7 w-12 items-center justify-center">
                 <ChevronRight className="size-5 rotate-[-90deg]" />
               </span>
-              More
+              {t("More")}
             </button>
           </div>
         </nav>
@@ -337,21 +340,21 @@ export function PublicFooter() {
   return (
     <footer className="mt-16 border-t border-rule py-8 text-sm text-ink-2">
       <div className="flex flex-wrap gap-x-6 gap-y-2">
-        <span>Everyday · a hackathon build on the PayPal sandbox</span>
+        <span>{t("Everyday · a hackathon build on the PayPal sandbox")}</span>
         <a className="underline underline-offset-4" href="/llms.txt">
-          llms.txt
+          {t("llms.txt")}
         </a>
         <a className="underline underline-offset-4" href="/skill.md">
-          skill.md
+          {t("skill.md")}
         </a>
         <Link className="underline underline-offset-4" to="/safety/model-card">
-          Scam model card
+          {t("Scam model card")}
         </Link>
         <a className="underline underline-offset-4" href="https://github.com/PrathamRanjan/everyday">
-          Source (MIT)
+          {t("Source (MIT)")}
         </a>
         <span className="inline-flex items-center gap-1">
-          <Accessibility className="size-4" /> Display and help is in the header
+          <Accessibility className="size-4" />{" "}{t("Display and help is in the header")}
         </span>
       </div>
     </footer>

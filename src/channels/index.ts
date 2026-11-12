@@ -10,6 +10,8 @@ import { getDb } from "../db.js";
 import { enqueue } from "../jobs.js";
 import { newId } from "../lib/ids.js";
 import { currentWs, withWs, wsOfOwner } from "../ws.js";
+import { isLang, type Lang } from "../i18n/index.js";
+import { display } from "../i18n/display.js";
 
 export type Party = "shopper" | "merchant";
 export type Channel = "telegram" | "whatsapp" | "simulator";
@@ -27,12 +29,19 @@ export const telegramReady = () => Boolean(config.channels.telegramToken);
 export const whatsappReady = () => Boolean(config.channels.whatsappToken && config.channels.whatsappPhoneId);
 
 /** Queue a message to an address; delivered by the send_channel_message job. */
-export async function send(opts: { channel: Channel; address: string; body: string; buttons?: Button[]; entity?: string; entityId?: string }, q?: Queryable): Promise<string> {
+export async function send(opts: { channel: Channel; address: string; body: string; buttons?: Button[]; entity?: string; entityId?: string; lang?: Lang | null }, q?: Queryable): Promise<string> {
   const db = q ?? (await getDb());
   const id = newId("msg");
-  await db.query("INSERT INTO channel_messages (id, channel, direction, address, body, buttons, entity, entity_id, status, ws_id) VALUES ($1,$2,'out',$3,$4,$5,$6,$7,'queued',$8)", [id, opts.channel, opts.address, opts.body, opts.buttons ? JSON.stringify(opts.buttons) : null, opts.entity ?? null, opts.entityId ?? null, currentWs()]);
+  await db.query("INSERT INTO channel_messages (id, channel, direction, address, body, buttons, entity, entity_id, status, ws_id, lang) VALUES ($1,$2,'out',$3,$4,$5,$6,$7,'queued',$8,$9)", [id, opts.channel, opts.address, opts.body, opts.buttons ? JSON.stringify(opts.buttons) : null, opts.entity ?? null, opts.entityId ?? null, currentWs(), opts.lang ?? null]);
   await enqueue(db, "send_channel_message", { messageId: id }, new Date(), `chan:${id}`);
   return id;
+}
+
+/** B6: the language a party reads (a shopper's chosen language; shops read English in this demo). */
+export async function partyLang(db: Queryable, party: Party, partyId: string): Promise<Lang | null> {
+  if (party !== "shopper") return null;
+  const l = (await db.query<{ lang: string | null }>("SELECT lang FROM accounts WHERE id = $1", [partyId])).rows[0]?.lang;
+  return isLang(l) && l !== "en" ? l : null;
 }
 
 /** Sends to every channel a party has linked (plus the simulator). Pass `q` from inside db.tx. */
@@ -41,14 +50,18 @@ export async function notifyParty(party: Party, partyId: string, body: string, b
   const links = (await db.query<{ channel: Channel; address: string }>("SELECT channel, address FROM party_links WHERE party = $1 AND party_id = $2", [party, partyId])).rows;
   const targets = links.length ? links : [{ channel: "simulator" as Channel, address: `${party}:${partyId}` }];
   if (links.length && !links.some((l) => l.channel === "simulator")) targets.push({ channel: "simulator", address: `${party}:${partyId}` });
-  for (const t of targets) await send({ channel: t.channel, address: t.address, body, buttons, entity, entityId }, db);
+  const lang = await partyLang(db, party, partyId);
+  for (const t of targets) await send({ channel: t.channel, address: t.address, body, buttons, entity, entityId, lang }, db);
 }
 
 export async function deliver(messageId: string): Promise<void> {
   const db = await getDb();
   const m = (await db.query("SELECT * FROM channel_messages WHERE id = $1 AND direction = 'out' AND status = 'queued'", [messageId])).rows[0] as any;
   if (!m) return;
-  const buttons: Button[] = m.buttons ?? [];
+  // B6: worded in the reader's language as it goes out; the stored message stays as written (English).
+  const l: Lang = isLang(m.lang) ? m.lang : "en";
+  const buttons: Button[] = (m.buttons ?? []).map((b: Button) => ({ ...b, label: display(b.label, l) }));
+  m.body = display(m.body, l);
   try {
     let externalId: string | null = null;
     if (m.channel === "telegram" && telegramReady()) {

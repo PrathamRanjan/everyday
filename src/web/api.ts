@@ -42,6 +42,8 @@ import { partyOf } from "./trace.js";
 import { DEMO_SCAM } from "./safety.js";
 import { newId } from "../lib/ids.js";
 import { demoWallet, walletView } from "../services/demowallet.js";
+import { fxRates } from "../services/fx.js";
+import { normLang } from "../i18n/index.js";
 
 type Handler = (req: Request, res: Response) => Promise<unknown>;
 const send = (fn: Handler) => (req: Request, res: Response, next: (e?: unknown) => void) =>
@@ -116,6 +118,16 @@ export function apiRoutes() {
   const r = Router();
 
   // ---------- Session and public ----------
+  // B6: the shopper's language, saved on the account so messages sent later (Telegram, push) are worded in it.
+  r.post("/api/ui/lang", send(async (req) => {
+    const a = await shopperOf(req);
+    const l = normLang(req.body?.lang);
+    if (!l) throw new GtError("Pick one of: en, hi, id, pt.", "bad_lang", 400);
+    await (await getDb()).query("UPDATE accounts SET lang = $2 WHERE id = $1", [a.id, l]);
+    return { ok: true, lang: l };
+  }));
+  // B5: a rough local-currency reading of dollar amounts (display only; Everyday charges in US dollars).
+  r.get("/api/ui/fx", send(async () => fxRates()));
   r.get("/api/ui/session", send(async (req) => {
     const w = await whoami(req);
     const wallet = config.demoMode ? walletView(await demoWallet()) : null;
@@ -208,6 +220,12 @@ export function apiRoutes() {
     const a = await shopperOf(req);
     const { webPicksFor } = await import("../services/web-picks.js");
     return webPicksFor(a, String(req.params.id), { refresh: req.query.refresh === "1" });
+  }));
+  // Tier 2: the shopper bought a web listing at the retailer; Everyday tracks it from here (nothing is paid here).
+  r.post("/api/ui/plans/:id/web/bought", send(async (req) => {
+    const a = await shopperOf(req);
+    const { trackWebPurchase } = await import("../services/web-picks.js");
+    return trackWebPurchase(a, String(req.params.id), String(req.body?.url ?? ""));
   }));
   r.get("/api/ui/plans/:id", send(async (req) => {
     const a = await shopperOf(req);

@@ -4,6 +4,7 @@ import { SpeakableText } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { t, tn } from "@/i18n";
 
 /** What /safety/scan returns (src/safety/readers.ts): rules, Decisions and the code reader; strictest wins. */
 export interface ServerRead {
@@ -32,7 +33,7 @@ export function loadModel() {
         const s = document.createElement("script");
         s.src = `${ORT}ort.min.js`;
         s.onload = () => res();
-        s.onerror = () => rej(new Error("onnxruntime-web did not load"));
+        s.onerror = () => rej(new Error(t("onnxruntime-web did not load")));
         document.head.appendChild(s);
       });
     w.ort.env.wasm.wasmPaths = ORT;
@@ -77,7 +78,7 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
     let model: ModelResult | null = null;
     let modelErr: string | null = null;
     let ms = 0;
-    setStatus("Checking with the rules and the second reader…");
+    setStatus(t("Checking with the rules and the second reader…"));
     try {
       const r = await fetch("/safety/scan", { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify({ text, context }) });
       const j = await r.json();
@@ -87,7 +88,7 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
       serverErr = (e as Error).message;
     }
     try {
-      setStatus(guardPromise ? "Scoring on this device…" : "Loading the model onto this device (23 MB, once)…");
+      setStatus(guardPromise ? t("Scoring on this device…") : t("Loading the model onto this device (23 MB, once)…"));
       const g = await loadModel();
       const t0 = performance.now();
       model = await g.score(text);
@@ -106,24 +107,24 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
   let state: keyof typeof TONE | null = null;
   let headline = "";
   if (out) {
-    if (!s) (state = "unconfirmed"), (headline = "Not confirmed clear: the server check didn't run");
-    else if (s.state === "hold" || m?.level === "hold") (state = "hold"), (headline = "Hold: don't pay yet");
+    if (!s) (state = "unconfirmed"), (headline = t("Not confirmed clear: the server check didn't run"));
+    else if (s.state === "hold" || m?.level === "hold") (state = "hold"), (headline = t("Hold: don't pay yet"));
     else if (s.state !== "clear") (state = s.state), (headline = s.headline);
-    else if (m?.level === "caution" && modelTactic) (state = "caution"), (headline = "Caution: check before you pay");
-    else (state = "clear"), (headline = "No scam signs found");
+    else if (m?.level === "caution" && modelTactic) (state = "caution"), (headline = t("Caution: check before you pay"));
+    else (state = "clear"), (headline = t("No scam signs found"));
   }
   const found = new Set([...(s?.tactics ?? []), ...Object.entries(m?.tactics ?? {}).filter(([, p]) => p >= 0.5).map(([k]) => k)]);
   return (
     <div className="grid gap-3">
-      <Label htmlFor={`scan-${context ?? "page"}`}>{compact ? "Paste the message you got" : "Paste a seller's reply, a marketplace message or a text about a parcel"}</Label>
-      <SpeakableText id={`scan-${context ?? "page"}`} value={text} onChange={setText} rows={compact ? 3 : 5} placeholder="Paste the message here" />
+      <Label htmlFor={`scan-${context ?? "page"}`}>{compact ? t("Paste the message you got") : t("Paste a seller's reply, a marketplace message or a text about a parcel")}</Label>
+      <SpeakableText id={`scan-${context ?? "page"}`} value={text} onChange={setText} rows={compact ? 3 : 5} placeholder={t("Paste the message here")} />
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={check} disabled={busy || !text.trim()}>
-          <Busy on={busy}>{null}</Busy>Check this message
+          <Busy on={busy}>{null}</Busy>{t("Check this message")}
         </Button>
         {demo && (
           <Button variant="outline" onClick={() => setText(demo)}>
-            Paste the demo scam
+            {t("Paste the demo scam")}
           </Button>
         )}
         <span className="text-sm text-ink-2" aria-live="polite">
@@ -136,14 +137,14 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
             {headline}
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat label="On this device" value={m ? `${Math.round(m.p_scam * 100)}%` : "—"} hint={m ? `${out.ms.toFixed(0)} ms; nothing left your browser` : (out.modelErr ?? "not run")} />
-            <Stat label="Rules" value={s?.rules.level ?? "—"} hint={s ? (s.rules.reasons.length ? `${s.rules.reasons.length} reason${s.rules.reasons.length > 1 ? "s" : ""}` : "no rule fired") : (out.serverErr ?? "not run")} />
-            <Stat label="Second reader" value={s?.decisions.ran ? `${s.decisions.answers.filter((a) => a.verdict === "yes").length} yes` : "—"} hint={s?.decisions.ran ? `${s.decisions.model}, ${s.decisions.latency_ms} ms` : (s?.decisions.why_not ?? "not run")} />
-            <Stat label="Pay-to details" value={s ? String(s.code.destinations.filter((d) => d.kind !== "link").length) : "—"} hint={s ? (s.code.destinations.length ? `${s.code.destinations.length} found` : "none named") : "not run"} />
+            <Stat label={t("On this device")} value={m ? `${Math.round(m.p_scam * 100)}%` : "—"} hint={m ? t("{0} ms; nothing left your browser", out.ms.toFixed(0)) : (out.modelErr ?? t("not run"))} />
+            <Stat label={t("Rules")} value={s?.rules.level ?? "—"} hint={s ? (s.rules.reasons.length ? `${s.rules.reasons.length} reason${s.rules.reasons.length > 1 ? "s" : ""}` : t("no rule fired")) : (out.serverErr ?? t("not run"))} />
+            <Stat label={t("Second reader")} value={s?.decisions.ran ? `${s.decisions.answers.filter((a) => a.verdict === "yes").length} yes` : "—"} hint={s?.decisions.ran ? t("{0}, {1} ms", s.decisions.model, s.decisions.latency_ms) : (s?.decisions.why_not ?? t("not run"))} />
+            <Stat label={t("Pay-to details")} value={s ? String(s.code.destinations.filter((d) => d.kind !== "link").length) : "—"} hint={s ? (s.code.destinations.length ? `${s.code.destinations.length} found` : t("none named")) : t("not run")} />
           </div>
           {s?.reasons?.length ? (
             <div>
-              <h3 className="text-sm font-semibold">Why</h3>
+              <h3 className="text-sm font-semibold">{t("Why")}</h3>
               <ul className="mt-1 list-disc pl-5 text-sm">
                 {s.reasons.map((x) => (
                   <li key={x}>{x}</li>
@@ -153,7 +154,7 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
           ) : null}
           {!compact && found.size > 0 && (
             <div>
-              <h3 className="text-sm font-semibold">What this message does</h3>
+              <h3 className="text-sm font-semibold">{t("What this message does")}</h3>
               <ul className="mt-1 list-disc pl-5 text-sm">
                 {[...found].map((k) => (
                   <li key={k}>{words[k] ?? k}</li>
@@ -163,14 +164,14 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
           )}
           {!compact && s?.decisions.ran && (
             <details className="text-sm">
-              <summary className="cursor-pointer font-semibold">The second reader's answers</summary>
+              <summary className="cursor-pointer font-semibold">{t("The second reader's answers")}</summary>
               <table className="mt-2 w-full text-left text-xs">
                 <thead>
                   <tr>
-                    <th className="py-1">Question</th>
-                    <th>Probability</th>
-                    <th>Answer</th>
-                    <th>Thresholds</th>
+                    <th className="py-1">{t("Question")}</th>
+                    <th>{t("Probability")}</th>
+                    <th>{t("Answer")}</th>
+                    <th>{t("Thresholds")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -180,8 +181,7 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
                       <td>{a.probability === null ? "—" : a.probability.toFixed(2)}</td>
                       <td>{a.verdict.replace("_", " ")}</td>
                       <td>
-                        no below {a.threshold.clear_below}, yes from {a.threshold.hold_above}
-                        {a.threshold.calibrated ? "" : " (not calibrated)"}
+                        {tn("no below {0}, yes from {1}{2}", a.threshold.clear_below, a.threshold.hold_above, a.threshold.calibrated ? "" : t(" (not calibrated)"))}
                       </td>
                     </tr>
                   ))}
@@ -190,8 +190,7 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
             </details>
           )}
           <p className="text-sm text-ink-2">
-            What to do: pay only through Everyday's own PayPal checkout, or to details you confirmed by phone on a number you already had. Never share codes.{" "}
-            {state === "clear" ? "A clear result isn't a guarantee." : ""}
+            {tn("What to do: pay only through Everyday's own PayPal checkout, or to details you confirmed by phone on a number you already had. Never share codes. {0}", state === "clear" ? t("A clear result isn't a guarantee.") : "")}
           </p>
         </div>
       )}

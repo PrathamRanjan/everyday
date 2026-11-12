@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { money, words } from "@/lib/format";
 import type { ApiError } from "@/lib/api";
+import { t, tn, N_ } from "@/i18n";
 
 /** Top of every screen: what happened, what needs you, what happens next. */
 export function PageHead({ eyebrow, title, lede, needs, next, actions, className }: { eyebrow?: ReactNode; title: ReactNode; lede?: ReactNode; needs?: ReactNode; next?: ReactNode; actions?: ReactNode; className?: string }) {
@@ -20,13 +21,13 @@ export function PageHead({ eyebrow, title, lede, needs, next, actions, className
           <dl className="mt-3 grid gap-1 text-sm sm:flex sm:gap-6">
             {needs && (
               <div className="flex gap-2">
-                <dt className="font-semibold text-now">Needs you</dt>
+                <dt className="font-semibold text-now">{t("Needs you")}</dt>
                 <dd>{needs}</dd>
               </div>
             )}
             {next && (
               <div className="flex gap-2">
-                <dt className="font-semibold text-ink-2">Next</dt>
+                <dt className="font-semibold text-ink-2">{t("Next")}</dt>
                 <dd>{next}</dd>
               </div>
             )}
@@ -57,55 +58,56 @@ export function Panel({ title, sub, children, className, id, action, tight }: { 
 
 /** A server status → the money-state language: tone and plain words. */
 const STATES: Record<string, [Tone, string]> = {
-  created: ["wait", "awaiting payment"],
-  pending: ["wait", "waiting on PayPal"],
-  approved: ["done", "approved"],
-  open: ["wait", "open"],
-  paid: ["done", "paid"],
-  succeeded: ["done", "done"],
-  completed: ["done", "completed"],
-  COMPLETED: ["done", "PayPal COMPLETED"],
-  PENDING: ["wait", "PayPal PENDING"],
-  PARTIALLY_REFUNDED: ["back", "partly refunded"],
-  REFUNDED: ["back", "refunded"],
-  DECLINED: ["stop", "declined by PayPal"],
-  FAILED: ["stop", "failed"],
-  failed: ["stop", "failed"],
-  declined: ["stop", "declined"],
-  denied: ["stop", "refused"],
-  held: ["now", "waiting for you"],
-  ordered: ["plain", "ordered"],
-  shipped: ["wait", "on its way"],
-  delivered: ["done", "delivered"],
-  backordered: ["now", "backordered"],
-  swapped: ["back", "swapped"],
-  returned: ["back", "returned"],
-  cancelled: ["stop", "cancelled"],
-  planning: ["now", "planning"],
-  quoted: ["wait", "quoted"],
-  purchased: ["done", "bought"],
-  stale: ["plain", "out of date"],
-  choose: ["now", "choose a remedy"],
-  awaiting_merchant: ["wait", "with the merchant"],
-  resolved: ["done", "resolved"],
-  owned: ["done", "owned"],
-  sold: ["plain", "sold"],
-  given: ["plain", "given away"],
-  recycled: ["plain", "recycled"],
-  current: ["done", "current"],
-  fired: ["done", "target reached"],
-  active: ["done", "active"],
-  done: ["done", "done"],
-  running: ["wait", "running"],
-  link_saved: ["plain", "link saved"],
-  analysed_fixture: ["plain", "demo clip"],
-  analysed_screenshot: ["done", "read from screenshot"],
-  analysed_cover: ["done", "read from cover"],
-  described: ["plain", "described"],
+  created: ["wait", N_("awaiting payment")],
+  pending: ["wait", N_("waiting on PayPal")],
+  approved: ["done", N_("approved")],
+  open: ["wait", N_("open")],
+  paid: ["done", N_("paid")],
+  succeeded: ["done", N_("done")],
+  completed: ["done", N_("completed")],
+  COMPLETED: ["done", N_("PayPal COMPLETED")],
+  PENDING: ["wait", N_("PayPal PENDING")],
+  PARTIALLY_REFUNDED: ["back", N_("partly refunded")],
+  REFUNDED: ["back", N_("refunded")],
+  DECLINED: ["stop", N_("declined by PayPal")],
+  FAILED: ["stop", N_("failed")],
+  failed: ["stop", N_("failed")],
+  declined: ["stop", N_("declined")],
+  denied: ["stop", N_("refused")],
+  held: ["now", N_("waiting for you")],
+  ordered: ["plain", N_("ordered")],
+  shipped: ["wait", N_("on its way")],
+  delivered: ["done", N_("delivered")],
+  backordered: ["now", N_("backordered")],
+  swapped: ["back", N_("swapped")],
+  returned: ["back", N_("returned")],
+  cancelled: ["stop", N_("cancelled")],
+  planning: ["now", N_("planning")],
+  quoted: ["wait", N_("quoted")],
+  purchased: ["done", N_("bought")],
+  stale: ["plain", N_("out of date")],
+  choose: ["now", N_("choose a remedy")],
+  awaiting_merchant: ["wait", N_("with the merchant")],
+  resolved: ["done", N_("resolved")],
+  owned: ["done", N_("owned")],
+  sold: ["plain", N_("sold")],
+  given: ["plain", N_("given away")],
+  recycled: ["plain", N_("recycled")],
+  current: ["done", N_("current")],
+  fired: ["done", N_("target reached")],
+  active: ["done", N_("active")],
+  done: ["done", N_("done")],
+  running: ["wait", N_("running")],
+  link_saved: ["plain", N_("link saved")],
+  analysed_fixture: ["plain", N_("demo clip")],
+  analysed_screenshot: ["done", N_("read from screenshot")],
+  analysed_cover: ["done", N_("read from cover")],
+  described: ["plain", N_("described")],
 };
 export function stateOf(s: string | null | undefined): [Tone, string] {
   if (!s) return ["plain", "—"];
-  return STATES[s] ?? STATES[s.toLowerCase()] ?? ["plain", words(s)];
+  const hit = STATES[s] ?? STATES[s.toLowerCase()];
+  return hit ? [hit[0], t(hit[1])] : ["plain", t(words(s))];
 }
 
 export function State({ s, label, className }: { s: string | null | undefined; label?: string; className?: string }) {
@@ -140,12 +142,12 @@ export function LoadError({ error, retry }: { error: ApiError; retry?: () => voi
     <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border border-stop/40 bg-stop-bg p-5 text-stop">
       <div className="flex items-center gap-2 font-semibold">
         {offline ? <WifiOff className="size-5" /> : <AlertTriangle className="size-5" />}
-        {error.status === 404 ? "Not found" : offline ? "Offline" : "Couldn't load this"}
+        {error.status === 404 ? t("Not found") : offline ? t("Offline") : t("Couldn't load this")}
       </div>
-      <p className="text-sm text-ink">{error.message} Nothing was changed.</p>
+      <p className="text-sm text-ink">{tn("{0} Nothing was changed.", error.message)}</p>
       {retry && (
         <Button variant="outline" size="sm" onClick={retry}>
-          Try again
+          {t("Try again")}
         </Button>
       )}
     </div>
@@ -154,7 +156,7 @@ export function LoadError({ error, retry }: { error: ApiError; retry?: () => voi
 
 export function PageSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div aria-busy="true" aria-label="Loading" className="space-y-4">
+    <div aria-busy="true" aria-label={t("Loading")} className="space-y-4">
       <Skeleton className="h-4 w-24 bg-sunk" />
       <Skeleton className="h-10 w-2/3 bg-sunk" />
       {Array.from({ length: rows }, (_, i) => (
@@ -183,14 +185,14 @@ export function TrustStrip({ ai, code, paypal, className }: { ai: ReactNode; cod
     </li>
   );
   return (
-    <ul className={cn("grid divide-y divide-rule rounded-lg border border-rule bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0", className)} aria-label="Who decides what">
-      <Item icon={<ScanText className="size-5" />} who="AI reads">
+    <ul className={cn("grid divide-y divide-rule rounded-lg border border-rule bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0", className)} aria-label={t("Who decides what")}>
+      <Item icon={<ScanText className="size-5" />} who={t("AI reads")}>
         {ai}
       </Item>
-      <Item icon={<Cpu className="size-5" />} who="Code decides">
+      <Item icon={<Cpu className="size-5" />} who={t("Code decides")}>
         {code}
       </Item>
-      <Item icon={<ShieldCheck className="size-5" />} who="PayPal moves money">
+      <Item icon={<ShieldCheck className="size-5" />} who={t("PayPal moves money")}>
         {paypal}
       </Item>
     </ul>

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useAction, useApi } from "@/lib/api";
 import { money, when } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { t, N_, tn } from "@/i18n";
 
 interface SafetyData {
   inbox: { id: number; channel: string; text: string; created_at: string; flag: { serious: boolean; words: string[] } | null }[];
@@ -28,21 +29,21 @@ export default function Safety() {
       {(d) => (
         <div className="ev-rise">
           <PageHead
-            eyebrow="Scam protection"
-            title="A second pair of eyes"
+            eyebrow={t("Scam protection")}
+            title={t("A second pair of eyes")}
             lede={
               <>
-                Rules in code, a scam text model that runs in your browser, a second reader (OpenAI's Decisions API) and a check for pay-to details. The strictest wins, and none of them can approve a payment. <Link className="underline underline-offset-4" to="/safety/model-card">How it was tested</Link>.
+                {t("Rules in code, a scam text model that runs in your browser, a second reader (OpenAI's Decisions API) and a check for pay-to details. The strictest wins, and none of them can approve a payment.")}{" "}<Link className="underline underline-offset-4" to="/safety/model-card">{t("How it was tested")}</Link>.
               </>
             }
-            needs={d.holds.filter((h) => h.status === "pending").length ? `${d.holds.filter((h) => h.status === "pending").length} payment held` : undefined}
+            needs={d.holds.filter((h) => h.status === "pending").length ? t("{0} payment held", d.holds.filter((h) => h.status === "pending").length) : undefined}
           />
           <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-            <Panel title="Check a message" sub="Four checks, strictest wins: a model on this device (the words don't leave your browser for it), rules, a second reader on the server, and a look for any pay-to details.">
+            <Panel title={t("Check a message")} sub={t("Four checks, strictest wins: a model on this device (the words don't leave your browser for it), rules, a second reader on the server, and a look for any pay-to details.")}>
               <ScamCheck demo={d.demo_scam} tactics={d.tactics} />
             </Panel>
             <div className="space-y-6">
-              <Panel id="protected" title={<span className="inline-flex items-center gap-2"><UserCheck className="size-5" />Protected mode {d.protected.on && <State s="active" label="on" />}</span>} sub="The first payment to any new seller waits for you, holds are explained calmly with no timers, and a trusted contact hears about every hold.">
+              <Panel id="protected" title={<span className="inline-flex items-center gap-2"><UserCheck className="size-5" />{t("Protected mode")}{" "}{d.protected.on && <State s="active" label="on" />}</span>} sub={t("The first payment to any new seller waits for you, holds are explained calmly with no timers, and a trusted contact hears about every hold.")}>
                 <form
                   className="grid gap-3"
                   onSubmit={(e) => {
@@ -51,20 +52,20 @@ export default function Safety() {
                   }}
                 >
                   <div className="grid gap-1.5">
-                    <Label htmlFor="pc1">Trusted contact (Telegram chat id, optional)</Label>
+                    <Label htmlFor="pc1">{t("Trusted contact (Telegram chat id, optional)")}</Label>
                     <Input id="pc1" value={c1 ?? d.protected.contacts[0] ?? ""} onChange={(e) => setC1(e.target.value)} placeholder="telegram:123456789" className="min-h-11 bg-card" />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label htmlFor="pc2">Second contact</Label>
+                    <Label htmlFor="pc2">{t("Second contact")}</Label>
                     <Input id="pc2" value={c2 ?? d.protected.contacts[1] ?? ""} onChange={(e) => setC2(e.target.value)} className="min-h-11 bg-card" />
                   </div>
                   <Button type="submit" variant={d.protected.on ? "outline" : "default"} className="h-auto min-h-11 max-w-full justify-self-start py-2 whitespace-normal" disabled={Boolean(busy)}>
                     <Busy on={busy === "prot"}>{null}</Busy>
-                    {d.protected.on ? "Turn protected mode off" : "Turn protected mode on"}
+                    {d.protected.on ? t("Turn protected mode off") : t("Turn protected mode on")}
                   </Button>
                 </form>
               </Panel>
-              <Panel title="Holds the safety layer made">
+              <Panel title={t("Holds the safety layer made")}>
                 {d.holds.length ? (
                   <ul className="space-y-3">
                     {d.holds.map((h) => (
@@ -86,13 +87,13 @@ export default function Safety() {
                     ))}
                   </ul>
                 ) : (
-                  <Empty icon={<ShieldCheck className="size-6" />} title="Nothing held.">
-                    If a payment looks like a scam pattern, it waits here and on Rules.
+                  <Empty icon={<ShieldCheck className="size-6" />} title={t("Nothing held.")}>
+                    {t("If a payment looks like a scam pattern, it waits here and on Rules.")}
                   </Empty>
                 )}
               </Panel>
             </div>
-            <Panel id="inbox" title="Messages you received">
+            <Panel id="inbox" title={t("Messages you received")}>
               {d.inbox.length ? (
                 <ul className="space-y-3">
                   {d.inbox.map((m) => (
@@ -100,7 +101,7 @@ export default function Safety() {
                       {m.flag && (
                         <p role="alert" className={cn("mb-1 flex items-start gap-1.5 font-semibold", m.flag.serious ? "text-stop" : "text-wait")}>
                           <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-                          This message {m.flag.words.join(", and ")}. Everyday only pays through PayPal checkout; nothing in a message changes that.
+                          {tn("This message {0}. Everyday only pays through PayPal checkout; nothing in a message changes that.", m.flag.words.join(", and "))}
                         </p>
                       )}
                       <p className="break-words">{m.text}</p>
@@ -111,16 +112,16 @@ export default function Safety() {
                   ))}
                 </ul>
               ) : (
-                <Empty title="No messages.">Messages from shops and the Telegram bot show here, checked as they arrive.</Empty>
+                <Empty title={t("No messages.")}>{t("Messages from shops and the Telegram bot show here, checked as they arrive.")}</Empty>
               )}
             </Panel>
-            <Panel id="sellers" title="Sellers" sub="A first payment to a seller found on the open web is a caution; with protected mode on it waits for you.">
+            <Panel id="sellers" title={t("Sellers")} sub={t("A first payment to a seller found on the open web is a caution; with protected mode on it waits for you.")}>
               <ul className="divide-y divide-rule text-sm">
                 {d.sellers.map((s) => (
                   <li key={s.name} className="flex flex-wrap items-center gap-2 py-2">
                     <span className="min-w-0 flex-1">{s.name.replace(/\s*\(.*\)$/, "")}</span>
-                    <State s={s.kind === "discovery" ? "pending" : "paid"} label={s.kind === "discovery" ? "found on the web" : "test merchant"} />
-                    <span className="num w-16 text-right text-ink-2">{s.paid} paid</span>
+                    <State s={s.kind === "discovery" ? "pending" : "paid"} label={s.kind === "discovery" ? t("found on the web") : t("test merchant")} />
+                    <span className="num w-16 text-right text-ink-2">{tn("{0} paid", s.paid)}</span>
                   </li>
                 ))}
               </ul>
@@ -133,51 +134,51 @@ export default function Safety() {
 }
 
 const CARD = [
-  ["ScamShield SMS test", "8,188", "0.988", "75%", "real Singapore SMS, in-distribution"],
-  ["ScamShield eval sets", "1,574", "0.979", "67%", "real and hand-written"],
-  ["Singlish genuine", "600", "—", "1.0% held", "real everyday messages: the false-alarm check"],
-  ["Business templates", "200", "0.85", "11%", "author-written, held-out templates"],
-  ["Business email (BEC) seed", "200", "0.58", "25%", "hand-written; the model is weak here"],
+  [N_("ScamShield SMS test"), "8,188", "0.988", N_("75%"), N_("real Singapore SMS, in-distribution")],
+  [N_("ScamShield eval sets"), "1,574", "0.979", N_("67%"), N_("real and hand-written")],
+  [N_("Singlish genuine"), "600", "—", N_("1.0% held"), N_("real everyday messages: the false-alarm check")],
+  [N_("Business templates"), "200", "0.85", N_("11%"), N_("author-written, held-out templates")],
+  [N_("Business email (BEC) seed"), "200", "0.58", N_("25%"), N_("hand-written; the model is weak here")],
 ];
 
 export function ModelCard() {
   return (
     <div className="ev-rise">
       <Link to="/safety" className="mb-4 inline-flex min-h-11 items-center gap-1 text-sm text-ink-2 hover:text-ink">
-        <ArrowLeft className="size-4" /> Scam protection
+        <ArrowLeft className="size-4" />{" "}{t("Scam protection")}
       </Link>
-      <PageHead eyebrow="Model card" title="How the scam check was tested" lede="Numbers come from frozen test sets the model never trained on. Everything synthetic is marked." />
+      <PageHead eyebrow={t("Model card")} title={t("How the scam check was tested")} lede={t("Numbers come from frozen test sets the model never trained on. Everything synthetic is marked.")} />
       <div className="space-y-6">
-        <Panel title="Text model" sub="Runs in your browser, 23 MB, int8 ONNX.">
-          <div className="rail-scroll" tabIndex={0} role="region" aria-label="Table (scrolls sideways)">
+        <Panel title={t("Text model")} sub={t("Runs in your browser, 23 MB, int8 ONNX.")}>
+          <div className="rail-scroll" tabIndex={0} role="region" aria-label={t("Table (scrolls sideways)")}>
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-rule text-left text-xs tracking-wide text-ink-2 uppercase">
-                  <th className="py-2 pr-3 font-semibold">Test set</th>
-                  <th className="py-2 pr-3 text-right font-semibold">Messages</th>
-                  <th className="py-2 pr-3 text-right font-semibold">AUC</th>
-                  <th className="py-2 pr-3 text-right font-semibold">Caught at 1% genuine held</th>
-                  <th className="py-2 font-semibold">What it is</th>
+                  <th className="py-2 pr-3 font-semibold">{t("Test set")}</th>
+                  <th className="py-2 pr-3 text-right font-semibold">{t("Messages")}</th>
+                  <th className="py-2 pr-3 text-right font-semibold">{t("AUC")}</th>
+                  <th className="py-2 pr-3 text-right font-semibold">{t("Caught at 1% genuine held")}</th>
+                  <th className="py-2 font-semibold">{t("What it is")}</th>
                 </tr>
               </thead>
               <tbody className="num">
                 {CARD.map((r) => (
                   <tr key={r[0]} className="border-b border-rule last:border-0">
-                    <td className="py-2 pr-3">{r[0]}</td>
+                    <td className="py-2 pr-3">{t(r[0])}</td>
                     <td className="py-2 pr-3 text-right">{r[1]}</td>
                     <td className="py-2 pr-3 text-right">{r[2]}</td>
-                    <td className="py-2 pr-3 text-right">{r[3]}</td>
-                    <td className="py-2 text-ink-2">{r[4]}</td>
+                    <td className="py-2 pr-3 text-right">{t(r[3])}</td>
+                    <td className="py-2 text-ink-2">{t(r[4])}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-sm text-ink-2">The browser and Python versions agree on the hold decision for 197 of 200 messages; the three differ because int8 arithmetic differs between runtimes. The training notebooks aren't in this repository, so these figures can't be re-run from it.</p>
+          <p className="mt-3 text-sm text-ink-2">{t("The browser and Python versions agree on the hold decision for 197 of 200 messages; the three differ because int8 arithmetic differs between runtimes. The training notebooks aren't in this repository, so these figures can't be re-run from it.")}</p>
         </Panel>
-        <Panel title="Payment-risk model">
+        <Panel title={t("Payment-risk model")}>
           <p className="text-sm">
-            LightGBM, 300 trees, monotone: a scam signal can only raise the score. <b>Trained on synthetic data</b>; there's no real payment-fraud data in this project. Its score is a ranking signal shown next to the rule reasons, never a fraud rate.
+            {t("LightGBM, 300 trees, monotone: a scam signal can only raise the score.")}{" "}<b>{t("Trained on synthetic data")}</b>{t("; there's no real payment-fraud data in this project. Its score is a ranking signal shown next to the rule reasons, never a fraud rate.")}
           </p>
         </Panel>
       </div>

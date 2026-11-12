@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { useApi } from "@/lib/api";
 import { when } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { t, tn } from "@/i18n";
 
 /** A3.2: the pages that need no sign-in. Each reads a committed result file or the showcase demo; nothing is typed in. */
 
 const Table = ({ label, head, children, min = 640 }: { label: string; head: ReactNode[]; children: ReactNode; min?: number }) => (
-  <div className="rail-scroll" tabIndex={0} role="region" aria-label={`${label} (scrolls sideways)`}>
+  <div className="rail-scroll" tabIndex={0} role="region" aria-label={t("{0} (scrolls sideways)", label)}>
     <table className="w-full text-sm" style={{ minWidth: min }}>
       <thead>
         <tr className="border-b border-rule text-left text-xs tracking-wide text-ink-2 uppercase">
@@ -30,7 +31,7 @@ const Td = ({ children, className }: { children?: ReactNode; className?: string 
 const Ok = ({ ok, label }: { ok: boolean; label?: string }) => (
   <span className={cn("inline-flex items-center gap-1 font-medium", ok ? "text-done" : "text-stop")}>
     {ok ? <CircleCheck className="size-4" aria-hidden /> : <CircleX className="size-4" aria-hidden />}
-    {label ?? (ok ? "pass" : "fail")}
+    {label ?? (ok ? t("pass") : t("fail"))}
   </span>
 );
 const show = (v: unknown) => (v === null || v === undefined ? "—" : typeof v === "string" ? v : JSON.stringify(v));
@@ -43,9 +44,9 @@ function Copyable({ text, label }: { text: string; label: string }) {
       <pre className="overflow-x-auto rounded-md border border-rule bg-paper-2 p-3 pr-12 text-xs whitespace-pre-wrap break-all">{text}</pre>
       <button
         type="button"
-        aria-label={`Copy ${label}`}
+        aria-label={t("Copy {0}", label)}
         className="absolute top-2 right-2 inline-flex size-9 items-center justify-center rounded-md border border-rule bg-card hover:bg-paper-2"
-        onClick={() => void navigator.clipboard?.writeText(text).then(() => toast.success("Copied"), () => toast.error("Couldn't copy"))}
+        onClick={() => void navigator.clipboard?.writeText(text).then(() => toast.success(t("Copied")), () => toast.error(t("Couldn't copy")))}
       >
         <Copy className="size-4" />
       </button>
@@ -70,20 +71,20 @@ interface ProofData {
 
 function SuitePanel({ s }: { s: Suite }) {
   const [open, setOpen] = useState(false);
-  if (s.missing) return <Panel title={s.title}><p className="text-sm text-stop">No result file yet: this check hasn't been run on this build.</p></Panel>;
+  if (s.missing) return <Panel title={s.title}><p className="text-sm text-stop">{t("No result file yet: this check hasn't been run on this build.")}</p></Panel>;
   const cases = s.cases ?? [];
   const shown = open ? cases : cases.slice(0, 12);
   return (
-    <Panel id={s.name} title={s.title} sub={`Run ${dateOf(s.run_on)} · ${s.provider}`}>
+    <Panel id={s.name} title={s.title} sub={t("Run {0} · {1}", dateOf(s.run_on), s.provider)}>
       <p className="mb-3 text-sm text-ink-2">{s.what}</p>
       <ul className="mb-3 flex flex-wrap gap-2 text-sm">
         {(s.arms ?? []).map((a) => (
           <li key={a.arm} className="rounded-md border border-rule px-2 py-1">
-            <b>{a.arm}</b>: {a.correct} of {a.cases} correct{a.p50_ms ? ` · median ${a.p50_ms} ms` : ""}
+            <b>{a.arm}</b>{tn(": {0} of {1} correct{2}", a.correct, a.cases, a.p50_ms ? t(" · median {0} ms", a.p50_ms) : "")}
           </li>
         ))}
       </ul>
-      <Table label={`${s.title}: every case`} head={["Case", "Input", "Expected", "Answer", "Result"]} min={760}>
+      <Table label={t("{0}: every case", s.title)} head={[t("Case"), t("Input"), t("Expected"), t("Answer"), t("Result")]} min={760}>
         {shown.map((c) => (
           <tr key={`${c.arm}-${c.id}`} className="border-b border-rule last:border-0">
             <Td className="font-mono text-xs">
@@ -105,7 +106,7 @@ function SuitePanel({ s }: { s: Suite }) {
       </Table>
       {cases.length > 12 && (
         <Button variant="outline" size="sm" className="mt-3" onClick={() => setOpen((x) => !x)}>
-          {open ? "Show fewer" : `Show all ${cases.length} cases`}
+          {open ? t("Show fewer") : t("Show all {0} cases", cases.length)}
         </Button>
       )}
     </Panel>
@@ -118,13 +119,13 @@ export default function Proof() {
   const [decAll, setDecAll] = useState(false);
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Proof" title="Every check, every case" lede="What was tested, every case with its answer, the models and the date each check ran, and what hasn't been measured. No sign-in needed." />
+      <PageHead eyebrow={t("Proof")} title={t("Every check, every case")} lede={t("What was tested, every case with its answer, the models and the date each check ran, and what hasn't been measured. No sign-in needed.")} />
       <Loaded state={st}>
         {(d) => (
           <div className="space-y-6">
-            <Panel title="Models">
+            <Panel title={t("Models")}>
               <p className="text-sm">
-                Reading requests and photos: <b>{d.models.read}</b> (backup {d.models.backup}). Small jobs: {d.models.small}. Second reader for scams: <b>{d.models.decisions}</b> on OpenAI's Decisions API. {d.models.connected ? "Connected on this instance." : "Not connected on this instance."}
+                {t("Reading requests and photos:")}{" "}<b>{d.models.read}</b>{" "}{tn("(backup {0}). Small jobs: {1}. Second reader for scams:", d.models.backup, d.models.small)}{" "}<b>{d.models.decisions}</b>{" "}{tn("on OpenAI's Decisions API. {0}", d.models.connected ? t("Connected on this instance.") : t("Not connected on this instance."))}
               </p>
               <p className="mt-2 text-xs text-ink-2">{d.built_from}</p>
             </Panel>
@@ -132,9 +133,9 @@ export default function Proof() {
               <SuitePanel key={s.name} s={s} />
             ))}
             {d.decisions && (
-              <Panel id="decisions" title={d.decisions.title} sub={`Run ${dateOf(d.decisions.run_on)} · ${d.decisions.model}`}>
+              <Panel id="decisions" title={d.decisions.title} sub={t("Run {0} · {1}", dateOf(d.decisions.run_on), d.decisions.model)}>
                 <p className="mb-3 text-sm text-ink-2">{d.decisions.what}</p>
-                <Table label="Calibration" head={["Question", "Clear below", "Hold from", "Held-out precision", "Held-out recall", "Held-out messages"]}>
+                <Table label={t("Calibration")} head={[t("Question"), t("Clear below"), t("Hold from"), t("Held-out precision"), t("Held-out recall"), t("Held-out messages")]}>
                   {d.decisions.thresholds.map((t) => (
                     <tr key={t.name} className="num border-b border-rule last:border-0">
                       <Td className="font-mono text-xs">{t.name}</Td>
@@ -146,29 +147,29 @@ export default function Proof() {
                     </tr>
                   ))}
                 </Table>
-                {d.decisions.not_calibrated.length > 0 && <p className="mt-3 text-sm">Not calibrated (too few examples), so never used to hold or clear: {d.decisions.not_calibrated.join(", ")}.</p>}
-                <h3 className="mt-4 mb-2 text-sm font-semibold">Every labelled message ({d.decisions.cases.length})</h3>
-                <Table label="Labelled messages" head={["Message", "Labelled yes", "Model's probability for those"]} min={700}>
+                {d.decisions.not_calibrated.length > 0 && <p className="mt-3 text-sm">{tn("Not calibrated (too few examples), so never used to hold or clear: {0}.", d.decisions.not_calibrated.join(", "))}</p>}
+                <h3 className="mt-4 mb-2 text-sm font-semibold">{tn("Every labelled message ({0})", d.decisions.cases.length)}</h3>
+                <Table label={t("Labelled messages")} head={[t("Message"), t("Labelled yes"), t("Model's probability for those")]} min={700}>
                   {(decAll ? d.decisions.cases : d.decisions.cases.slice(0, 10)).map((c, i) => {
                     const yes = Object.entries(c.labels).filter(([, v]) => v === 1).map(([k]) => k);
                     return (
                       <tr key={i} className="border-b border-rule last:border-0">
                         <Td className="max-w-[22rem]">{c.text}</Td>
-                        <Td className="font-mono text-xs">{yes.join(", ") || "none (genuine)"}</Td>
+                        <Td className="font-mono text-xs">{yes.join(", ") || t("none (genuine)")}</Td>
                         <Td className="num text-xs">{c.answers ? yes.map((k) => `${k}: ${c.answers?.[k] ?? "not decided"}`).join("; ") || "—" : "—"}</Td>
                       </tr>
                     );
                   })}
                 </Table>
                 <Button variant="outline" size="sm" className="mt-3" onClick={() => setDecAll((x) => !x)}>
-                  {decAll ? "Show fewer" : `Show all ${d.decisions.cases.length} messages`}
+                  {decAll ? t("Show fewer") : t("Show all {0} messages", d.decisions.cases.length)}
                 </Button>
               </Panel>
             )}
             {d.techjam && (
-              <Panel id="techjam" title={d.techjam.title} sub={`Run ${dateOf(d.techjam.run_on)} · no model`}>
+              <Panel id="techjam" title={d.techjam.title} sub={t("Run {0} · no model", dateOf(d.techjam.run_on))}>
                 <p className="mb-3 text-sm text-ink-2">{d.techjam.what}</p>
-                <Table label="Systems" head={["System", "Cases", "Found in top 10", "MRR", "Right item first", "Correctly said none", "Wrongly said none", "Turns"]} min={760}>
+                <Table label={t("Systems")} head={[t("System"), t("Cases"), t("Found in top 10"), "MRR", t("Right item first"), t("Correctly said none"), t("Wrongly said none"), t("Turns")]} min={760}>
                   {d.techjam.systems.map((s) => (
                     <tr key={s.system} className="num border-b border-rule last:border-0">
                       <Td>{s.system}</Td>
@@ -182,8 +183,8 @@ export default function Proof() {
                     </tr>
                   ))}
                 </Table>
-                <h3 className="mt-4 mb-2 text-sm font-semibold">Every case ({d.techjam.cases.length})</h3>
-                <Table label="Search cases" head={["Case", "Opening request", "Right item", "Everyday", "Questions asked", "Baseline"]} min={820}>
+                <h3 className="mt-4 mb-2 text-sm font-semibold">{tn("Every case ({0})", d.techjam.cases.length)}</h3>
+                <Table label={t("Search cases")} head={[t("Case"), t("Opening request"), t("Right item"), t("Everyday"), t("Questions asked"), t("Baseline")]} min={820}>
                   {(tjAll ? d.techjam.cases : d.techjam.cases.slice(0, 12)).map((c) => (
                     <tr key={c.id} className="border-b border-rule last:border-0">
                       <Td className="font-mono text-xs">
@@ -191,20 +192,20 @@ export default function Proof() {
                         <div className="text-ink-2">{c.kind}</div>
                       </Td>
                       <Td>{c.query}</Td>
-                      <Td className="font-mono text-xs">{c.target ?? "none in the catalog"}</Td>
-                      <Td>{c.everyday ? (c.target ? <Ok ok={c.everyday.converted} label={c.everyday.converted ? "first" : c.everyday.hit10 ? "in top 10" : "missed"} /> : <Ok ok={c.everyday.abstained} label={c.everyday.abstained ? "said none" : "offered something"} />) : "—"}</Td>
-                      <Td className="text-xs text-ink-2">{c.everyday?.asked.join(" · ") || "none"}</Td>
-                      <Td>{c.baseline ? (c.target ? (c.baseline.rr === 1 ? "first" : c.baseline.hit10 ? "in top 10" : "missed") : "offered something") : "—"}</Td>
+                      <Td className="font-mono text-xs">{c.target ?? t("none in the catalog")}</Td>
+                      <Td>{c.everyday ? (c.target ? <Ok ok={c.everyday.converted} label={c.everyday.converted ? "first" : c.everyday.hit10 ? t("in top 10") : "missed"} /> : <Ok ok={c.everyday.abstained} label={c.everyday.abstained ? t("said none") : t("offered something")} />) : "—"}</Td>
+                      <Td className="text-xs text-ink-2">{c.everyday?.asked.join(" · ") || t("none")}</Td>
+                      <Td>{c.baseline ? (c.target ? (c.baseline.rr === 1 ? t("first") : c.baseline.hit10 ? t("in top 10") : t("missed")) : t("offered something")) : "—"}</Td>
                     </tr>
                   ))}
                 </Table>
                 <Button variant="outline" size="sm" className="mt-3" onClick={() => setTjAll((x) => !x)}>
-                  {tjAll ? "Show fewer" : `Show all ${d.techjam.cases.length} cases`}
+                  {tjAll ? t("Show fewer") : t("Show all {0} cases", d.techjam.cases.length)}
                 </Button>
               </Panel>
             )}
-            <Panel title="Scam model on your device" sub="From its model card">
-              <Table label="Model card" head={["Test set", "Messages", "AUC", "Caught at 1% genuine held", "What it is"]}>
+            <Panel title={t("Scam model on your device")} sub={t("From its model card")}>
+              <Table label={t("Model card")} head={[t("Test set"), t("Messages"), "AUC", t("Caught at 1% genuine held"), t("What it is")]}>
                 {d.model_card.rows.map((r) => (
                   <tr key={r.set} className="num border-b border-rule last:border-0">
                     <Td>{r.set}</Td>
@@ -217,27 +218,27 @@ export default function Proof() {
               </Table>
               <p className="mt-3 text-sm">{d.model_card.note}</p>
             </Panel>
-            <Panel title="Robot judge">
+            <Panel title={t("Robot judge")}>
               {d.robot_judge ? (
                 <>
                   <p className="mb-2 text-sm">
-                    Last run {when(d.robot_judge.run_on)} on {d.robot_judge.target}, by a {d.robot_judge.by}. It starts a fresh demo and walks every path on the judge page; a step counts only if it ticked itself from what really happened. {d.robot_judge.stored}
+                    {tn("Last run {0} on {1}, by a {2}. It starts a fresh demo and walks every path on the judge page; a step counts only if it ticked itself from what really happened. {3}", when(d.robot_judge.run_on), d.robot_judge.target, d.robot_judge.by, d.robot_judge.stored)}
                   </p>
                   <ul className="space-y-2 text-sm">
                     {d.robot_judge.paths.map((p) => (
                       <li key={p.id}>
-                        <Ok ok={p.ok} label={p.ok ? "completed" : "failed"} /> {p.title} in {p.seconds} s
-                        {p.error && <span className="block text-ink-2">Stopped: {p.error}</span>}
+                        <Ok ok={p.ok} label={p.ok ? "completed" : "failed"} />{" "}{tn("{0} in {1} s", p.title, p.seconds)}
+                        {p.error && <span className="block text-ink-2">{tn("Stopped: {0}", p.error)}</span>}
                         <span className="block text-ink-2">{p.steps.map((s) => `${s.done ? "✓" : "✗"} ${s.label}`).join(" · ")}</span>
                       </li>
                     ))}
                   </ul>
                 </>
               ) : (
-                <p className="text-sm text-ink-2">No robot-judge run recorded on this build.</p>
+                <p className="text-sm text-ink-2">{t("No robot-judge run recorded on this build.")}</p>
               )}
             </Panel>
-            <Panel title="Not measured">
+            <Panel title={t("Not measured")}>
               <ul className="list-disc space-y-1 pl-5 text-sm">
                 {d.not_measured.map((x) => (
                   <li key={x}>{x}</li>
@@ -254,22 +255,22 @@ export default function Proof() {
 // ---------------- /ai ----------------
 
 interface AiData { showcase: { id: string; built: string } | null; connected: boolean; calls: { at: string; purpose: string; model: string; via: string; input: string | null; tools: { tool: string; source: string; ms: number | null }[]; output: string | null; error: string | null; ms: number; tokens_in: number; tokens_out: number; cost_usd: number; ok: boolean }[] }
-const PURPOSE: Record<string, string> = { read_request: "Read a request", capture_frame: "Read a photo", shopper_question: "Assistant (Ask)", scam_check: "Second scam reader", plan_question: "Worded a question", compile_policy: "Read spending rules", classify: "Small job", eval: "Evaluation" };
+const PURPOSE: Record<string, string> = { get read_request() { return t("Read a request"); }, get capture_frame() { return t("Read a photo"); }, get shopper_question() { return t("Assistant (Ask)"); }, get scam_check() { return t("Second scam reader"); }, get plan_question() { return t("Worded a question"); }, get compile_policy() { return t("Read spending rules"); }, get classify() { return t("Small job"); }, get eval() { return t("Evaluation"); } };
 
 export function AiCalls() {
   const st = useApi<AiData>("/api/public/ai");
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="AI calls" title="The last 20 model calls" lede="From the showcase demo, which is rebuilt every night and asked a few real questions. Each row is one call: what it read, which tools it used, what came back, how long it took and what it cost." />
+      <PageHead eyebrow={t("AI calls")} title={t("The last 20 model calls")} lede={t("From the showcase demo, which is rebuilt every night and asked a few real questions. Each row is one call: what it read, which tools it used, what came back, how long it took and what it cost.")} />
       <Loaded state={st}>
         {(d) =>
           !d.calls.length ? (
             <Panel>
-              <p className="text-sm">{d.showcase ? "The showcase hasn't made a model call since it was rebuilt." : "There's no showcase on this instance yet."} {d.connected ? "" : "No model is connected here."}</p>
+              <p className="text-sm">{d.showcase ? t("The showcase hasn't made a model call since it was rebuilt.") : t("There's no showcase on this instance yet.")} {d.connected ? "" : t("No model is connected here.")}</p>
             </Panel>
           ) : (
-            <Panel sub={d.showcase ? `Showcase built ${when(d.showcase.built)}. Costs are estimates from list prices.` : undefined}>
-              <Table label="Model calls" head={["When", "Job", "Model", "Read", "Tools", "Answer", "Time", "Cost"]} min={980}>
+            <Panel sub={d.showcase ? t("Showcase built {0}. Costs are estimates from list prices.", when(d.showcase.built)) : undefined}>
+              <Table label={t("Model calls")} head={[t("When"), t("Job"), t("Model"), t("Read"), t("Tools"), t("Answer"), t("Time"), t("Cost")]} min={980}>
                 {d.calls.map((c, i) => (
                   <tr key={i} className="border-b border-rule last:border-0">
                     <Td className="text-xs whitespace-nowrap">{when(c.at)}</Td>
@@ -281,8 +282,8 @@ export function AiCalls() {
                     <Td className="max-w-[14rem]">{c.input ?? "—"}</Td>
                     <Td className="max-w-[12rem] text-xs">{c.tools.length ? c.tools.map((t) => `${t.tool}${t.source === "paypal" ? " (PayPal MCP)" : ""}`).join(", ") : "—"}</Td>
                     <Td className="max-w-[18rem] font-mono text-xs break-words">{c.ok ? c.output : <span className="text-stop">{c.error}</span>}</Td>
-                    <Td className="num whitespace-nowrap">{c.ms} ms</Td>
-                    <Td className="num whitespace-nowrap">{c.cost_usd ? `$${c.cost_usd.toFixed(5)}` : "not priced"}</Td>
+                    <Td className="num whitespace-nowrap">{tn("{0} ms", c.ms)}</Td>
+                    <Td className="num whitespace-nowrap">{c.cost_usd ? `$${c.cost_usd.toFixed(5)}` : t("not priced")}</Td>
                   </tr>
                 ))}
               </Table>
@@ -302,11 +303,11 @@ export function PayPalApis() {
   const st = useApi<PpData>("/api/public/paypal");
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="PayPal" title="Every PayPal API Everyday uses" lede="When each is called, and a live id from the showcase demo where one exists. All of it runs on PayPal's sandbox with test money." />
+      <PageHead eyebrow="PayPal" title={t("Every PayPal API Everyday uses")} lede={t("When each is called, and a live id from the showcase demo where one exists. All of it runs on PayPal's sandbox with test money.")} />
       <Loaded state={st}>
         {(d) => (
-          <Panel sub={`${d.env === "sandbox" ? "PayPal sandbox" : `PayPal ${d.env}`} · ${d.connected ? "connected" : "not connected"}${d.showcase ? ` · showcase built ${when(d.showcase.built)}` : " · no showcase yet"}`}>
-            <Table label="PayPal APIs" head={["API", "When Everyday calls it", "Live id in the showcase"]} min={760}>
+          <Panel sub={`${d.env === "sandbox" ? t("PayPal sandbox") : `PayPal ${d.env}`} · ${d.connected ? "connected" : t("not connected")}${d.showcase ? t(" · showcase built {0}", when(d.showcase.built)) : t(" · no showcase yet")}`}>
+            <Table label={t("PayPal APIs")} head={["API", t("When Everyday calls it"), t("Live id in the showcase")]} min={760}>
               {d.apis.map((a) => (
                 <tr key={a.key} className="border-b border-rule last:border-0">
                   <Td>
@@ -322,7 +323,7 @@ export function PayPalApis() {
                         {a.live.at && <div className="text-xs text-ink-2">{when(a.live.at)}</div>}
                       </>
                     ) : (
-                      <span className="text-ink-2">None in the showcase yet</span>
+                      <span className="text-ink-2">{t("None in the showcase yet")}</span>
                     )}
                   </Td>
                 </tr>
@@ -343,7 +344,7 @@ export function Roles() {
   const st = useApi<RolesData>("/api/public/roles");
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Who can move money" title="Who can do what with money" lede="Every person, model and outside assistant that touches Everyday, with what each can and cannot do." />
+      <PageHead eyebrow={t("Who can move money")} title={t("Who can do what with money")} lede={t("Every person, model and outside assistant that touches Everyday, with what each can and cannot do.")} />
       <Loaded state={st}>
         {(d) => (
           <div className="space-y-4">
@@ -354,7 +355,7 @@ export function Roles() {
               <Panel key={r.who} title={r.who}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <h3 className="mb-1 text-sm font-semibold text-done">Can</h3>
+                    <h3 className="mb-1 text-sm font-semibold text-done">{t("Can")}</h3>
                     <ul className="list-disc space-y-1 pl-5 text-sm">
                       {r.can.map((x) => (
                         <li key={x}>{x}</li>
@@ -362,7 +363,7 @@ export function Roles() {
                     </ul>
                   </div>
                   <div>
-                    <h3 className="mb-1 text-sm font-semibold text-stop">Cannot</h3>
+                    <h3 className="mb-1 text-sm font-semibold text-stop">{t("Cannot")}</h3>
                     <ul className="list-disc space-y-1 pl-5 text-sm">
                       {r.cannot.map((x) => (
                         <li key={x}>{x}</li>
@@ -387,16 +388,16 @@ export function Accessibility() {
   const st = useApi<A11yData>("/api/public/accessibility");
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Accessibility" title="What was tested, and how" lede="Works with a keyboard, at 200% text and with reduced motion; every control has a name. Results come from the automated run recorded below, with its date. What wasn't tested is listed too." />
+      <PageHead eyebrow={t("Accessibility")} title={t("What was tested, and how")} lede={t("Works with a keyboard, at 200% text and with reduced motion; every control has a name. Results come from the automated run recorded below, with its date. What wasn't tested is listed too.")} />
       <Loaded state={st}>
         {(d) =>
           d.missing ? (
             <Panel>
-              <p className="text-sm text-stop">No accessibility run is recorded on this build.</p>
+              <p className="text-sm text-stop">{t("No accessibility run is recorded on this build.")}</p>
             </Panel>
           ) : (
             <div className="space-y-6">
-              <Panel title="Checks" sub={`Run ${when(d.run_on)} on ${d.target}`}>
+              <Panel title={t("Checks")} sub={t("Run {0} on {1}", when(d.run_on), d.target)}>
                 <ul className="space-y-3">
                   {(d.checks ?? []).map((c) => (
                     <li key={c.id} className="rounded-md border border-rule p-3 text-sm">
@@ -410,7 +411,7 @@ export function Accessibility() {
                   ))}
                 </ul>
               </Panel>
-              <Panel title="Not tested">
+              <Panel title={t("Not tested")}>
                 <ul className="list-disc space-y-1 pl-5 text-sm">
                   {(d.not_tested ?? []).map((x) => (
                     <li key={x}>{x}</li>
@@ -439,7 +440,7 @@ export function Agents() {
     try {
       const r = await fetch("/api/ui/devices", { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, credentials: "same-origin", body: JSON.stringify({ client: "agent" }) });
       const out = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(out?.message ?? "Sign in to your demo first.");
+      if (!r.ok) throw new Error(out?.message ?? t("Sign in to your demo first."));
       setKey(out.key);
     } catch (e) {
       toast.error((e as Error).message);
@@ -449,46 +450,46 @@ export function Agents() {
   };
   return (
     <div className="ev-rise">
-      <PageHead eyebrow="Agents" title="Connect your own assistant" lede="Everyday is an MCP server. An outside assistant can plan, quote and start a PayPal approval for the shopper, inside the shopper's rules; it can't refund or change limits." />
+      <PageHead eyebrow={t("Agents")} title={t("Connect your own assistant")} lede={t("Everyday is an MCP server. An outside assistant can plan, quote and start a PayPal approval for the shopper, inside the shopper's rules; it can't refund or change limits.")} />
       <Loaded state={st}>
         {(d) => (
           <div className="space-y-6">
-            <Panel title="Your key">
+            <Panel title={t("Your key")}>
               <p className="mb-3 text-sm">{d.key_where}</p>
               {key ? (
                 <>
-                  <p className="mb-2 text-sm font-medium">Shown once. Copy it now.</p>
-                  <Copyable text={key} label="the assistant key" />
+                  <p className="mb-2 text-sm font-medium">{t("Shown once. Copy it now.")}</p>
+                  <Copyable text={key} label={t("the assistant key")} />
                 </>
               ) : me.data?.workspace ? (
                 <Button onClick={() => void make()} disabled={busy}>
-                  <KeyRound /> Make an assistant key
+                  <KeyRound />{" "}{t("Make an assistant key")}
                 </Button>
               ) : (
                 <Button asChild variant="outline">
-                  <Link to="/demo">Start a demo first</Link>
+                  <Link to="/demo">{t("Start a demo first")}</Link>
                 </Button>
               )}
             </Panel>
-            <Panel title="Connect" sub={d.transport}>
+            <Panel title={t("Connect")} sub={d.transport}>
               <div className="space-y-4">
                 {d.connect.map((c) => (
                   <div key={c.client}>
                     <h3 className="mb-1 text-sm font-semibold">{c.client}</h3>
-                    <Copyable text={key ? c.command.replace(/YOUR_EVERYDAY_KEY/g, key) : c.command} label={`the ${c.client} command`} />
+                    <Copyable text={key ? c.command.replace(/YOUR_EVERYDAY_KEY/g, key) : c.command} label={t("the {0} command", c.client)} />
                   </div>
                 ))}
               </div>
             </Panel>
-            <Panel title="Tools">
+            <Panel title={t("Tools")}>
               <p className="text-sm">
-                <b>Shopper ({d.endpoint}):</b> <span className="font-mono text-xs">{d.shopper_tools.join(", ")}</span>
+                <b>{tn("Shopper ({0}):", d.endpoint)}</b> <span className="font-mono text-xs">{d.shopper_tools.join(", ")}</span>
               </p>
               <p className="mt-2 text-sm">
-                <b>Shop, read only ({d.merchant_endpoint}):</b> <span className="font-mono text-xs">{d.merchant_tools.join(", ")}</span>
+                <b>{tn("Shop, read only ({0}):", d.merchant_endpoint)}</b> <span className="font-mono text-xs">{d.merchant_tools.join(", ")}</span>
               </p>
               <p className="mt-3 text-sm text-ink-2">
-                {d.limits} See <Link className="underline" to="/who-can-move-money">who can move money</Link>.
+                {tn("{0} See", d.limits)}{" "}<Link className="underline" to="/who-can-move-money">{t("who can move money")}</Link>.
               </p>
             </Panel>
           </div>

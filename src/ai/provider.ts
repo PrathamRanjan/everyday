@@ -10,6 +10,7 @@
  * shopper's mandate and answers shopper questions; prices, the plan, the quote and every PayPal call come
  * from code.
  */
+import { replyLanguageLine } from "../i18n/index.js";
 import { createHash } from "node:crypto";
 import { config } from "../config.js";
 import { getDb } from "../db.js";
@@ -178,7 +179,7 @@ async function openaiStructured(model: string, call: StructuredCall<unknown>, sc
       headers: { Authorization: `Bearer ${config.ai.openaiKey}`, "content-type": "application/json" },
       body: JSON.stringify({
         model,
-        instructions: call.system,
+        instructions: `${call.system}\n${replyLanguageLine()} Words quoted from the input stay exactly as written, in the input's language.`,
         input,
         text: { format: { type: "json_schema", name: call.schemaName, strict: true, schema } },
         max_output_tokens: Math.max(MIN_OUTPUT_TOKENS, call.maxOutputTokens ?? 0),

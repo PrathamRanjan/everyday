@@ -1,4 +1,6 @@
 import { paypalBaseUrl } from "../config.js";
+import { currentLang, LANGS } from "../i18n/index.js";
+// B7: PayPal's own page opens in the shopper's language (BCP 47; Hindi has no PayPal page, so English (India)).
 import { OrderInput, PayPalApi, PayPalError, PPCapture, PPDispute, PPOrder, PPRefund, PPSetupToken, PPTransaction, toValue, TrackingInput, UnknownOutcomeError } from "./types.js";
 
 type Json = Record<string, any>;
@@ -133,7 +135,7 @@ export class PayPalClient implements PayPalApi {
             items: input.items?.map((i) => ({ name: i.name.slice(0, 127), sku: i.sku.slice(0, 127), quantity: String(i.quantity), unit_amount: { currency_code: input.currency, value: toValue(i.unitCents) }, category: "PHYSICAL_GOODS" })),
           },
         ],
-        payment_source: { paypal: { experience_context: { brand_name: (input.brand ?? "Everyday").slice(0, 127), user_action: "PAY_NOW", shipping_preference: "NO_SHIPPING", return_url: input.returnUrl, cancel_url: input.cancelUrl } } },
+        payment_source: { paypal: { experience_context: { brand_name: (input.brand ?? "Everyday").slice(0, 127), locale: LANGS[currentLang()].paypal, user_action: "PAY_NOW", shipping_preference: "NO_SHIPPING", return_url: input.returnUrl, cancel_url: input.cancelUrl } } },
       },
       { requestId, prefer: "return=representation" },
     );

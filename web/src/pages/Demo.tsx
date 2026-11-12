@@ -8,6 +8,7 @@ import { useSession } from "@/lib/session";
 import { day } from "@/lib/format";
 import { startTour } from "@/tours/tours";
 import { cn } from "@/lib/utils";
+import { t, tn } from "@/i18n";
 
 interface JudgeStep { key: string; label: string; how: string; href: string; done: boolean; at: string | null }
 interface JudgeData {
@@ -37,15 +38,15 @@ export function Judge() {
     <Loaded state={st}>
       {(d) => (
         <div className="ev-rise">
-          <PageHead eyebrow="For judges" title="Try it in three minutes" lede="Pick a path. Each step opens the right screen, and ticks itself here when it really happened in your own private demo. No PayPal login is needed for any of them; the sandbox moves test money only." />
+          <PageHead eyebrow={t("For judges")} title={t("Try it in three minutes")} lede={t("Pick a path. Each step opens the right screen, and ticks itself here when it really happened in your own private demo. No PayPal login is needed for any of them; the sandbox moves test money only.")} />
           {!d.ws && (
             <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-rule bg-card p-4">
-              <p className="text-sm">Start your own private demo first: a shopper, a shop, two real sandbox purchases and a price drop waiting to be claimed.</p>
+              <p className="text-sm">{t("Start your own private demo first: a shopper, a shop, two real sandbox purchases and a price drop waiting to be claimed.")}</p>
               <Button disabled={Boolean(busy)} onClick={() => void run("start", "/demo/start", {}, { stay: true })}>
                 <Busy on={busy === "start"}>
                   <PlayCircle />
                 </Busy>
-                Start my demo
+                {t("Start my demo")}
               </Button>
             </div>
           )}
@@ -60,12 +61,12 @@ export function Judge() {
                     </h2>
                     <span className="inline-flex shrink-0 items-center gap-1 text-xs text-ink-2">
                       <Clock className="size-3.5" />
-                      {p.minutes} min
+                      {tn("{0} min", p.minutes)}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-ink-2">{p.why}</p>
                   <p className="mt-2 text-xs font-semibold" aria-live="polite">
-                    {n} of {p.steps.length} done{p.no_login ? " · no PayPal login" : ""}
+                    {tn("{0} of {1} done{2}", n, p.steps.length, p.no_login ? t(" · no PayPal login") : "")}
                   </p>
                   <ol className="mt-3 space-y-2">
                     {p.steps.map((s, i) => (
@@ -75,12 +76,12 @@ export function Judge() {
                           <div className="min-w-0">
                             <div className="font-medium">{s.label}</div>
                             <div className="text-ink-2">{s.how}</div>
-                            {s.done && s.at && <div className="num text-xs text-ink-2">Recorded {new Date(s.at).toLocaleTimeString()}</div>}
+                            {s.done && s.at && <div className="num text-xs text-ink-2">{tn("Recorded {0}", new Date(s.at).toLocaleTimeString())}</div>}
                           </div>
                         </div>
                         {!s.done && d.ws && (
                           <Link to={s.href} className="mt-2 inline-flex min-h-11 items-center gap-1 pl-6 font-semibold underline underline-offset-4">
-                            Open <ArrowRight className="size-3.5" />
+                            {t("Open")}{" "}<ArrowRight className="size-3.5" />
                           </Link>
                         )}
                       </li>
@@ -92,14 +93,14 @@ export function Judge() {
           </div>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-            <Panel title="What is live, what is simulated" sub="Built from this site's own settings when you opened the page, not typed by hand.">
+            <Panel title={t("What is live, what is simulated")} sub={t("Built from this site's own settings when you opened the page, not typed by hand.")}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="text-xs text-ink-2">
-                      <th className="py-1 pr-3">Part</th>
-                      <th className="pr-3">State</th>
-                      <th>How</th>
+                      <th className="py-1 pr-3">{t("Part")}</th>
+                      <th className="pr-3">{t("State")}</th>
+                      <th>{t("How")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -117,29 +118,29 @@ export function Judge() {
               </div>
             </Panel>
             <div className="space-y-6">
-              <Panel title="On your phone" sub={d.phone ? "Scan to open this same demo on a phone, signed in. The link works for 48 hours." : "Start your demo first to get a phone link."}>
+              <Panel title={t("On your phone")} sub={d.phone ? t("Scan to open this same demo on a phone, signed in. The link works for 48 hours.") : t("Start your demo first to get a phone link.")}>
                 {d.phone && (
                   <div className="grid justify-items-start gap-2">
-                    <div className="w-40 rounded bg-white p-2" role="img" aria-label="QR code that opens this demo on a phone" dangerouslySetInnerHTML={{ __html: d.phone.svg }} />
+                    <div className="w-40 rounded bg-white p-2" role="img" aria-label={t("QR code that opens this demo on a phone")} dangerouslySetInnerHTML={{ __html: d.phone.svg }} />
                     <button type="button" className="text-sm underline" onClick={() => void navigator.clipboard?.writeText(d.phone!.url)}>
                       <Link2 className="mr-1 inline size-3.5" />
-                      Copy the link
+                      {t("Copy the link")}
                     </button>
                   </div>
                 )}
               </Panel>
-              <Panel title="PayPal sandbox accounts">
+              <Panel title={t("PayPal sandbox accounts")}>
                 {d.sandbox_buyer ? (
                   <dl className="grid gap-1 text-sm">
-                    <dt className="text-ink-2">Sandbox buyer (for paying on PayPal's own page)</dt>
+                    <dt className="text-ink-2">{t("Sandbox buyer (for paying on PayPal's own page)")}</dt>
                     <dd className="font-mono">{d.sandbox_buyer.email}</dd>
                     {d.sandbox_buyer.password && <dd className="font-mono">{d.sandbox_buyer.password}</dd>}
                   </dl>
                 ) : (
-                  <p className="text-sm text-ink-2">None needed: every path pays with the demo's saved sandbox wallet. A sandbox buyer login for paying on PayPal's own page hasn't been published here.</p>
+                  <p className="text-sm text-ink-2">{t("None needed: every path pays with the demo's saved sandbox wallet. A sandbox buyer login for paying on PayPal's own page hasn't been published here.")}</p>
                 )}
               </Panel>
-              <Panel title="Pages that need no sign-in">
+              <Panel title={t("Pages that need no sign-in")}>
                 <ul className="space-y-2 text-sm">
                   {d.pages.map((p) => (
                     <li key={p.href}>
@@ -154,7 +155,7 @@ export function Judge() {
             </div>
           </div>
           <p className="mt-6 text-xs text-ink-2">
-            Want a walk-through of one page instead? <button type="button" className="underline" onClick={() => void startTour("judge")}>Explain the page I'm on</button> (it explains this page only and ends when you leave it).
+            {t("Want a walk-through of one page instead?")}{" "}<button type="button" className="underline" onClick={() => void startTour("judge")}>{t("Explain the page I'm on")}</button>{" "}{t("(it explains this page only and ends when you leave it).")}
           </p>
         </div>
       )}
@@ -172,65 +173,65 @@ export default function Demo() {
     <Loaded state={st}>
       {(d) => (
         <div className="ev-rise">
-          <PageHead eyebrow="Demo controls" title="Run the demo" lede={d.demo ? "Your own demo: move its clock, start it again, or switch between Maya and her shop." : "Demo mode is off on this server."} />
+          <PageHead eyebrow={t("Demo controls")} title={t("Run the demo")} lede={d.demo ? t("Your own demo: move its clock, start it again, or switch between Maya and her shop.") : t("Demo mode is off on this server.")} />
           {d.demo && d.private_demos && !d.workspace && (
-            <Panel title="You don't have a demo yet" sub="Each visitor gets a private copy. Nobody else sees what you do in yours.">
+            <Panel title={t("You don't have a demo yet")} sub={t("Each visitor gets a private copy. Nobody else sees what you do in yours.")}>
               <Button disabled={Boolean(busy)} onClick={() => run("start", "/demo/start", {})}>
-                <Busy on={busy === "start"}>{null}</Busy>Try the live demo
+                <Busy on={busy === "start"}>{null}</Busy>{t("Try the live demo")}
               </Button>
             </Panel>
           )}
           {d.demo && (!d.private_demos || d.workspace) && (
             <div className="grid gap-6 md:grid-cols-2">
-              <Panel title={<span className="inline-flex items-center gap-2"><Clock className="size-5" />Demo clock</span>} sub="Deliveries, return windows and price promises run on this clock.">
+              <Panel title={<span className="inline-flex items-center gap-2"><Clock className="size-5" />{t("Demo clock")}</span>} sub={t("Deliveries, return windows and price promises run on this clock.")}>
                 <p className="num font-display text-3xl">{d.clock ?? "—"}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="outline" disabled={Boolean(busy)} onClick={() => run("day", "/demo/clock", { step: "day" }, { stay: true })}>
-                    <Busy on={busy === "day"}>{null}</Busy>+1 working day
+                    <Busy on={busy === "day"}>{null}</Busy>{t("+1 working day")}
                   </Button>
                   <Button variant="outline" disabled={Boolean(busy)} onClick={() => run("week", "/demo/clock", { step: "week" }, { stay: true })}>
-                    <Busy on={busy === "week"}>{null}</Busy>+1 week
+                    <Busy on={busy === "week"}>{null}</Busy>{t("+1 week")}
                   </Button>
                 </div>
               </Panel>
-              <Panel title={<span className="inline-flex items-center gap-2"><RotateCcw className="size-5" />Start my demo again</span>} sub="Rebuilds only your own demo: Maya, her shop, the catalog and the seed's sandbox payments. Nobody else's demo changes. Sandbox orders already in PayPal stay in PayPal.">
+              <Panel title={<span className="inline-flex items-center gap-2"><RotateCcw className="size-5" />{t("Start my demo again")}</span>} sub={t("Rebuilds only your own demo: Maya, her shop, the catalog and the seed's sandbox payments. Nobody else's demo changes. Sandbox orders already in PayPal stay in PayPal.")}>
                 <Button
                   variant="outline"
                   disabled={Boolean(busy)}
                   onClick={() => {
-                    if (confirm("Rebuild your own demo from the start? Only yours changes.")) void run("reset", "/demo/reset");
+                    if (confirm(t("Rebuild your own demo from the start? Only yours changes."))) void run("reset", "/demo/reset");
                   }}
                 >
-                  <Busy on={busy === "reset"}>{null}</Busy>Reset my demo
+                  <Busy on={busy === "reset"}>{null}</Busy>{t("Reset my demo")}
                 </Button>
               </Panel>
               {ws && (
-                <Panel title={<span className="inline-flex items-center gap-2"><Link2 className="size-5" />This demo</span>} sub={`Private to you. Deleted if unused until ${day(String(ws.expires_at).slice(0, 10))}.`} className="md:col-span-2">
+                <Panel title={<span className="inline-flex items-center gap-2"><Link2 className="size-5" />{t("This demo")}</span>} sub={t("Private to you. Deleted if unused until {0}.", day(String(ws.expires_at).slice(0, 10)))} className="md:col-span-2">
                   {ws.progress_line && <p className="text-sm" role="status">{ws.progress_line}</p>}
                   {ws.join_url && (
                     <p className="mt-2 text-sm text-ink-2">
-                      Open the same demo on your phone: <span className="num break-all text-ink">{ws.join_url}</span>
+                      {t("Open the same demo on your phone:")}{" "}<span className="num break-all text-ink">{ws.join_url}</span>
                     </p>
                   )}
                 </Panel>
               )}
-              <Panel title="Jump in" className="md:col-span-2">
+              <Panel title={t("Jump in")} className="md:col-span-2">
                 <div className="flex flex-wrap gap-2">
                   {p.data?.accounts.map((a) => (
                     <Button key={a.id} variant="outline" disabled={Boolean(busy)} onClick={() => run(a.id, "/login", { as: `acc:${a.id}` })}>
-                      <User className="size-4" /> {a.name} (shopper)
+                      <User className="size-4" />{" "}{tn("{0} (shopper)", a.name)}
                     </Button>
                   ))}
                   {p.data?.merchants.map((m) => (
                     <Button key={m.id} variant="outline" disabled={Boolean(busy)} onClick={() => run(m.id, "/login", { as: `mer:${m.id}` })}>
-                      <Store className="size-4" /> {m.name.replace(/\s*\(.*\)$/, "")} (merchant)
+                      <Store className="size-4" />{" "}{tn("{0} (merchant)", m.name.replace(/\s*\(.*\)$/, ""))}
                     </Button>
                   ))}
                   <Button variant="ghost" onClick={() => void startTour("judge")}>
-                    <PlayCircle className="size-4" /> Judge tour
+                    <PlayCircle className="size-4" />{" "}{t("Judge tour")}
                   </Button>
                 </div>
-                <p className="mt-3 text-xs text-ink-2">MCP clients use access keys printed by the seed script; keys are never shown on a page.</p>
+                <p className="mt-3 text-xs text-ink-2">{t("MCP clients use access keys printed by the seed script; keys are never shown on a page.")}</p>
               </Panel>
             </div>
           )}

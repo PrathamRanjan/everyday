@@ -221,3 +221,13 @@
 
 /* Grid items never grow past their track because of a wide child (the lifeline scrolls inside instead). */
 @layer base { .grid > * { min-width: 0; } }
+
+/* B7: languages. Hindi in Noto Sans Devanagari with a taller line (matras need the room); headings too, since the
+   display serif has no Devanagari. Long Portuguese and Indonesian words may break rather than overflow. */
+:root[data-lang="hi"] body, :root[data-lang="hi"] h1, :root[data-lang="hi"] h2, :root[data-lang="hi"] h3, :root[data-lang="hi"] .font-display {
+  font-family: "Noto Sans Devanagari Variable", var(--font-sans);
+}
+:root[data-lang="hi"] body { line-height: 1.75; }
+:root[data-lang="hi"] h1, :root[data-lang="hi"] h2, :root[data-lang="hi"] h3 { line-height: 1.4; letter-spacing: 0; }
+:root:not([data-lang="en"]) .whitespace-nowrap:is(button, a) { white-space: normal; text-align: center; }
+:root[data-lang="pt"] main, :root[data-lang="id"] main { overflow-wrap: anywhere; hyphens: auto; }

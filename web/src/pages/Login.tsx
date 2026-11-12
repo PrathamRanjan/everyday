@@ -8,6 +8,7 @@ import { Busy, Loaded, PageHead } from "@/components/kit";
 import { postAction, useApi } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { toast } from "sonner";
+import { t, tn } from "@/i18n";
 
 type Personas = { demo: boolean; accounts: { id: string; name: string }[]; merchants: { id: string; name: string }[]; private_demos?: boolean; workspace?: string | null };
 
@@ -34,7 +35,7 @@ export default function Login() {
   };
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHead eyebrow="Sign in" title="Who are you today?" lede="This is a demo on the PayPal sandbox. Nothing here uses real money." />
+      <PageHead eyebrow={t("Sign in")} title={t("Who are you today?")} lede={t("This is a demo on the PayPal sandbox. Nothing here uses real money.")} />
       <Loaded state={st}>
         {(d) => (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -45,12 +46,12 @@ export default function Login() {
                     <PlayCircle className="size-5" />
                   </span>
                   <div>
-                    <p className="font-display text-xl">Your own demo</p>
-                    <p className="text-sm text-ink-2">A private copy with Maya, her shop and real sandbox payments. Nobody else sees it; it's deleted 48 hours after your last visit.</p>
+                    <p className="font-display text-xl">{t("Your own demo")}</p>
+                    <p className="text-sm text-ink-2">{t("A private copy with Maya, her shop and real sandbox payments. Nobody else sees it; it's deleted 48 hours after your last visit.")}</p>
                   </div>
                 </div>
                 <Button className="self-start" onClick={() => go("start", {}, "/demo/start")} disabled={Boolean(busy)}>
-                  <Busy on={busy === "start"}>{null}</Busy>Try the live demo
+                  <Busy on={busy === "start"}>{null}</Busy>{t("Try the live demo")}
                 </Button>
               </div>
             )}
@@ -62,11 +63,11 @@ export default function Login() {
                   </span>
                   <div>
                     <p className="font-display text-xl">{a.name}</p>
-                    <p className="text-sm text-ink-2">Shopper · buying a study setup by Friday</p>
+                    <p className="text-sm text-ink-2">{t("Shopper · buying a study setup by Friday")}</p>
                   </div>
                 </div>
                 <Button onClick={() => go(a.id, { as: `acc:${a.id}` })} disabled={Boolean(busy)}>
-                  <Busy on={busy === a.id}>{null}</Busy>Continue as {a.name}
+                  <Busy on={busy === a.id}>{null}</Busy>{tn("Continue as {0}", a.name)}
                 </Button>
               </div>
             ))}
@@ -78,11 +79,11 @@ export default function Login() {
                   </span>
                   <div>
                     <p className="font-display text-xl">{m.name.replace(/\s*\(.*\)$/, "")}</p>
-                    <p className="text-sm text-ink-2">Merchant · sandbox test shop</p>
+                    <p className="text-sm text-ink-2">{t("Merchant · sandbox test shop")}</p>
                   </div>
                 </div>
                 <Button variant="outline" onClick={() => go(m.id, { as: `mer:${m.id}` })} disabled={Boolean(busy)}>
-                  <Busy on={busy === m.id}>{null}</Busy>Open the merchant console
+                  <Busy on={busy === m.id}>{null}</Busy>{t("Open the merchant console")}
                 </Button>
               </div>
             ))}
@@ -94,16 +95,16 @@ export default function Login() {
               }}
             >
               <div className="flex items-center gap-2 font-medium">
-                <KeyRound className="size-4" /> With an access key
+                <KeyRound className="size-4" />{" "}{t("With an access key")}
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="key">Access key</Label>
+                <Label htmlFor="key">{t("Access key")}</Label>
                 <Input id="key" type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} className="min-h-11" required />
               </div>
               <Button type="submit" variant="outline" className="self-start" disabled={Boolean(busy) || !key}>
-                <Busy on={busy === "key"}>{null}</Busy>Sign in
+                <Busy on={busy === "key"}>{null}</Busy>{t("Sign in")}
               </Button>
-              {!d.demo && <p className="text-sm text-ink-2">Demo mode is off on this server, so only access keys work.</p>}
+              {!d.demo && <p className="text-sm text-ink-2">{t("Demo mode is off on this server, so only access keys work.")}</p>}
             </form>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { setFxFetcher } from "../src/services/fx.js";
 import { createApp } from "../src/app.js";
 import { config } from "../src/config.js";
 import { openDb, setDb, type Db } from "../src/db.js";
@@ -245,6 +246,15 @@ describe("Everyday acceptance journey", () => {
     const web = await maya.get(`/api/ui/plans/${intent.id}/web`);
     expect(web.status).toBe(200);
     expect(web.json.label).toMatch(/not purchasable in this demo/);
+    // Tier 2: saying you bought a listing that isn't in the results is refused plainly (404), never a 500.
+    expect((await maya.req("POST", `/api/ui/plans/${intent.id}/web/bought`, { json: { url: "https://nowhere.example/" } })).status).toBe(404);
+    // B6/B5: the shopper's language is saved on the account; the exchange-rate reading is empty when rates can't be fetched.
+    expect((await maya.req("POST", "/api/ui/lang", { json: { lang: "pt" } })).json).toMatchObject({ ok: true, lang: "pt" });
+    expect((await one("SELECT lang FROM accounts WHERE id = $1", [s.account])).lang).toBe("pt");
+    expect((await maya.req("POST", "/api/ui/lang", { json: { lang: "fr" } })).status).toBe(400);
+    expect((await maya.req("POST", "/api/ui/lang", { json: { lang: "en" } })).status).toBe(200);
+    setFxFetcher(async () => Promise.reject(new Error("no network in tests")));
+    expect((await maya.get("/api/ui/fx")).json).toMatchObject({ fx: null });
     // B6: receipts in. The sample is served; reading with no model says so and offers the form; a typed line saves with its dates.
     expect((await maya.get("/api/ui/receipts/sample")).json.text).toMatch(/BrightDesk/);
     const rr = await maya.req("POST", "/api/ui/receipts/read", { json: { text: "1 x Desk lamp $20.00" } });

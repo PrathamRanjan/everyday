@@ -469,6 +469,9 @@ CREATE TABLE IF NOT EXISTS workspaces (
 );
 CREATE INDEX IF NOT EXISTS workspaces_ip ON workspaces(ip_hash, created_at);
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS ws_id TEXT;
+-- B6: the language the shopper chose; outgoing messages are worded in it when they are sent (stored in English).
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS lang TEXT;
+ALTER TABLE channel_messages ADD COLUMN IF NOT EXISTS lang TEXT;
 ALTER TABLE merchants ADD COLUMN IF NOT EXISTS ws_id TEXT;
 CREATE INDEX IF NOT EXISTS accounts_ws ON accounts(ws_id);
 CREATE INDEX IF NOT EXISTS merchants_ws ON merchants(ws_id);

@@ -1,4 +1,5 @@
 import { announce } from "@/lib/announce";
+import { wireLang } from "@/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -13,8 +14,12 @@ export class ApiError extends Error {
 }
 
 /** GET one screen's data. A 401 means "sign in first". */
-export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const r = await fetch(path, { headers: { accept: "application/json" }, credentials: "same-origin", signal });
+export async function getJson<T>(path: string, signal?: AbortSignal, again = false): Promise<T> {
+  const r = await fetch(path, { headers: { accept: "application/json", "x-everyday-lang": wireLang() }, credentials: "same-origin", signal });
+  // The first screen's data is preloaded with the page, worded in the cookie's language; if that isn't the language
+  // chosen here (the server says which it used), ask again.
+  const served = r.headers.get("x-everyday-lang");
+  if (!again && served && served !== wireLang()) return getJson<T>(path, signal, true);
   const text = await r.text();
   let body: any = null;
   try {
@@ -24,6 +29,13 @@ export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T>
   }
   if (!r.ok) throw new ApiError(body?.message ?? (r.status >= 500 ? "Something went wrong on our side." : `Request failed (${r.status})`), r.status);
   return body as T;
+}
+
+/** POST JSON to an /api/ui route; never throws (the page says what went wrong). */
+export async function postJson(path: string, body: unknown): Promise<{ ok: boolean; status: number; j: any }> {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json", accept: "application/json", "x-everyday-ui": "1", "x-everyday-lang": wireLang() }, credentials: "same-origin", body: JSON.stringify(body) });
+  const j = await r.json().catch(() => null);
+  return { ok: r.ok, status: r.status, j };
 }
 
 export type LoadState<T> = { data: T | null; error: ApiError | null; loading: boolean; reload: () => Promise<void> };
@@ -61,6 +73,12 @@ export function useApi<T>(path: string | null): LoadState<T> {
   useEffect(() => {
     void load();
   }, [load]);
+  // B1.3: a language switch refetches in place, so the server's own sentences follow without a reload.
+  useEffect(() => {
+    const on = () => void load();
+    window.addEventListener("ev:lang", on);
+    return () => window.removeEventListener("ev:lang", on);
+  }, [load]);
   return { data, error, loading, reload: load };
 }
 
@@ -73,7 +91,7 @@ export type ActResult = { to: string; ok: string | null; err: string | null; ext
 type Val = string | number | boolean | null | undefined;
 export async function postAction(path: string, data?: Record<string, Val | Val[]> | FormData): Promise<ActResult> {
   let body: BodyInit | undefined;
-  const headers: Record<string, string> = { "x-everyday-ui": "1", accept: "application/json" };
+  const headers: Record<string, string> = { "x-everyday-ui": "1", accept: "application/json", "x-everyday-lang": wireLang() };
   if (data instanceof FormData) body = data;
   else if (data) {
     const p = new URLSearchParams();

@@ -34,6 +34,10 @@ export interface ItemLine {
   href: string | null;
 }
 
+/** One whole sentence per state, so each can be translated as a sentence (the issue word is translated as a blank). */
+const caseLine = (n: string, issue: string, status: string) =>
+  status === "refunding" ? `${n} (${issue}) is being refunded; it counts once PayPal confirms it.` : status === "choose" ? `${n} (${issue}) is waiting for you to choose a remedy.` : `${n} (${issue}) is with the shop.`;
+
 export async function moneyBack(q: Queryable, a: Account) {
   const today = nowIso(a).slice(0, 10);
   const auto = Boolean((await q.query<{ auto_claim: boolean }>("SELECT auto_claim FROM accounts WHERE id = $1", [a.id])).rows[0]?.auto_claim);
@@ -43,7 +47,7 @@ export async function moneyBack(q: Queryable, a: Account) {
     lines.push({ kind: "price_drop", title: p.title, amount_cents: p.amount_cents, until: null, detail: `The shop now charges ${money(p.now_cents)}; you paid ${money(p.protected_unit_cents)}. ${p.policy_version ?? "The shop's policy"} promises the difference.`, href: `/orders/${p.order_id}`, line_id: p.line_id });
   const open = (await q.query<any>("SELECT c.number, c.status, c.issue, c.refund_cents, c.line_id, o.id AS order_id, l.title FROM cases c JOIN orders o ON o.id = c.order_id LEFT JOIN order_lines l ON l.id = c.line_id WHERE o.account_id = $1 AND c.status IN ('awaiting_merchant','refunding','choose') ORDER BY c.created_at DESC", [a.id])).rows;
   for (const c of open)
-    lines.push({ kind: "claim_open", title: c.title ?? c.number, amount_cents: c.refund_cents ?? null, until: null, detail: `${c.number} (${c.issue === "price_drop" ? "price drop" : String(c.issue).replace(/_/g, " ")}) is ${c.status === "refunding" ? "being refunded; it counts once PayPal confirms it" : c.status === "choose" ? "waiting for you to choose a remedy" : "with the shop"}.`, href: `/orders/${c.order_id}#cases`, line_id: c.line_id });
+    lines.push({ kind: "claim_open", title: c.title ?? c.number, amount_cents: c.refund_cents ?? null, until: null, detail: caseLine(c.number, String(c.issue).replace(/_/g, " "), c.status), href: `/orders/${c.order_id}#cases`, line_id: c.line_id });
   const items = (
     await q.query<any>(
       `SELECT oi.id, oi.title, oi.acquired, oi.return_until, oi.warranty_until, oi.price_cents, l.id AS line_id, l.delivered_at, ord.id AS order_id, ord.policy

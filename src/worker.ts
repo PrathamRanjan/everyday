@@ -22,7 +22,7 @@ export const handlers: Record<JobType, Handler> = {
   send_channel_message: async (p: { messageId: string }) => {
     await deliver(p.messageId);
   },
-  send_push: async (p: { subscriptionId: string; payload: { title: string; body: string; url?: string } }) => {
+  send_push: async (p: { subscriptionId: string; payload: { title: string; body: string; url?: string; lang?: string | null } }) => {
     await sendPush(p.subscriptionId, p.payload);
   },
   release_approved: async (p: { approvalId: string }) => {

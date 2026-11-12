@@ -8,6 +8,7 @@
  * Tool results go back to the model as data, wrapped, never as instructions. The answer is a list of sentences, each
  * naming the steps it relies on, so the rail can link every sentence to the fact it cites.
  */
+import { replyLanguageLine } from "../i18n/index.js";
 import { config } from "../config.js";
 import { getDb, type Queryable } from "../db.js";
 import { catalog, CATEGORY_LABEL } from "../services/catalog.js";
@@ -235,7 +236,7 @@ export async function ask(a: Account, question: string, emit: (e: AgentEvent) =>
   const base = { tools, text: { format: { type: "json_schema", name: "answer", schema: ANSWER_SCHEMA, strict: true } }, reasoning: { effort: "low" }, max_output_tokens: 4000 };
   const today = nowIso(a).slice(0, 10);
   let input: unknown[] = [
-    { role: "developer", content: [{ type: "input_text", text: `${SYSTEM}\nToday on the shopper's clock: ${today}.` }] },
+    { role: "developer", content: [{ type: "input_text", text: `${SYSTEM}\nToday on the shopper's clock: ${today}.\n${replyLanguageLine()} The shopper may write in English, Hindi (or Hindi mixed with English), Bahasa Indonesia or Portuguese.` }] },
     { role: "user", content: [{ type: "input_text", text: question.slice(0, 1000) }] },
   ];
   let prev: string | null = null;
