@@ -97,6 +97,7 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
       modelErr = (e as Error).message;
     }
     setOut({ server, serverErr, model, modelErr, ms });
+    window.dispatchEvent(new CustomEvent("ev:action", { detail: { path: "/safety/scan", to: location.pathname } }));
     setStatus("");
     setBusy(false);
   };
@@ -115,7 +116,7 @@ export function ScamCheck({ demo, tactics, context, compact }: { demo?: string; 
   }
   const found = new Set([...(s?.tactics ?? []), ...Object.entries(m?.tactics ?? {}).filter(([, p]) => p >= 0.5).map(([k]) => k)]);
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" data-tour={`scam-${context ?? "page"}`}>
       <Label htmlFor={`scan-${context ?? "page"}`}>{compact ? t("Paste the message you got") : t("Paste a seller's reply, a marketplace message or a text about a parcel")}</Label>
       <SpeakableText id={`scan-${context ?? "page"}`} value={text} onChange={setText} rows={compact ? 3 : 5} placeholder={t("Paste the message here")} />
       <div className="flex flex-wrap items-center gap-2">

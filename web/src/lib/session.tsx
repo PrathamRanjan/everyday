@@ -11,6 +11,8 @@ export interface Session {
   paypal_env: string;
   /** A2.1: the demo's saved sandbox wallet (demo mode only). `usable` means pay-with-no-login is offered. */
   demo_wallet: { usable: boolean; state: string; email: string | null; checked_at: string | null; detail: string | null } | null;
+  /** The PayPal sandbox test buyer a judge signs in as on PayPal's own page (set by the owner; demo only). */
+  sandbox_buyer?: { email: string; password: string | null } | null;
   telegram_bot: string;
   /** A1: every visitor gets a private demo workspace (POST /demo/start). */
   private_demos: boolean;

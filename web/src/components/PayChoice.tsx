@@ -14,24 +14,50 @@ const PayPalLangNote = () => (getLang() === "hi" ? <p className="mt-1 text-xs te
  * with no login; "Pay on PayPal's own page" is the normal approval on PayPal's sandbox. When the saved wallet is not
  * available, only PayPal's page is offered, and the page says why.
  */
+/** PayPal's sandbox checkout takes only sandbox test accounts; say so, and show the demo's test buyer when the owner set one. */
+function BuyerNote() {
+  const { session } = useSession();
+  if (!session?.demo) return null;
+  const b = session.sandbox_buyer;
+  return (
+    <div className="mt-2 rounded-md border border-rule bg-sunk/60 p-2.5 text-xs text-ink-2">
+      {b ? (
+        <>
+          {t("On PayPal's page, sign in as the sandbox test buyer:")}{" "}
+          <span className="font-mono text-ink">{b.email}</span>
+          {b.password ? (
+            <>
+              {" "}
+              · <span className="font-mono text-ink">{b.password}</span>
+            </>
+          ) : null}
+        </>
+      ) : (
+        t("PayPal's own page is PayPal's sandbox: it accepts sandbox test accounts only, not your real PayPal login. If you don't have a sandbox buyer from a PayPal developer account, pay as the demo shopper.")
+      )}
+    </div>
+  );
+}
+
 export function PayChoice({ cents, wallet, page, busy, run, className }: { cents: number; wallet: { path: string; data?: Record<string, string> }; page: { path: string; data?: Record<string, string> }; busy: string | null; run: ReturnType<typeof useAction>["run"]; className?: string }) {
   const { session } = useSession();
   const w = session?.demo ? session.demo_wallet : null;
   if (!w?.usable) {
     return (
-      <div className={className}>
+      <div className={className} data-tour="pay">
         <PayPalButton className="w-full" busy={busy === "pay"} disabled={Boolean(busy)} onClick={() => run("pay", page.path, page.data)}>
           {tn("Pay {0} with PayPal", money(cents))}
         </PayPalButton>
         <p className="mt-2 text-xs text-ink-2">
           {tn("You'll approve on PayPal's sandbox and come straight back. Nothing is charged until you approve there.{0}", session?.demo && w && t(" The demo's saved wallet isn't available right now{0}, so PayPal's own page is the way to pay.", w.detail ? ` (${w.detail.replace(/\s*It needs re-approval.*$/, "")})` : ""))}
         </p>
+        <BuyerNote />
         <PayPalLangNote />
       </div>
     );
   }
   return (
-    <div className={className}>
+    <div className={className} data-tour="pay">
       <div className="grid gap-2">
         <PayPalButton className="w-full" busy={busy === "pay-wallet"} disabled={Boolean(busy)} onClick={() => run("pay-wallet", wallet.path, wallet.data)}>
           {tn("Pay {0} as the demo shopper", money(cents))}
@@ -47,6 +73,7 @@ export function PayChoice({ cents, wallet, page, busy, run, className }: { cents
           {tn("The first pays at once from the demo's saved sandbox PayPal{0}, with no login; the order says “Paid from the demo's saved sandbox wallet”. The second opens PayPal's sandbox to approve there. Both are sandbox money only.", w.email ? ` (${w.email})` : "")}
         </span>
       </p>
+      <BuyerNote />
       <PayPalLangNote />
     </div>
   );

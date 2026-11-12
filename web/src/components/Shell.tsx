@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { LangPicker } from "./LangPicker";
 import { HandsFreeToggle } from "@/handsfree/Toggle";
 import { toast } from "sonner";
-import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, ReceiptText, RotateCcw, Route, ShieldCheck, ShoppingBag, Sun, SunMoon, Wallet, WifiOff } from "lucide-react";
+import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, ReceiptText, RotateCcw, Route, ShieldCheck, ShoppingBag, Store, Sun, SunMoon, User, Wallet, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // Loaded just after the first paint: the popover and the phone menu bring positioning and dialog code.
 const DisplayHelp = lazy(() => import("./DisplayHelp").then((m) => ({ default: m.DisplayHelp })));
@@ -12,7 +12,7 @@ import { useSession } from "@/lib/session";
 import { usePrefs } from "@/lib/prefs";
 import { postAction } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { startTour } from "@/tours/tours";
+import { RoleSwitch, switchRole } from "@/journey/RoleSwitch";
 import { t } from "@/i18n";
 
 type Item = { to: string; label: string; icon: ReactNode; tour?: string; badge?: number };
@@ -50,7 +50,7 @@ function navFor(kind: "shopper" | "merchant" | null, needs: number): { main: Ite
 }
 
 const DEMO_LINKS: Item[] = [
-  { to: "/judge", get label() { return t("Judge mode"); }, icon: <PlayCircle /> },
+  { to: "/?home=1#start", get label() { return t("Guided demo"); }, icon: <PlayCircle /> },
   { to: "/demo", get label() { return t("Demo controls"); }, icon: <RotateCcw /> },
   { to: "/console", get label() { return t("Operator console"); }, icon: <FlaskConical /> },
 ];
@@ -196,7 +196,9 @@ export function Shell({ children }: { children: ReactNode }) {
     await postAction("/logout").catch(() => undefined);
     window.location.assign("/");
   };
-  const tourKind = who?.kind === "merchant" ? "merchant" : "shopper";
+  const nav = useNavigate();
+  // "Take the tour" opens the guided journeys on the home page: both sides, every step done by you.
+  const tour = () => nav("/?home=1#start");
   const menuButton = (
     <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label={t("Menu")}>
       <Menu className="size-5" />
@@ -214,17 +216,21 @@ export function Shell({ children }: { children: ReactNode }) {
           <WifiOff className="size-4" />{" "}{t("You're offline. What's on screen may be out of date, and nothing can be paid or sent until you're back.")}
         </div>
       )}
-      <header className="sticky top-0 z-30 border-b border-rule bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
+      <header className="ev-role-bar sticky top-0 z-30 border-b border-rule bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-1 px-4 min-[401px]:gap-2">
           <Link to={who ? (who.kind === "merchant" ? "/merchant" : "/today") : "/"} className="mr-auto rounded-md" aria-label={t("Everyday home")}>
             <Wordmark />
           </Link>
-          {who && (
+          {who && session?.demo ? (
+            <div className="max-[399px]:hidden">
+              <RoleSwitch />
+            </div>
+          ) : who ? (
             <span className="hidden text-sm text-ink-2 sm:inline">
               {who.kind === "merchant" ? t("Merchant · ") : ""}
               {who.first}
             </span>
-          )}
+          ) : null}
           <Suspense
             fallback={
               <Button variant="ghost" size="icon-sm" aria-label={t("Display and help")} title={t("Display and help")} disabled className="disabled:opacity-100">
@@ -247,12 +253,22 @@ export function Shell({ children }: { children: ReactNode }) {
                   {session?.demo && (
                     <>
                       <div className="eyebrow mt-4 px-3">{t("Demo")}</div>
+                      <button
+                        onClick={() => {
+                          setOpen(false);
+                          switchRole(who.kind === "merchant" ? "shopper" : "shop");
+                        }}
+                        className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk min-[400px]:hidden"
+                      >
+                        {who.kind === "merchant" ? <User className="size-[18px]" /> : <Store className="size-[18px]" />}{" "}
+                        {who.kind === "merchant" ? t("Switch to the shopper") : t("Switch to the shop")}
+                      </button>
                       {DEMO_LINKS.map((i) => (
                         <NavItem key={i.to} i={i} onClick={() => setOpen(false)} />
                       ))}
                     </>
                   )}
-                  <button onClick={() => startTour(tourKind)} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
+                  <button onClick={tour} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
                     <PlayCircle className="size-[18px]" />{" "}{t("Take the tour")}
                   </button>
                   <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
@@ -288,7 +304,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </>
             )}
             <div className="mt-auto flex flex-col gap-1 pt-4">
-              <button data-tour="take-tour" onClick={() => startTour(tourKind)} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
+              <button data-tour="take-tour" onClick={tour} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
                 <PlayCircle className="size-[18px]" />{" "}{t("Take the tour")}
               </button>
               <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">

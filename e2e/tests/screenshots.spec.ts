@@ -24,7 +24,7 @@ test("screenshots", async ({ page }) => {
   await page.request.post(`${planPath}/answer`, { form: { key: "laptop_port", value: "usb-c-dp" }, headers: { "x-everyday-ui": "1" } });
   const shopper = [["today", "/today"], ["plan", planPath], ["guard", "/guard"], ["you", "/you"], ["safety", "/safety"]] as const;
   const merchant = [["merchant", "/merchant"], ["merchant-approvals", "/merchant/approvals"]] as const;
-  const open = [["landing", "/"], ["login", "/login"], ["judge", "/judge"]] as const;
+  const open = [["landing", "/"], ["login", "/login"]] as const;
 
   for (const scheme of SCHEMES) {
     for (const w of WIDTHS) {

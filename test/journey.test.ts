@@ -202,7 +202,7 @@ describe("Everyday acceptance journey", () => {
     // The new front end: every screen URL serves the app shell, and each screen's data endpoint answers the right
     // party with no server error. Party boundaries hold: no session is 401, a merchant can't read shopper data.
     const runId = (await ui(maya, "/traces")).runs[0].id as string;
-    const screens = ["/login", "/today", "/discover", `/captures/${cap.id}`, "/plans", `/plans/${intent.id}`, "/purchases", "/receipts", `/orders/${order.id}`, "/you", "/things", "/guard", "/passport", "/safety", "/safety/model-card", "/channels", "/traces", `/trace/${runId}`, "/merchant", "/merchant/money", "/merchant/approvals", "/judge", "/demo", "/console", "/console/evidence", "/console/eval", "/telegram", "/ask", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
+    const screens = ["/login", "/today", "/discover", `/captures/${cap.id}`, "/plans", `/plans/${intent.id}`, "/purchases", "/receipts", `/orders/${order.id}`, "/you", "/things", "/guard", "/passport", "/safety", "/safety/model-card", "/channels", "/traces", `/trace/${runId}`, "/merchant", "/merchant/money", "/merchant/approvals", "/demo", "/console", "/console/evidence", "/console/eval", "/telegram", "/ask", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
     for (const u of screens) {
       const r = await anon.get(u);
       expect(r.status, u).toBe(200);
@@ -231,6 +231,10 @@ describe("Everyday acceptance journey", () => {
     expect((await ui(nl, "/merchant")).lines.map((x: any) => x.order_id)).toContain(order.id);
     expect((await ui(nl, "/merchant/money")).totals.orders).toBeGreaterThan(0);
     expect((await ui(nl, "/merchant/approvals")).chain.ok).toBe(true);
+    // The old judge page redirects to the home page's guided walk-throughs; the walk-through reads its progress here.
+    expect((await anon.get("/judge")).location).toBe("/?home=1#start");
+    const jr = await ui(anon, "/journey");
+    expect(Array.isArray(jr.done)).toBe(true);
     const judge = await ui(anon, "/judge");
     expect(judge.paths.map((p: any) => p.id)).toEqual(["money", "buy", "scam", "receipt"]);
     expect(judge.live.length).toBeGreaterThan(8);

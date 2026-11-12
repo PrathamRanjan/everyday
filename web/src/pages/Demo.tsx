@@ -231,8 +231,10 @@ export default function Demo() {
                       <Store className="size-4" />{" "}{tn("{0} (merchant)", m.name.replace(/\s*\(.*\)$/, ""))}
                     </Button>
                   ))}
-                  <Button variant="ghost" onClick={() => void startTour("judge")}>
-                    <PlayCircle className="size-4" />{" "}{t("Judge tour")}
+                  <Button variant="ghost" asChild>
+                    <Link to="/?home=1#start">
+                      <PlayCircle className="size-4" />{" "}{t("Guided demo")}
+                    </Link>
                   </Button>
                 </div>
                 <p className="mt-3 text-xs text-ink-2">{t("MCP clients use access keys printed by the seed script; keys are never shown on a page.")}</p>

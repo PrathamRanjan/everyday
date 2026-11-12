@@ -8,10 +8,12 @@ A personal buying and ownership assistant. A shared Reel/TikTok/Short becomes a 
 
 Spec: https://claude.ai/artifact/TZVLZwxENw3CTmxr7LMYGN
 
-## For judges: try it in 60 seconds
+## For judges: a guided walk-through
 
-1. Open https://pph-everyday.onrender.com and press **Try the live demo**. You get your own private copy of the demo (Maya, her shop, real PayPal sandbox payments, deleted 48 hours after your last visit). It lands on **Ask** with a question typed; press **Ask**.
-2. Open **/judge** for four paths, each one to three minutes, that tick themselves from what really happens: **Get money back** (a price drop claimed, approved by the shop, the refund read back from PayPal), **Ask for something and buy it** (paid from the demo's saved sandbox wallet, no PayPal login), **Check a scam message**, and **Add a receipt from another shop** (read by the model, checked by code).
+1. Open https://pph-everyday.onrender.com. The home page shows the two people who use Everyday, **Maya the shopper** and **Northlight Supply the shop**, and what passes between them through PayPal. No account, password or key is needed.
+2. Under **Pick a guided walk-through**, press **Start** on **The whole story, both sides** (about 6 minutes; there are shorter ones for each side). You get your own private demo, deleted 48 hours after your last visit. You press every button yourself: ask for a keyboard in a sentence, get the exact quote, pay with PayPal, switch to the shop (a colour wipe; green is the shop, orange is Maya) and ship it, claim a price drop as Maya, approve the refund as the shop, and watch PayPal confirm it. Each step moves on only when that really happened. The old **/judge** address opens this section.
+   - **Paying:** every payment and refund is a real PayPal sandbox call. The yellow button pays at once from a sandbox wallet saved for the demo, with no login. **Pay on PayPal's own page** opens PayPal's sandbox checkout, which accepts only sandbox test buyer accounts, never a real PayPal login. If the owner sets `EV_JUDGE_BUYER_EMAIL` and `EV_JUDGE_BUYER_PASSWORD` on the server, the app shows that test buyer at the pay step.
+   - The **Maya / shop** switch in the header (in the menu on very narrow phones) changes sides at any time. The access-key sign-in is only for connecting outside AI agents over MCP.
 3. **/proof** has the evaluation results and the robot judge's last walk through those paths; **/ai** lists every model call; **/paypal** lists every PayPal API in use, with live ids.
 
 What the AI does, what code decides and what PayPal moves are labelled on every screen that touches money. Sandbox only: no real money.

@@ -260,8 +260,10 @@ describe("Everyday foundation", () => {
     expect((await maya.req("POST", "/push/subscribe", { json: { endpoint: "https://push.example/x", keys: { p256dh: "a", auth: "b" } } })).status).toBe(200);
 
     // ---- Judge mode and evidence console.
+    // /judge now folds into the landing page's guided walk-throughs.
     const judge = await anon.get("/judge");
-    expect(judge.status).toBe(200);
+    expect(judge.status).toBe(302);
+    expect(judge.location).toBe("/?home=1#start");
     expect((await anon.get("/console/evidence")).status).toBe(200);
     ok(await anon.post("/console/eval", { suite: "adversarial" }));
     expect((await one("SELECT count(*)::int AS n FROM eval_runs WHERE suite = 'adversarial' AND NOT correct")).n).toBe(0);

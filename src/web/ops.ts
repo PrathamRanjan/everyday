@@ -78,7 +78,7 @@ MCP shopper agent (Streamable HTTP, stateless): ${config.appUrl}/mcp with Author
 MCP merchant agent (read-only): ${config.appUrl}/merchant/mcp with Authorization: Bearer <merchant key>.
 Skill: ${config.appUrl}/skill.md
 Runs API: ${config.appUrl}/api/v1/runs
-Evidence: ${config.appUrl}/console/evidence · eval explorer ${config.appUrl}/console/eval · judge ${config.appUrl}/judge
+Evidence: ${config.appUrl}/console/evidence · eval explorer ${config.appUrl}/console/eval · guided walk-throughs ${config.appUrl}/?home=1#start
 
 Guarantees: amounts come from the catalog and quotes, never from text; a quote hash must match before approval; every money move is dry-run against kill switches, the mandate, the monthly limit, the refund ceiling and live PayPal state; held moves wait for a click or passkey.
 `);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { KeyRound, PlayCircle, Store, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { t, tn } from "@/i18n";
 
 type Personas = { demo: boolean; accounts: { id: string; name: string }[]; merchants: { id: string; name: string }[]; private_demos?: boolean; workspace?: string | null };
+
+const d0 = (st: { data: Personas | null }) => Boolean(st.data?.demo);
 
 export default function Login() {
   const [q] = useSearchParams();
@@ -35,7 +37,12 @@ export default function Login() {
   };
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHead eyebrow={t("Sign in")} title={t("Who are you today?")} lede={t("This is a demo on the PayPal sandbox. Nothing here uses real money.")} />
+      <PageHead eyebrow={t("Sign in")} title={t("Who are you today?")} lede={t("This is a demo on the PayPal sandbox. Nothing here uses real money. Be Maya, the shopper, or her shop; you can switch sides at any time with the switch at the top.")} />
+      {d0(st) && (
+        <p className="-mt-2 mb-6 text-sm">
+          <Link className="font-semibold underline" to="/?home=1#start">{t("New here? Take a guided walk-through instead →")}</Link>
+        </p>
+      )}
       <Loaded state={st}>
         {(d) => (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -87,6 +94,31 @@ export default function Login() {
                 </Button>
               </div>
             ))}
+            {d.demo ? (
+              <details className="rounded-lg border border-rule bg-card p-5 sm:col-span-2">
+                <summary className="cursor-pointer font-medium">{t("For developers: sign in with an access key")}</summary>
+                <p className="mt-2 mb-3 text-sm text-ink-2">{t("You don't need a key for the demo. Keys are for connecting an outside AI agent (over MCP) to a shopper's account, and are printed by the seed script, never shown on the site.")}</p>
+              <form
+                className="flex flex-col gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void go("key", { key });
+                }}
+              >
+                <div className="flex items-center gap-2 font-medium">
+                  <KeyRound className="size-4" />{" "}{t("With an access key")}
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="key">{t("Access key")}</Label>
+                  <Input id="key" type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} className="min-h-11" required />
+                </div>
+                <Button type="submit" variant="outline" className="self-start" disabled={Boolean(busy) || !key}>
+                  <Busy on={busy === "key"}>{null}</Busy>{t("Sign in")}
+                </Button>
+                {!d.demo && <p className="text-sm text-ink-2">{t("Demo mode is off on this server, so only access keys work.")}</p>}
+              </form>
+              </details>
+            ) : (
             <form
               className="flex flex-col gap-3 rounded-lg border border-rule bg-card p-5 sm:col-span-2"
               onSubmit={(e) => {
@@ -106,6 +138,7 @@ export default function Login() {
               </Button>
               {!d.demo && <p className="text-sm text-ink-2">{t("Demo mode is off on this server, so only access keys work.")}</p>}
             </form>
+            )}
           </div>
         )}
       </Loaded>

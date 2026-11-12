@@ -4,6 +4,7 @@
  * redirect becomes JSON for the app), so business logic lives in one place.
  */
 import { Router, type Request, type Response } from "express";
+import { sandboxBuyer } from "./judge.js";
 import { existsSync, readFileSync } from "node:fs";
 import { config } from "../config.js";
 import { getDb } from "../db.js";
@@ -154,7 +155,7 @@ export function apiRoutes() {
     const wsId = currentWs();
     const wsRow = wsId && config.demoMode ? await workspaceById(wsId) : null;
     const workspace = wsRow ? { id: wsRow.id, kind: wsRow.kind, state: wsRow.seed_state, expires_at: wsRow.expires_at, progress_line: progressLine(wsRow.progress), finished: Boolean(wsRow.progress.finished), join_url: wsRow.kind === "visitor" && wsRow.join_token ? `${config.appUrl}/demo/join/${wsRow.join_token}` : null } : null;
-    const base = { demo: config.demoMode, private_demos: config.privateDemos, workspace, paypal_env: config.paypal.env, demo_wallet: wallet, live: { telegram: telegramReady(), push: pushReady(), channel3: channel3Ready(), ai: hasOpenAI(), ai_label: providerLabel(), paypal: Boolean(config.paypal.clientId) }, telegram_bot: config.channels.telegramBot };
+    const base = { demo: config.demoMode, private_demos: config.privateDemos, workspace, paypal_env: config.paypal.env, demo_wallet: wallet, sandbox_buyer: sandboxBuyer(), live: { telegram: telegramReady(), push: pushReady(), channel3: channel3Ready(), ai: hasOpenAI(), ai_label: providerLabel(), paypal: Boolean(config.paypal.clientId) }, telegram_bot: config.channels.telegramBot };
     if (w?.account) {
       const a = w.account;
       const db = await getDb();

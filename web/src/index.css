@@ -245,3 +245,35 @@ html[data-handsfree] :is(input[type="checkbox"], input[type="radio"]):not([data-
     animation: none;
   }
 }
+
+/* Guided journeys: who you are shows in colour. Vermilion is the shopper, moss is the shop. */
+:root { --role: var(--now); --role-bg: var(--now-bg); }
+:root[data-role="shop"] { --role: var(--done); --role-bg: var(--done-bg); }
+.ev-role-bar { box-shadow: inset 0 -2px 0 var(--role); transition: box-shadow 0.6s ease; }
+.ev-role-chip, [data-dock-role] .ev-role-chip { background: var(--role-bg); color: var(--role); }
+[data-dock-role="shop"] { --role: var(--done); --role-bg: var(--done-bg); }
+[data-dock-role="shopper"] { --role: var(--now); --role-bg: var(--now-bg); }
+.ev-dock-bar { background: var(--role); }
+.ev-dock-go { background: var(--role); color: var(--paper); }
+.ev-dock-go:disabled { opacity: 0.6; }
+.ev-dock { animation: ev-dock-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes ev-dock-in { from { transform: translateY(16px); opacity: 0; } }
+.ev-wait-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: var(--role); box-shadow: 0 0 0 0 var(--role); animation: ev-pulse 1.4s ease-out infinite; flex: none; }
+@keyframes ev-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--role) 60%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.driver-popover.ev-journey { border-top: 4px solid var(--role); }
+.driver-popover.ev-journey .ev-wait { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-weight: 600; color: var(--role); }
+.driver-popover.ev-journey .ev-wait-miss { margin-top: 8px; font-size: 0.8rem; }
+.driver-popover.ev-journey .driver-popover-footer .driver-popover-next-btn { background: var(--role); border-color: var(--role); color: var(--paper); }
+.ev-wipe { background: var(--role); clip-path: circle(0% at 50% 50%); animation: ev-wipe 1.55s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+.ev-wipe[data-role-wipe="shop"] { --role: var(--done); background: #2c6a4d; }
+.ev-wipe[data-role-wipe="shopper"] { background: #b13a0d; }
+.ev-wipe-text { animation: ev-wipe-text 1.55s ease forwards; }
+@keyframes ev-wipe { 0% { clip-path: circle(0% at 50% 50%); opacity: 1; } 35% { clip-path: circle(150% at 50% 50%); opacity: 1; } 75% { clip-path: circle(150% at 50% 50%); opacity: 1; } 100% { clip-path: circle(150% at 50% 50%); opacity: 0; } }
+@keyframes ev-wipe-text { 0%, 20% { opacity: 0; transform: translateY(16px); } 40%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ev-wipe, .ev-wipe-text { animation-duration: 0.01s; animation-delay: 0s; } .ev-wipe { clip-path: none; animation: ev-wipe-fade 1.2s forwards; } }
+@keyframes ev-wipe-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+.ev-flow-arrow { stroke-dasharray: 6 6; animation: ev-dash 1.2s linear infinite; }
+@keyframes ev-dash { to { stroke-dashoffset: -12; } }
+/* The part of the page a journey step points at gets a ring in the colour of who you are. */
+.driver-active .driver-active-element { outline: 3px solid var(--role); outline-offset: 5px; border-radius: 12px; transition: outline-color 0.4s; }
+.driver-popover.ev-journey .ev-done { font-weight: 700; color: var(--done); margin-bottom: 4px; }

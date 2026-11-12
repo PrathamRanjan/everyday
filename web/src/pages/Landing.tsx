@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { ArrowRight, Cpu, ScanText, ShieldCheck } from "lucide-react";
 import { Lifeline, type Band, type Mark } from "@/components/Lifeline";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -12,6 +12,9 @@ import { addDays, day, money } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { ScamCheck } from "@/components/ScamCheck";
 import { LangLinks } from "@/components/LangPicker";
+import { TwoSides } from "@/journey/TwoSides";
+import { JourneyCards } from "@/journey/JourneyCards";
+import { startJourney } from "@/journey/Journey";
 import { t, N_, tn } from "@/i18n";
 
 interface Preview {
@@ -61,11 +64,6 @@ function heroOf(p: Preview | null): { title: string; cents: number | null; marks
   };
 }
 
-const STEPS = [
-  { n: "1", get t() { return t("Show it"); }, get b() { return t("Paste a TikTok or YouTube link, add a screenshot, or just say “a quiet mouse under $45 by Thursday”."); } },
-  { n: "2", get t() { return t("Check the plan"); }, get b() { return t("Everyday rules out what won't fit — over budget once shipping's added, too late for your date, the monitor you already own — and says why. You approve one exact total on PayPal."); } },
-  { n: "3", get t() { return t("Let it watch"); }, get b() { return t("Delays, damage, a lower price, a recall: each becomes a swap, a case or money back. Every return window, price promise and warranty date stays in one line."); } },
-];
 
 const FAQ = [
   [N_("Does the AI spend my money?"), N_("No. The model reads words and pictures. Code checks budgets, dates and your rules. PayPal moves the money, and only after you approve the exact total on PayPal. Anything at or above your own approval line waits for a tap.")],
@@ -86,9 +84,14 @@ export default function Landing() {
   }, []);
   const who = session?.who;
   const { run: act, busy } = useAction();
-  // A1: one tap builds the visitor's own private copy of the demo and signs them in as its Maya.
-  // E10: it lands on Ask with a question typed, so the first thing a visitor sees is the assistant at work.
-  const tryDemo = () => void act("start", "/demo/start", { next: `/ask?q=${encodeURIComponent(t("What can I still get money back on?"))}` });
+  // The hero's button takes visitors to the guided walk-throughs; "look around" builds their own demo and opens Today.
+  const toStart = () => document.getElementById("start")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const lookAround = () => void act("start", "/demo/start", { next: "/today" });
+  const { refresh } = useSession();
+  const story = async () => {
+    await startJourney("story");
+    await refresh();
+  };
 
   return (
     <div className="ev-rise">
@@ -102,16 +105,17 @@ export default function Landing() {
             {t("Show Everyday something you liked. It works out what fits your life, buys it only with your approval on PayPal, and looks after it until the return window, the price promise and the warranty run out.")}
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Button size="lg" onClick={tryDemo} data-tour="try-demo" disabled={Boolean(busy)}>
-              <Busy on={busy === "start"}>{null}</Busy>{t("Try the live demo")}{" "}<ArrowRight className="size-4" />
+            <Button size="lg" onClick={toStart} data-tour="try-demo">
+              {t("Start the guided demo")}{" "}<ArrowRight className="size-4" />
             </Button>
             {who ? (
               <Button size="lg" variant="outline" onClick={() => nav(who.kind === "merchant" ? "/merchant" : "/today")}>
                 {tn("Open my {0}", who.kind === "merchant" ? t("console") : t("day"))}
               </Button>
             ) : (
-              <Button size="lg" variant="outline" asChild>
-                <Link to="/login">{t("Sign in with a key")}</Link>
+              <Button size="lg" variant="outline" onClick={lookAround} disabled={Boolean(busy)}>
+                <Busy on={busy === "start"}>{null}</Busy>
+                {t("Just look around")}
               </Button>
             )}
           </div>
@@ -157,20 +161,8 @@ export default function Landing() {
         </figure>
       </section>
 
-      <section className="mt-20" aria-labelledby="how">
-        <h2 id="how" className="text-3xl font-medium">
-          {t("Three steps")}
-        </h2>
-        <ol className="mt-6 grid gap-4 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <li key={s.n} className="relative rounded-lg border border-rule bg-card p-5">
-              <span className="num font-display text-4xl text-now">{s.n}</span>
-              <h3 className="mt-2 text-xl font-medium">{s.t}</h3>
-              <p className="mt-2 text-ink-2">{s.b}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <TwoSides />
+      <JourneyCards />
 
       <section className="mt-20" aria-labelledby="trust">
         <h2 id="trust" className="text-3xl font-medium">
@@ -258,9 +250,9 @@ export default function Landing() {
 
       <section className="mt-20 rounded-xl bg-ink p-6 text-paper sm:p-10">
         <h2 className="text-3xl font-medium text-paper">{t("See it with real sandbox money")}</h2>
-        <p className="prose-w mt-2 opacity-80">{t("A guided three-minute walk: a request becomes a checked plan, you pay on PayPal's sandbox, and the order's dates start running.")}</p>
-        <Button size="lg" className="mt-6 bg-paper text-ink hover:bg-paper/90" onClick={tryDemo} disabled={Boolean(busy)}>
-          <Busy on={busy === "start"}>{null}</Busy>{t("Try the live demo")}{" "}<ArrowRight className="size-4" />
+        <p className="prose-w mt-2 opacity-80">{t("The whole story in about six minutes: you ask for something as Maya, pay on PayPal's sandbox, ship it as the shop, claim a price drop and approve the refund, and watch PayPal confirm it.")}</p>
+        <Button size="lg" className="mt-6 bg-paper text-ink hover:bg-paper/90" onClick={() => void story()}>
+          {t("Start the whole story")}{" "}<ArrowRight className="size-4" />
         </Button>
         <p className="mt-3 text-sm opacity-70">{tn("The preview above is read from the showcase demo, built the same way as yours. Its clock reads {0}.", day(hero.today))}</p>
       </section>

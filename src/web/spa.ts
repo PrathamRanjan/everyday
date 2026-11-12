@@ -19,7 +19,7 @@ import { nowOf } from "../store.js";
 export const PAGES: RegExp[] = [
   /^\/login$/, /^\/today$/, /^\/discover$/, /^\/captures\/[\w-]+$/, /^\/plans$/, /^\/plans\/[\w-]+$/, /^\/purchases$/, /^\/receipts$/, /^\/orders\/[\w-]+$/,
   /^\/you$/, /^\/things$/, /^\/guard$/, /^\/passport$/, /^\/safety$/, /^\/safety\/model-card$/, /^\/channels$/, /^\/traces$/, /^\/trace\/[\w-]+$/,
-  /^\/merchant$/, /^\/merchant\/money$/, /^\/merchant\/approvals$/, /^\/judge$/, /^\/demo$/, /^\/console$/, /^\/console\/evidence$/, /^\/console\/eval$/, /^\/telegram$/,
+  /^\/merchant$/, /^\/merchant\/money$/, /^\/merchant\/approvals$/, /^\/demo$/, /^\/console$/, /^\/console\/evidence$/, /^\/console\/eval$/, /^\/telegram$/,
   /^\/ask$/, /^\/proof$/, /^\/ai$/, /^\/paypal$/, /^\/who-can-move-money$/, /^\/accessibility$/, /^\/agents$/,
 ];
 
@@ -33,7 +33,7 @@ const PAGE_MODULE: [RegExp, string][] = [
 
 /** The first read each page makes, fetched alongside the scripts. Same URL, mode and credentials as the app's fetch. */
 const PAGE_DATA: Record<string, string> = {
-  "/today": "/api/ui/today", "/login": "/api/ui/personas", "/judge": "/api/ui/judge", "/plans": "/api/ui/plans", "/purchases": "/api/ui/purchases",
+  "/today": "/api/ui/today", "/login": "/api/ui/personas", "/plans": "/api/ui/plans", "/purchases": "/api/ui/purchases",
   "/you": "/api/ui/you", "/safety": "/api/ui/safety", "/traces": "/api/ui/traces", "/merchant": "/api/ui/merchant", "/merchant/approvals": "/api/ui/merchant/approvals",
   "/console": "/api/ui/console", "/console/evidence": "/api/ui/evidence", "/demo": "/api/ui/demo",
   "/proof": "/api/public/proof", "/ai": "/api/public/ai", "/paypal": "/api/public/paypal", "/who-can-move-money": "/api/public/roles", "/accessibility": "/api/public/accessibility", "/agents": "/api/public/agents",
@@ -152,13 +152,16 @@ export function serveApp(app: Express, root: string) {
       const w = await whoami(req);
       // Keep the query (?tour=judge and friends) so a signed-in visitor opening a tour link still gets the tour.
       const qs = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
-      if (w?.account) return res.redirect(`/today${qs}`);
-      if (w?.merchant) return res.redirect(`/merchant${qs}`);
+      // ?home=1 opens the landing page (the two users and the guided journeys) even when signed in.
+      if (!req.query.home && w?.account) return res.redirect(`/today${qs}`);
+      if (!req.query.home && w?.merchant) return res.redirect(`/merchant${qs}`);
       await sendShell(req, res);
     } catch (e) {
       next(e);
     }
   });
+  // The judge page became the home page's guided walk-throughs.
+  app.get("/judge", (_req, res) => res.redirect(302, "/?home=1#start"));
   app.get(PAGES, (req, res, next) => sendShell(req, res).catch(next));
   return sendShell;
 }

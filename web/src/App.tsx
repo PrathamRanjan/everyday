@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Route, Routes, useLocation, useNavigate } from "react-router";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { t } from "@/i18n";
 import { Shell } from "@/components/Shell";
@@ -7,6 +7,7 @@ import { PageSkeleton } from "@/components/kit";
 import { useFlash } from "@/lib/api";
 import { endTourOnRouteChange } from "@/tours/tours";
 import Landing from "@/pages/Landing";
+import { JourneyHost } from "@/journey/Journey";
 
 const p = <T extends Record<string, any>>(f: () => Promise<T>, k: keyof T = "default") => lazy(() => f().then((m) => ({ default: m[k] })));
 const Login = p(() => import("@/pages/Login"));
@@ -29,7 +30,6 @@ const Trace = p(() => import("@/pages/Traces"), "Trace");
 const Merchant = p(() => import("@/pages/Merchant"));
 const MerchantMoney = p(() => import("@/pages/Merchant"), "MerchantMoney");
 const MerchantApprovals = p(() => import("@/pages/Merchant"), "MerchantApprovals");
-const Judge = p(() => import("@/pages/Demo"), "Judge");
 const Ask = p(() => import("@/pages/Ask"));
 const DemoPage = p(() => import("@/pages/Demo"));
 const Console = p(() => import("@/pages/Console"));
@@ -49,7 +49,9 @@ export function App() {
   const nav = useNavigate();
   useFlash();
   useEffect(() => {
-    window.scrollTo({ top: 0 });
+    // The landing page's "#start" (the guided journeys) scrolls to itself.
+    if (loc.hash) setTimeout(() => document.getElementById(loc.hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+    else window.scrollTo({ top: 0 });
     // A3.3: no tour starts by itself; an old "?tour=" link just opens the page.
     const q = new URLSearchParams(loc.search);
     if (q.get("tour")) {
@@ -57,7 +59,7 @@ export function App() {
       nav({ pathname: loc.pathname, search: q.toString() ? `?${q}` : "" }, { replace: true });
     }
     endTourOnRouteChange(loc.pathname);
-  }, [loc.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loc.pathname, loc.hash]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -86,7 +88,7 @@ export function App() {
             <Route path="/merchant" element={<Merchant />} />
             <Route path="/merchant/money" element={<MerchantMoney />} />
             <Route path="/merchant/approvals" element={<MerchantApprovals />} />
-            <Route path="/judge" element={<Judge />} />
+            <Route path="/judge" element={<Navigate to="/?home=1#start" replace />} />
             <Route path="/ask" element={<Ask />} />
             <Route path="/proof" element={<Proof />} />
             <Route path="/ai" element={<AiCalls />} />
@@ -103,6 +105,7 @@ export function App() {
           </Routes>
         </Suspense>
       </Shell>
+      <JourneyHost />
       <Toaster containerAriaLabel={t("Notifications")} />
     </>
   );

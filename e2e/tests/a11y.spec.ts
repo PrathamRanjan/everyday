@@ -13,7 +13,7 @@ type Check = { id: string; title: string; how: string; ok: boolean; detail: stri
 const checks: Check[] = [];
 const target = process.env.E2E_URL ?? "http://localhost:4111";
 
-const PUBLIC = ["/", "/login", "/judge", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
+const PUBLIC = ["/", "/login", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
 const SHOPPER = ["/today", "/ask", "/discover", "/plans", "/purchases", "/receipts", "/you", "/guard", "/passport", "/safety", "/channels", "/traces"];
 const MERCHANT = ["/merchant", "/merchant/money", "/merchant/approvals"];
 
@@ -97,7 +97,7 @@ test("reflow: no sideways scroll at 320 px wide or at 200% text", async ({ page 
   await resetDemo(page);
   await signIn(page, "shopper");
   const bad: string[] = [];
-  const pages = ["/", "/today", "/ask", "/plans", "/purchases", "/safety", "/judge", "/proof"];
+  const pages = ["/", "/today", "/ask", "/plans", "/purchases", "/safety", "/proof"];
   await page.setViewportSize({ width: 320, height: 760 });
   for (const p of pages) {
     await open(page, p);

@@ -40,6 +40,10 @@ async function openPostgres(url: string): Promise<Db> {
   const pgmod = await import("pg");
   const Pool = (pgmod as any).default?.Pool ?? (pgmod as any).Pool;
   const pool = new Pool({ connectionString: url, ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false }, max: 10 });
+  // A shared database restart drops idle and checked-out connections; without these listeners pg's "error" event is
+  // unhandled and takes the whole server down (the live 502 stretches). The pool replaces the dead client on next use.
+  pool.on("error", (e: Error) => console.error("[db] idle client error:", e.message));
+  pool.on("connect", (c: { on: (ev: "error", fn: (e: Error) => void) => void }) => c.on("error", (e: Error) => console.error("[db] client error:", e.message)));
   return {
     kind: "postgres",
     query: async (sql, params) => ({ rows: (await pool.query(sql, params)).rows }),

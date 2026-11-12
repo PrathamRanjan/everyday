@@ -107,8 +107,24 @@ export const NO_SIGN_IN = [
   { href: "/agents", label: "Agents", what: "How an outside assistant connects, with a copy-paste command" },
 ];
 
+/** The PayPal sandbox buyer a judge may sign in as on PayPal's own page (demo mode only; set by the owner). */
+export function sandboxBuyer(): { email: string; password: string | null } | null {
+  if (!config.demoMode || !process.env.EV_JUDGE_BUYER_EMAIL) return null;
+  return { email: process.env.EV_JUDGE_BUYER_EMAIL, password: process.env.EV_JUDGE_BUYER_PASSWORD ?? null };
+}
+
 export function judgeRoutes() {
   const r = Router();
+
+  /** The guided journey's state: which steps really happened in this demo, and the two personas to switch between. */
+  r.get("/api/ui/journey", json(async () => {
+    const ws = currentWs();
+    const db = await getDb();
+    const done = Object.keys(await ticks(ws));
+    const accounts = ws ? (await db.query<{ id: string; name: string }>("SELECT id, name FROM accounts WHERE ws_id = $1 ORDER BY created_at", [ws])).rows : [];
+    const merchants = ws ? (await db.query<{ id: string; name: string }>("SELECT id, name FROM merchants WHERE kind = 'test_merchant' AND ws_id = $1 ORDER BY name", [ws])).rows : [];
+    return { ws, done, shopper: accounts[0] ?? null, shop: merchants[0] ?? null };
+  }));
 
   r.get("/api/ui/judge", json(async (req) => {
     const ws = currentWs();
@@ -127,7 +143,7 @@ export function judgeRoutes() {
       live: liveTable(),
       pages: NO_SIGN_IN,
       phone,
-      sandbox_buyer: process.env.EV_JUDGE_BUYER_EMAIL ? { email: process.env.EV_JUDGE_BUYER_EMAIL, password: process.env.EV_JUDGE_BUYER_PASSWORD ?? null } : null,
+      sandbox_buyer: sandboxBuyer(),
     };
   }));
 

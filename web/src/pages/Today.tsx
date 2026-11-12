@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { AlertTriangle, BadgeDollarSign, CalendarClock, ChevronRight, HelpCircle, PackageCheck, PlayCircle, Siren, X } from "lucide-react";
 import { Lifeline, type Band, type Mark } from "@/components/Lifeline";
 import { ApprovalCard, type ApprovalView } from "@/components/Approval";
@@ -8,7 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useAction, useApi } from "@/lib/api";
 import { daysBetween, day, money, plural, when } from "@/lib/format";
-import { seenTour, startTour, tourActive } from "@/tours/tours";
+import { seenTour, tourActive } from "@/tours/tours";
+import { journeyActive } from "@/journey/Journey";
 import { cn } from "@/lib/utils";
 import { t, tn } from "@/i18n";
 
@@ -77,7 +78,7 @@ function MoneyBackPanel({ m, reload }: { m: MoneyBack; reload: () => Promise<voi
                 <p className="font-medium">{l.title}</p>
                 <p className="text-xs text-ink-2">{l.detail}</p>
               </div>
-              <Button size="sm" className="h-auto min-h-11 whitespace-normal" disabled={Boolean(busy)} onClick={() => run(`c-${l.line_id}`, `/lines/${l.line_id}/price-protection`, undefined, { stay: true })}>
+              <Button data-tour="claim-drop" size="sm" className="h-auto min-h-11 whitespace-normal" disabled={Boolean(busy)} onClick={() => run(`c-${l.line_id}`, `/lines/${l.line_id}/price-protection`, undefined, { stay: true })}>
                 <Busy on={busy === `c-${l.line_id}`}>{null}</Busy>{tn("Ask for {0} back", money(l.amount_cents ?? 0))}
               </Button>
             </li>
@@ -137,15 +138,16 @@ function MoneyBackPanel({ m, reload }: { m: MoneyBack; reload: () => Promise<voi
 const ICON: Record<string, React.ReactNode> = { recall: <Siren />, approve: <PackageCheck />, question: <HelpCircle />, gap: <AlertTriangle /> };
 
 export function FirstRun({ kind }: { kind: "shopper" | "merchant" }) {
-  const [hide, setHide] = useState(seenTour() || tourActive());
-  if (hide) return null;
+  const [hide, setHide] = useState(seenTour() || tourActive() || journeyActive());
+  const nav = useNavigate();
+  if (hide || journeyActive()) return null;
   return (
     <div className="mb-6 flex items-center gap-3 rounded-lg border border-rule bg-card p-3 pl-4">
       <PlayCircle className="size-5 shrink-0 text-now" />
       <p className="min-w-0 flex-1 text-sm">
-        <b>{t("New here?")}</b>{" "}{t("A one-minute tour shows where things are.")}
+        <b>{t("New here?")}</b>{" "}{kind === "merchant" ? t("A guided walk-through has you ship an order and approve a refund as the shop, step by step.") : t("A guided walk-through has you buy something with PayPal, then see it from the shop's side, step by step.")}
       </p>
-      <Button size="sm" onClick={() => void startTour(kind)}>
+      <Button size="sm" onClick={() => nav("/?home=1#start")}>
         {t("Take the tour")}
       </Button>
       <Button

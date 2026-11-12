@@ -31,7 +31,7 @@ function LineRow({ l, reload }: { l: MerchantData["lines"][number]; reload: () =
   const [days, setDays] = useState("4");
   const open = l.status === "ordered" || l.status === "shipped" || l.status === "backordered";
   return (
-    <li className="grid gap-2 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
+    <li className="grid gap-2 py-3">
       <div className="min-w-0">
         <p className="font-medium">{l.title}</p>
         <p className="num text-xs text-ink-2">
@@ -43,7 +43,7 @@ function LineRow({ l, reload }: { l: MerchantData["lines"][number]; reload: () =
       <div className="flex flex-wrap items-center gap-2">
         <State s={l.status} />
         {l.status === "ordered" && (
-          <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => run("ship", `/merchant/lines/${l.id}/ship`, undefined, { stay: true })}>
+          <Button data-tour="ship" size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => run("ship", `/merchant/lines/${l.id}/ship`, undefined, { stay: true })}>
             <Busy on={busy === "ship"}>
               <Truck className="size-4" />
             </Busy>
@@ -115,7 +115,7 @@ function CaseRow({ c, reload }: { c: MerchantData["cases"][number]; reload: () =
             {t("Note to the customer")}
           </Label>
           <Input id={`cn-${c.id}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Note (optional)")} className="min-h-11 w-56 bg-card text-sm" />
-          <Button size="sm" disabled={Boolean(busy)} onClick={() => run("ok", `/merchant/cases/${c.id}`, { approve: "1", note }, { stay: true })}>
+          <Button data-tour="approve-case" size="sm" disabled={Boolean(busy)} onClick={() => run("ok", `/merchant/cases/${c.id}`, { approve: "1", note }, { stay: true })}>
             <Busy on={busy === "ok"}>{null}</Busy>{tn("Approve{0}", c.refund_cents ? ` ${money(c.refund_cents)} refund` : "")}
           </Button>
           <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => run("no", `/merchant/cases/${c.id}`, { approve: "0", note }, { stay: true })}>

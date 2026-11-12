@@ -62,6 +62,7 @@ export function useApi<T>(path: string | null): LoadState<T> {
       if (n !== seq.current) return;
       const err = e instanceof ApiError ? e : new ApiError(navigator.onLine ? "Couldn't reach Everyday." : "You're offline.", 0);
       if (err.status === 401) {
+        if ((window as { __evSwitching?: boolean }).__evSwitching) return;
         nav(`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`, { replace: true });
         return;
       }
@@ -117,7 +118,11 @@ export async function postAction(path: string, data?: Record<string, Val | Val[]
   } catch {
     j = null;
   }
-  if (r.ok && j && "to" in j) return j as ActResult;
+  if (r.ok && j && "to" in j) {
+    // The guided journey listens for the real actions a judge takes (a claim, a quote, a payment, a shipment).
+    window.dispatchEvent(new CustomEvent("ev:action", { detail: { path, to: (j as ActResult).to } }));
+    return j as ActResult;
+  }
   if (j?.message) throw new ApiError(j.message, r.status);
   if (r.status === 404) throw new ApiError("That isn't there any more. Refresh and try again.", 404);
   if (r.status === 401) throw new ApiError("Sign in first.", 401);

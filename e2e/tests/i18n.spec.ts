@@ -13,7 +13,7 @@ import { resetDemo, signIn } from "./helpers";
  *  3. Switching language keeps what is typed in a form (no reload, no lost state).
  */
 const here = dirname(fileURLToPath(import.meta.url));
-const PUBLIC = ["/", "/login", "/judge", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
+const PUBLIC = ["/", "/login", "/proof", "/ai", "/paypal", "/who-can-move-money", "/accessibility", "/agents"];
 const SHOPPER = ["/today", "/ask", "/discover", "/plans", "/purchases", "/receipts", "/you", "/guard", "/passport", "/safety", "/channels", "/traces"];
 const MERCHANT = ["/merchant", "/merchant/money", "/merchant/approvals"];
 

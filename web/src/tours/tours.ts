@@ -64,7 +64,6 @@ const TOURS: Record<TourKind, Step[]> = {
     { route: "/merchant/money", el: "[data-tour=merchant-money]", get title() { return t("Money and disputes"); }, get body() { return t("Captured totals and fees from PayPal, tracking numbers sent to PayPal, and disputes synced from the sandbox."); } },
   ],
   judge: [
-    { route: "/judge", el: "[data-tour=judge-head]", get title() { return t("Judge mode · about 3 minutes"); }, get body() { return t("You're Maya, a demo shopper, on the PayPal sandbox. Eight stops. The live PayPal step is real sandbox money. Use the arrow keys or the buttons."); } },
     { route: "/today", el: "[data-tour=today-head]", get title() { return t("1 · What needs Maya"); }, get body() { return t("Plans waiting for approval, a recall on headphones she owns, and her monthly limit. Numbers come from the data, not the copy."); } },
     { route: "/plans", el: "[data-tour=plan-new]", get title() { return t("2 · Say it in a sentence"); }, get body() { return t("Type “A quiet mouse under $45 by Thursday” and press Plan it. The model reads the words, with quotes as evidence; anything it can't quote is dropped. Budget and dates are parsed by code. The tour picks up on the plan."); }, waitFor: { get label() { return t("I'll write one"); }, resumeOn: /^\/plans\/[\w-]+$/ } },
     { route: newestPlan, el: "[data-tour=plan-read]", get title() { return t("3 · AI reads, with receipts"); }, get body() { return t("Each thing the model understood shows the exact words it came from. No quote, no field."); } },
@@ -157,7 +156,7 @@ function end() {
 export async function startTour(kind: TourKind): Promise<boolean> {
   const steps = await stepsHere(kind);
   if (!steps.length) {
-    toast(t("This page has no tour. The judge page lists short paths through the whole demo."));
+    toast(t("This page has no tour. The guided walk-throughs on the home page go through the whole demo."));
     return false;
   }
   page = location.pathname;
