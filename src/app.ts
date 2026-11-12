@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { getDb } from "./db.js";
 import { GtError } from "./lib/util.js";
+import { isDbOutage, routeAsyncErrorsToNext } from "./lib/async-errors.js";
 import { opsRoutes } from "./web/ops.js";
 import { safetyRoutes } from "./web/safety.js";
 import { askRoutes } from "./web/ask.js";
@@ -37,6 +38,7 @@ export function createApp() {
     installChannelHandlers();
     handlersInstalled = true;
   }
+  routeAsyncErrorsToNext();
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
@@ -113,7 +115,12 @@ export function createApp() {
   // Any other page a browser asks for is the app's own "not found" screen.
   app.use((req, res, next) => (shell && req.method === "GET" && req.accepts(["html", "json"]) === "html" ? (res.status(404), void shell(req, res).catch(next)) : next()));
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (res.headersSent) return void res.end();
     if (err instanceof GtError) return res.status(err.status).type("text").send(err.message);
+    if (isDbOutage(err)) {
+      console.error("[everyday] database unavailable:", req.method, req.path, err instanceof Error ? err.message : err);
+      return res.status(503).set("Retry-After", "15").type("text").send("Everyday's database is restarting. Try again in a few seconds.");
+    }
     console.error("[everyday]", req.method, req.path, err);
     res.status(500).send("Something went wrong.");
   });
