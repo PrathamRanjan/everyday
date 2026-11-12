@@ -114,11 +114,11 @@ function MoneyBackPanel({ m, reload }: { m: MoneyBack; reload: () => Promise<voi
               <li key={it.id} className="rounded-md border border-rule p-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                   {it.href ? (
-                    <Link to={it.href} className="font-medium hover:underline">
+                    <Link to={it.href} className="font-medium hover:underline" data-no-i18n>
                       {it.title}
                     </Link>
                   ) : (
-                    <span className="font-medium">{it.title}</span>
+                    <span className="font-medium" data-no-i18n>{it.title}</span>
                   )}
                   <span className="num text-xs text-ink-2">
                     {tn("Bought {0}{1}{2}{3}", day(it.bought), it.return_until ? t(" · return by {0}", day(it.return_until)) : "", it.promise_until ? t(" · price promise to {0}", day(it.promise_until)) : "", it.warranty_until ? t(" · warranty to {0}", day(it.warranty_until)) : "")}

@@ -126,7 +126,7 @@ export default function Landing() {
               <div className="eyebrow">
                 {hero.live ? t("Live preview") : t("Preview")} <span className="ml-1 rounded-full border border-rule px-1.5 py-px text-[0.65rem] normal-case">{t("Sample data")}</span>
               </div>
-              <p className="mt-1 truncate font-display text-2xl">{hero.title}</p>
+              <p className="mt-1 truncate font-display text-2xl" data-no-i18n>{hero.title}</p>
             </div>
             {hero.cents !== null && (
               <div className="shrink-0 text-right">

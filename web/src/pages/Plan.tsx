@@ -14,6 +14,7 @@ import { usePrefs } from "@/lib/prefs";
 import { useToday } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { t, N_, tn } from "@/i18n";
+import { TasteSort, type TasteResult } from "@/taste/TasteSort";
 
 interface Pick { id: string; title: string; price_cents: number; merchant: string; label: string; reasons: string[]; exact: boolean; delay_days: number }
 interface Slot {
@@ -196,6 +197,7 @@ function WebTier({ intentId }: { intentId: string }) {
   const st = useApi<WebPicks>(`/api/ui/plans/${intentId}/web`);
   const [tracked, setTracked] = useState<Record<string, string>>({});
   const [busyUrl, setBusyUrl] = useState<string | null>(null);
+  const [taste, setTaste] = useState<TasteResult>(null);
   if (st.loading && !st.data) return <Panel title={t("Also found on the web")}><p className="text-sm text-ink-2">{t("Searching Channel3 and checking each listing…")}</p></Panel>;
   if (st.error) return <Panel title={t("Also found on the web")}><p className="text-sm text-stop">{st.error.message}</p></Panel>;
   const d = st.data;
@@ -216,20 +218,26 @@ function WebTier({ intentId }: { intentId: string }) {
   };
   const shown = d.picks.filter((x) => x.verdict !== "off_topic");
   const offTopic = d.picks.length - shown.length;
+  // Taste (opt-in) reorders inside each verdict group, keeping the groups in the order code put them.
+  const groups = [...new Set(shown.map((x) => x.verdict))];
+  const scored = shown.map((x, n) => ({ x, s: taste && taste.scores.length === shown.length ? taste.scores[n] : null }));
+  const ordered = taste ? [...scored].sort((a, b) => groups.indexOf(a.x.verdict) - groups.indexOf(b.x.verdict) || (b.s ?? 0) - (a.s ?? 0)) : scored;
   return (
     <Panel id="web" title={t("Also found on the web")} sub={t("{0}. Searched Channel3 for “{1}”{2}; each listing is checked in code for {3}{4}.", d.label, d.query_en, d.translated ? t(" (your words: “{0}”)", d.query) : "", d.must.length ? d.must.join(", ") : t("what you asked"), d.budget_cents ? t(" and your {0} budget", money(d.budget_cents)) : "")}>
       <p className="mb-3 rounded-md border border-rule bg-paper-2 p-3 text-sm font-medium" data-testid="web-answer">{d.answer}</p>
+      {shown.length > 1 && <TasteSort listings={shown.map((x) => ({ title: x.title, brand: x.brand }))} onResult={setTaste} />}
+      {taste?.nothingFits && <p className="mb-3 rounded-md border border-wait/50 bg-wait-bg p-3 text-sm" role="status" data-testid="taste-nothing-fits">{t("Nothing here looks much like what you usually keep. That's the taste model's guess, not a rule; the verdicts above still stand.")}</p>}
       {!d.picks.length ? (
         <p className="text-sm text-ink-2">{d.note}</p>
       ) : (
         <ul className="space-y-3">
-          {shown.map((x, n) => (
-            <li key={n} className={cn("rounded-md border p-3 text-sm", x.verdict === "fits" ? "border-done/50" : "border-rule")}>
+          {ordered.map(({ x, s }, n) => (
+            <li key={x.url ?? `${x.title}${n}`} data-taste={s === null ? undefined : s.toFixed(3)} className={cn("rounded-md border p-3 text-sm", x.verdict === "fits" ? "border-done/50" : "border-rule")}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="font-medium">{x.title}</span>
                 <span className="num">{x.price_cents !== null ? money(x.price_cents, x.currency) : t("no price")}</span>
               </div>
-              <div className="text-xs text-ink-2">
+              <div className="text-xs text-ink-2" data-no-i18n>
                 {[x.brand, x.merchant, x.rating ? `${x.rating.value.toFixed(1)}★ (${x.rating.count})` : null].filter(Boolean).join(" · ")}
               </div>
               <p className={cn("mt-1 font-semibold", VERDICT[x.verdict][1])}>

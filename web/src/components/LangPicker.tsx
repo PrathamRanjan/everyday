@@ -19,9 +19,9 @@ export function LangPicker({ className }: { className?: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className={cn("gap-1.5 px-2", className)} aria-label={t("Language: {0}. Change language", LANGS.find((l) => l.code === cur)!.name)} data-testid="lang-picker">
+        <Button variant="ghost" size="sm" className={cn("gap-1.5 px-2 max-[400px]:min-w-11", className)} aria-label={t("Language: {0}. Change language", LANGS.find((l) => l.code === cur)!.name)} data-testid="lang-picker">
           <Languages className="size-4" />
-          <span className="text-xs font-semibold uppercase" data-no-i18n>{cur}</span>
+          <span className="text-xs font-semibold uppercase max-[400px]:hidden" data-no-i18n>{cur}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-2">

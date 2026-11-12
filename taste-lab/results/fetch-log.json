@@ -1,0 +1,35 @@
+{
+  "started": "2026-11-12T07:12:21.312Z",
+  "source": "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/resolve/main",
+  "categories": {
+    "Office_Products": {
+      "rating_bytes": 104457590,
+      "meta_bytes": 2146468843,
+      "users_read": 223308,
+      "users_kept": 3999,
+      "items_needed": 27965,
+      "items_found": 27962,
+      "seconds": 22
+    },
+    "Electronics": {
+      "rating_bytes": 160000000,
+      "meta_bytes": 5246144134,
+      "users_read": 226851,
+      "users_kept": 4000,
+      "items_needed": 43484,
+      "items_found": 43483,
+      "seconds": 55
+    },
+    "Home_and_Kitchen": {
+      "rating_bytes": 160000000,
+      "meta_bytes": 11788767944,
+      "users_read": 194798,
+      "users_kept": 4000,
+      "items_needed": 67688,
+      "items_found": 67685,
+      "seconds": 111
+    }
+  },
+  "total_bytes": 19605838511,
+  "finished": "2026-11-12T07:15:29.505Z"
+}

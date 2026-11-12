@@ -127,6 +127,8 @@ export function serveApp(app: Express, root: string) {
   // A1.4: the hands-free face tracker's runtime and model, served from here (no CDN); fetched only when switched on.
   app.use("/mediapipe", express.static(join(dist, "mediapipe"), { maxAge: "7d", index: false }));
   app.use("/models", express.static(join(dist, "models"), { maxAge: "7d", index: false }));
+  // The taste model (taste-lab/): weights and its card, fetched by the browser only when "Sort by my taste" is on.
+  app.use("/taste", express.static(join(dist, "taste"), { maxAge: "1h", index: false }), (_req, res) => void res.status(404).json({ error: "not_found" }));
   for (const f of ["favicon.svg", "robots.txt"]) app.get(`/${f}`, (_req, res) => res.sendFile(join(dist, f), { maxAge: "1d" }));
   const sendShell = async (req: Request, res: express.Response) => {
     if (process.env.NODE_ENV !== "production") (shell = readFileSync(indexPath, "utf8")), (pre = readPreloads());

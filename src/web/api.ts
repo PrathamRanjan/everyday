@@ -234,6 +234,18 @@ export function apiRoutes() {
     return { plans: rows, recipients };
   }));
 
+  // The taste model's card (taste-lab/): metrics against baselines, the "nothing fits" line, the language test.
+  r.get("/api/ui/taste", send(async () => {
+    const { tasteCard } = await import("../taste/taste.js");
+    return tasteCard();
+  }));
+  // What the browser's taste model learns from: the shopper's own things (title and brand), and whether they kept them.
+  r.get("/api/ui/taste/history", send(async (req) => {
+    const a = await shopperOf(req);
+    const mine = await owned(await getDb(), a);
+    return { items: mine.slice(0, 40).map((o: any) => ({ title: String(o.title), brand: o.brand ? String(o.brand) : null, kept: o.status === "owned" })) };
+  }));
+
   // B6: the plan's web tier (Channel3), checked in code against the same must-haves; a labelled hand-off, never a checkout.
   r.get("/api/ui/plans/:id/web", send(async (req) => {
     const a = await shopperOf(req);

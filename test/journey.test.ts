@@ -254,6 +254,13 @@ describe("Everyday acceptance journey", () => {
     expect((await maya.req("POST", "/api/ui/lang", { json: { lang: "fr" } })).status).toBe(400);
     expect((await maya.req("POST", "/api/ui/lang", { json: { lang: "en" } })).status).toBe(200);
     expect(Array.isArray((await ui(maya, "/agents/calls")).calls)).toBe(true);
+    // The taste model's card (no weights) and the shopper's own things it learns from.
+    const card = await ui(maya, "/taste");
+    expect(card.available).toBe(true);
+    expect(card.W).toBeUndefined();
+    const th = await ui(maya, "/taste/history");
+    expect(th.items.length).toBeGreaterThan(0);
+    expect(th.items[0]).toHaveProperty("kept");
     expect((await anon.get("/downloads/everyday-extension.zip")).status).toBe(200);
     setFxFetcher(async () => Promise.reject(new Error("no network in tests")));
     expect((await maya.get("/api/ui/fx")).json).toMatchObject({ fx: null });

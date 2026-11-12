@@ -67,6 +67,7 @@ interface ProofData {
   decisions: null | { title: string; what: string; run_on: string; model: string; thresholds: { name: string; clear_below: number; hold_above: number; held_out?: { n: number; precision: number; recall: number; false_clear: number; refused: number } }[]; not_calibrated: string[]; cases: { text: string; labels: Record<string, number>; answers: Record<string, number | null> | null }[] };
   model_card: { rows: { set: string; n: string; auc: string; caught_at_1pct: string; what: string }[]; note: string };
   robot_judge: null | { run_on: string; target: string; by: string; ok: boolean; stored: string; paths: { id: string; title: string; ok: boolean; seconds: number; error: string | null; steps: { key: string; label: string; done: boolean }[] }[] };
+  taste: null | { version: string; trained_at: string; ships: string; embedding: string; people: number; items: number; gb: number; rows: { method: string; hr_at_10: number; ndcg_at_10: number; auc: number; cold_hr_at_10: number; cases: number; cold_cases: number }[]; nothing_fits: { tau: number; test: { good_kept: number; cross_flagged: number; same_flagged: number } }; language: { people: number; langs: Record<string, any> } };
   not_measured: string[];
 }
 
@@ -239,6 +240,31 @@ export default function Proof() {
                 <p className="text-sm text-ink-2">{t("No robot-judge run recorded on this build.")}</p>
               )}
             </Panel>
+            {d.taste && (
+              <Panel id="taste" title={t("Taste model")} sub={t("Trained {0} · {1}", dateOf(d.taste.trained_at), d.taste.embedding)}>
+                <p className="mb-3 text-sm text-ink-2">{t("{0} Amazon shoppers and {1} products ({2} GB read from Amazon Reviews 2023). The last thing each person bought is hidden; the model ranks it among 99 other products from the same category. “New products” are ones no one bought in training, like most web listings.", d.taste.people.toLocaleString(), d.taste.items.toLocaleString(), d.taste.gb)}</p>
+                <Table label={t("Taste model against baselines")} head={[t("Method"), t("Top 10 of 100"), "NDCG@10", "AUC", t("Top 10, new products")]} min={560}>
+                  {d.taste.rows.map((r) => (
+                    <tr key={r.method} className={cn("border-b border-rule last:border-0", r.method === "trained_projection" && "font-semibold")}>
+                      <Td className="font-mono text-xs">{r.method}{r.method === d.taste!.ships && <span className="ml-1 rounded bg-done-bg px-1 text-done">{t("ships")}</span>}</Td>
+                      <Td className="num">{(r.hr_at_10 * 100).toFixed(1)}%</Td>
+                      <Td className="num">{r.ndcg_at_10.toFixed(3)}</Td>
+                      <Td className="num">{r.auc.toFixed(3)}</Td>
+                      <Td className="num">{(r.cold_hr_at_10 * 100).toFixed(1)}%</Td>
+                    </tr>
+                  ))}
+                </Table>
+                <p className="mt-3 text-sm">{t("“Nothing fits” (a whole list under {0}): a list from another category is flagged {1}% of the time; a list holding the real next buy is wrongly flagged {2}% of the time. That is why the app calls it a guess.", d.taste.nothing_fits.tau, Math.round(d.taste.nothing_fits.test.cross_flagged * 100), Math.round((1 - d.taste.nothing_fits.test.good_kept) * 100))}</p>
+                <ul className="mt-2 flex flex-wrap gap-2 text-sm">
+                  {["en", "hi", "id", "pt"].filter((l) => d.taste!.language.langs[l]).map((l) => (
+                    <li key={l} className="rounded-md border border-rule px-2 py-1" data-no-i18n>
+                      <b>{l}</b>: {(d.taste!.language.langs[l].hr_at_5_of_20 * 100).toFixed(0)}% top 5 of 20
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-ink-2">{t("Language test: {0} held-out people, their history in English, the 20 listings machine-translated. Chance is 25%.", d.taste.language.people)}</p>
+              </Panel>
+            )}
             <Panel title={t("Not measured")}>
               <ul className="list-disc space-y-1 pl-5 text-sm">
                 {d.not_measured.map((x) => (

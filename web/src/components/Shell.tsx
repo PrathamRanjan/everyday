@@ -74,7 +74,7 @@ export function Wordmark({ className }: { className?: string }) {
         <circle cx="15" cy="7" r="3.5" fill="var(--now)" />
         <circle cx="24" cy="7" r="2.5" fill="var(--card)" stroke="var(--ink-2)" strokeWidth="1.4" />
       </svg>
-      {t("Everyday")}
+      <span className="max-[400px]:sr-only">{t("Everyday")}</span>
     </span>
   );
 }
@@ -215,7 +215,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       )}
       <header className="sticky top-0 z-30 border-b border-rule bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-1 px-4 min-[401px]:gap-2">
           <Link to={who ? (who.kind === "merchant" ? "/merchant" : "/today") : "/"} className="mr-auto rounded-md" aria-label={t("Everyday home")}>
             <Wordmark />
           </Link>

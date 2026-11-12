@@ -1,0 +1,9 @@
+{
+  "tag": "k128-centred",
+  "ships": "trained_projection",
+  "compared_on_validation": {
+    "k128-centred": 0.1401,
+    "k32-centred": 0.1285,
+    "k128": 0.1172
+  }
+}

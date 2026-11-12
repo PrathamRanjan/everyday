@@ -53,6 +53,8 @@ export const NOT_MEASURED = [
   "The second reader (Decisions) beyond 48 hand-labelled messages; five of its eleven questions had too few examples to calibrate and are not used to hold.",
   "The assistant's answers: no graded set yet; each answer cites the tool calls it relies on so a reader can check it.",
   "The phone app on a real device: tested as a web build only.",
+  "Hands-free on real eyes and real speech: the gaze maths is tested on simulated eyes and the voice words in code; no person's accuracy has been measured, and the browser's speech service does the listening.",
+  "The taste model on Everyday shoppers: it was trained and tested on Amazon shoppers (Office, Electronics, Home and Kitchen), not on anyone using this app; its language test used machine-translated titles.",
 ];
 
 function suite(name: string, title: string, what: string) {
@@ -71,6 +73,15 @@ function suite(name: string, title: string, what: string) {
     model: c.detail?.model ?? null,
   }));
   return { name, title, what, run_on: j.run_on, provider: j.provider, arms: j.arms, cases };
+}
+
+/** The taste model's card (taste-lab/, exported to src/taste/model.json), shaped for the proof page. */
+async function tasteProof() {
+  const { tasteModel } = await import("../taste/taste.js");
+  const m: any = tasteModel();
+  if (!m) return null;
+  const rows = Object.entries(m.test as Record<string, any>).map(([method, v]) => ({ method, hr_at_10: v.all.hr_at_10, ndcg_at_10: v.all.ndcg_at_10, auc: v.all.auc, cold_hr_at_10: v.cold_items.hr_at_10, cases: v.all.cases, cold_cases: v.cold_items.cases }));
+  return { version: m.version, trained_at: m.trained_at, ships: m.ships, embedding: m.embedding.model_id, people: m.data.people, items: m.data.items, gb: +(m.data.bytes_downloaded / 1e9).toFixed(2), rows, nothing_fits: m.nothing_fits, language: m.language };
 }
 
 export async function proofData() {
@@ -112,6 +123,7 @@ export async function proofData() {
       : null,
     model_card: { rows: MODEL_CARD, note: "From the training notebooks, which are not in this repository, so these figures can't be re-run from it. The payment-risk model is trained on synthetic data: its score is a ranking signal, not a fraud rate." },
     robot_judge: robot,
+    taste: await tasteProof(),
     not_measured: NOT_MEASURED,
   };
 }

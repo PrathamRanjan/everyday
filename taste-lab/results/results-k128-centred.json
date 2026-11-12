@@ -1,0 +1,201 @@
+{
+  "config": {
+    "K": 128,
+    "centred": true
+  },
+  "ships": "trained_projection",
+  "trained_at": "2026-11-12T10:35:04.362Z",
+  "users": 11999,
+  "items": 139130,
+  "best_epoch": 7,
+  "training": [
+    {
+      "epoch": 1,
+      "loss": 1.1228,
+      "val_ndcg_at_10": 0.1362,
+      "val_hr_at_10": 0.2445
+    },
+    {
+      "epoch": 2,
+      "loss": 0.9932,
+      "val_ndcg_at_10": 0.1349,
+      "val_hr_at_10": 0.2434
+    },
+    {
+      "epoch": 3,
+      "loss": 0.9355,
+      "val_ndcg_at_10": 0.1375,
+      "val_hr_at_10": 0.2445
+    },
+    {
+      "epoch": 4,
+      "loss": 0.9024,
+      "val_ndcg_at_10": 0.1379,
+      "val_hr_at_10": 0.2451
+    },
+    {
+      "epoch": 5,
+      "loss": 0.8882,
+      "val_ndcg_at_10": 0.14,
+      "val_hr_at_10": 0.2508
+    },
+    {
+      "epoch": 6,
+      "loss": 0.8576,
+      "val_ndcg_at_10": 0.1374,
+      "val_hr_at_10": 0.2412
+    },
+    {
+      "epoch": 7,
+      "loss": 0.8404,
+      "val_ndcg_at_10": 0.1401,
+      "val_hr_at_10": 0.2497
+    },
+    {
+      "epoch": 8,
+      "loss": 0.8317,
+      "val_ndcg_at_10": 0.1393,
+      "val_hr_at_10": 0.2478
+    },
+    {
+      "epoch": 9,
+      "loss": 0.8251,
+      "val_ndcg_at_10": 0.1388,
+      "val_hr_at_10": 0.2469
+    },
+    {
+      "epoch": 10,
+      "loss": 0.8154,
+      "val_ndcg_at_10": 0.1397,
+      "val_hr_at_10": 0.2473
+    }
+  ],
+  "results": {
+    "random": {
+      "val": {
+        "cases": 11999,
+        "hr_at_10": 0.1012,
+        "ndcg_at_10": 0.0453,
+        "auc": 0.5031
+      },
+      "test": {
+        "cases": 11999,
+        "hr_at_10": 0.0992,
+        "ndcg_at_10": 0.0449,
+        "auc": 0.494
+      },
+      "test_cold_items": {
+        "cases": 6088,
+        "hr_at_10": 0.0997,
+        "ndcg_at_10": 0.0448,
+        "auc": 0.5018
+      }
+    },
+    "popularity": {
+      "val": {
+        "cases": 11999,
+        "hr_at_10": 0.2509,
+        "ndcg_at_10": 0.1624,
+        "auc": 0.4176
+      },
+      "test": {
+        "cases": 11999,
+        "hr_at_10": 0.2272,
+        "ndcg_at_10": 0.1465,
+        "auc": 0.393
+      },
+      "test_cold_items": {
+        "cases": 6088,
+        "hr_at_10": 0,
+        "ndcg_at_10": 0,
+        "auc": 0.0421
+      }
+    },
+    "raw_cosine": {
+      "val": {
+        "cases": 11999,
+        "hr_at_10": 0.2311,
+        "ndcg_at_10": 0.1285,
+        "auc": 0.6061
+      },
+      "test": {
+        "cases": 11999,
+        "hr_at_10": 0.2175,
+        "ndcg_at_10": 0.1207,
+        "auc": 0.597
+      },
+      "test_cold_items": {
+        "cases": 6088,
+        "hr_at_10": 0.2055,
+        "ndcg_at_10": 0.1119,
+        "auc": 0.591
+      }
+    },
+    "trained_projection": {
+      "val": {
+        "cases": 11999,
+        "hr_at_10": 0.2497,
+        "ndcg_at_10": 0.1401,
+        "auc": 0.6241
+      },
+      "test": {
+        "cases": 11999,
+        "hr_at_10": 0.2324,
+        "ndcg_at_10": 0.1295,
+        "auc": 0.611
+      },
+      "test_cold_items": {
+        "cases": 6088,
+        "hr_at_10": 0.2124,
+        "ndcg_at_10": 0.1172,
+        "auc": 0.5916
+      }
+    },
+    "pca128_start": {
+      "val": {
+        "cases": 11999,
+        "hr_at_10": 0.228,
+        "ndcg_at_10": 0.1266,
+        "auc": 0.6048
+      },
+      "test": {
+        "cases": 11999,
+        "hr_at_10": 0.2154,
+        "ndcg_at_10": 0.1184,
+        "auc": 0.5957
+      },
+      "test_cold_items": {
+        "cases": 6088,
+        "hr_at_10": 0.2019,
+        "ndcg_at_10": 0.109,
+        "auc": 0.5895
+      }
+    }
+  },
+  "nothing_fits": {
+    "tau": 0.2,
+    "chosen_on": "validation, best balanced accuracy between lists holding the real next buy and lists from another category",
+    "validation": {
+      "good_kept": 0.7691,
+      "cross_flagged": 0.7643,
+      "same_flagged": 0.2677
+    },
+    "test": {
+      "good_kept": 0.7832,
+      "cross_flagged": 0.7631,
+      "same_flagged": 0.2597
+    },
+    "test_balanced_accuracy": 0.7732,
+    "reading": "good_kept = a list with the real next buy said 'something fits'; cross_flagged = a list from another category said 'nothing fits'; same_flagged = a random same-category list said 'nothing fits' (no right answer)"
+  },
+  "seconds": 355,
+  "nothing_fits_per_item": {
+    "tau": -0.0685,
+    "chosen_on": "validation: 90% of real next buys score at or above it",
+    "test_real_next_buy_at_or_above": 0.897,
+    "test_random_same_category_item_below": 0.15,
+    "test_list_with_real_buy_says_something_fits": 1,
+    "test_list_of_10_random_same_category_says_nothing_fits": 0,
+    "test_list_of_10_other_category_items_says_nothing_fits": 0.0004
+  }
+}

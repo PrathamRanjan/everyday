@@ -1,0 +1,32 @@
+{
+  "people": 150,
+  "candidates_each": 20,
+  "ships": "k128-centred",
+  "model": "trained_projection",
+  "langs": {
+    "en": {
+      "hr_at_5_of_20": 0.3333,
+      "mean_rank_of_20": 9.17,
+      "alignment_with_english": null
+    },
+    "hi_title_only_alignment": 0.8143,
+    "hi": {
+      "hr_at_5_of_20": 0.34,
+      "mean_rank_of_20": 9.32,
+      "alignment_with_english": 0.8309
+    },
+    "id_title_only_alignment": 0.7902,
+    "id": {
+      "hr_at_5_of_20": 0.32,
+      "mean_rank_of_20": 9.25,
+      "alignment_with_english": 0.7903
+    },
+    "pt_title_only_alignment": 0.7341,
+    "pt": {
+      "hr_at_5_of_20": 0.2867,
+      "mean_rank_of_20": 9.71,
+      "alignment_with_english": 0.7274
+    }
+  },
+  "chance_hr_at_5_of_20": 0.25
+}
