@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { SpeakableText } from "@/components/forms";
 import { Link } from "react-router";
 import { Camera, ClipboardPaste, FileText, ReceiptText, Trash2 } from "lucide-react";
 import { Busy, PageHead, Panel, TrustStrip } from "@/components/kit";
@@ -160,7 +161,7 @@ export default function Receipts() {
         <Panel title={t("1. The receipt")} sub={t("Text or a photo. The receipt is treated as data: instructions inside it are ignored.")}>
           <div className="grid gap-3">
             <Label htmlFor="receipt-text">{t("Order email or receipt text")}</Label>
-            <Textarea id="receipt-text" rows={9} value={text} onChange={(e) => (setText(e.target.value), setPhoto(null))} placeholder={t("Paste the order confirmation here")} />
+            <SpeakableText id="receipt-text" rows={9} value={text} onChange={(v) => (setText(v), setPhoto(null))} placeholder={t("Paste the order confirmation here")} />
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" onClick={sample}>
                 <FileText aria-hidden />{" "}{t("Use the sample receipt")}

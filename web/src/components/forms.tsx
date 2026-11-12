@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,15 @@ export type Recipient = { id: string; name: string; relation: string; is_self: b
 /** A text box with optional voice typing (Display and help → Voice typing). */
 export function SpeakableText({ id, value, onChange, placeholder, rows = 2, required, className }: { id: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number; required?: boolean; className?: string }) {
   const { prefs } = usePrefs();
-  const dict = useDictation((t) => onChange(value ? `${value} ${t}` : t));
+  const latest = useRef(value);
+  latest.current = value;
+  const dict = useDictation((said) => said && onChange(latest.current ? `${latest.current} ${said}` : said));
+  // C4: push-to-talk on every main box, whenever the browser can listen (hold to talk, or press once to start).
   return (
     <div className={cn("relative", className)}>
       <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows} required={required} className="min-h-12 resize-y bg-card pr-12 text-base" />
-      {prefs.voiceInput && dict.supported && (
-        <Button type="button" size="icon-sm" variant={dict.on ? "default" : "ghost"} className="absolute top-1 right-1" onClick={dict.start} aria-label={dict.on ? t("Listening") : t("Speak instead of typing")}>
+      {dict.supported && !prefs.hideMic && (
+        <Button type="button" size="icon-sm" variant={dict.on ? "default" : "ghost"} className="absolute top-1 right-1" {...dict.hold} aria-pressed={dict.on} aria-label={dict.on ? t("Listening: let go or press again to stop") : t("Hold to talk instead of typing")} title={t("Hold to talk, or press once to start")} data-testid={`mic-${id}`}>
           <Mic className="size-4" />
         </Button>
       )}

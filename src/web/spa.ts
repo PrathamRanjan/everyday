@@ -124,6 +124,9 @@ export function serveApp(app: Express, root: string) {
   app.use("/assets", compressed(join(dist, "assets")));
   app.use("/assets", express.static(join(dist, "assets"), { immutable: true, maxAge: "1y", index: false }));
   app.use("/fonts", express.static(join(dist, "fonts"), { immutable: true, maxAge: "1y", index: false }));
+  // A1.4: the hands-free face tracker's runtime and model, served from here (no CDN); fetched only when switched on.
+  app.use("/mediapipe", express.static(join(dist, "mediapipe"), { maxAge: "7d", index: false }));
+  app.use("/models", express.static(join(dist, "models"), { maxAge: "7d", index: false }));
   for (const f of ["favicon.svg", "robots.txt"]) app.get(`/${f}`, (_req, res) => res.sendFile(join(dist, f), { maxAge: "1d" }));
   const sendShell = async (req: Request, res: express.Response) => {
     if (process.env.NODE_ENV !== "production") (shell = readFileSync(indexPath, "utf8")), (pre = readPreloads());

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { QR } from "@/components/Install";
 import { Link } from "react-router";
 import { ArrowRight, CircleCheck, Clock, Link2, PlayCircle, RotateCcw, Store, User } from "lucide-react";
 import { Busy, Loaded, PageHead, Panel } from "@/components/kit";
@@ -209,9 +210,12 @@ export default function Demo() {
                 <Panel title={<span className="inline-flex items-center gap-2"><Link2 className="size-5" />{t("This demo")}</span>} sub={t("Private to you. Deleted if unused until {0}.", day(String(ws.expires_at).slice(0, 10)))} className="md:col-span-2">
                   {ws.progress_line && <p className="text-sm" role="status">{ws.progress_line}</p>}
                   {ws.join_url && (
-                    <p className="mt-2 text-sm text-ink-2">
-                      {t("Open the same demo on your phone:")}{" "}<span className="num break-all text-ink">{ws.join_url}</span>
-                    </p>
+                    <div className="mt-2 flex flex-wrap items-start gap-3">
+                      <QR text={ws.join_url} label={t("QR code: opens this demo on your phone, signed in")} size={128} />
+                      <p className="min-w-0 flex-1 text-sm text-ink-2">
+                        {t("Open the same demo on your phone:")}{" "}<span className="num break-all text-ink">{ws.join_url}</span>
+                      </p>
+                    </div>
                   )}
                 </Panel>
               )}

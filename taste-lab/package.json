@@ -1,0 +1,17 @@
+{
+  "name": "everyday-taste-lab",
+  "private": true,
+  "type": "module",
+  "description": "Trains and checks Everyday's taste model (Amazon Reviews 2023 samples, multilingual MiniLM, a learned projection).",
+  "scripts": {
+    "fetch": "node scripts/1-fetch.mjs",
+    "embed": "node scripts/2-embed.mjs",
+    "train": "node scripts/3-train.mjs",
+    "language": "node --env-file=../.env scripts/4-language.mjs",
+    "export": "node scripts/5-export.mjs",
+    "all": "npm run fetch && npm run embed && npm run train && npm run language && npm run export"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1"
+  }
+}

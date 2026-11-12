@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { LangPicker } from "./LangPicker";
+import { HandsFreeToggle } from "@/handsfree/Toggle";
 import { toast } from "sonner";
 import { Accessibility, CalendarClock, ChevronRight, Compass, FlaskConical, Gavel, Inbox, LogOut, Map, Menu, MessageSquare, Moon, Package, PlayCircle, ReceiptText, RotateCcw, Route, ShieldCheck, ShoppingBag, Sun, SunMoon, Wallet, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -233,6 +234,7 @@ export function Shell({ children }: { children: ReactNode }) {
           >
             <DisplayHelp />
           </Suspense>
+          <HandsFreeToggle />
           <LangPicker />
           <ThemeToggle />
           {who ? (

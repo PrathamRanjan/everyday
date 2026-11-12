@@ -253,6 +253,8 @@ describe("Everyday acceptance journey", () => {
     expect((await one("SELECT lang FROM accounts WHERE id = $1", [s.account])).lang).toBe("pt");
     expect((await maya.req("POST", "/api/ui/lang", { json: { lang: "fr" } })).status).toBe(400);
     expect((await maya.req("POST", "/api/ui/lang", { json: { lang: "en" } })).status).toBe(200);
+    expect(Array.isArray((await ui(maya, "/agents/calls")).calls)).toBe(true);
+    expect((await anon.get("/downloads/everyday-extension.zip")).status).toBe(200);
     setFxFetcher(async () => Promise.reject(new Error("no network in tests")));
     expect((await maya.get("/api/ui/fx")).json).toMatchObject({ fx: null });
     // B6: receipts in. The sample is served; reading with no model says so and offers the form; a typed line saves with its dates.

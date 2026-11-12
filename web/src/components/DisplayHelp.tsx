@@ -52,7 +52,7 @@ export function DisplayHelp() {
           <Row id="a11y-targets" label={t("Bigger buttons")} checked={prefs.bigTargets} onChange={(v) => set({ bigTargets: v })} />
           <Row id="a11y-simple" label={t("Fewer details")} hint={t("Hides IDs and technical notes")} checked={prefs.simpleWords} onChange={(v) => set({ simpleWords: v })} />
           <Row id="a11y-time" label={t("Extra time")} hint={t("Quotes and approvals never auto-refresh away")} checked={prefs.extraTime} onChange={(v) => set({ extraTime: v })} />
-          <Row id="a11y-voice" label={t("Voice typing")} hint={t("Adds a microphone to text boxes, where the browser supports it")} checked={prefs.voiceInput} onChange={(v) => set({ voiceInput: v })} />
+          <Row id="a11y-voice" label={t("Microphone on text boxes")} hint={t("Hold it to talk instead of typing, where the browser supports it")} checked={!prefs.hideMic} onChange={(v) => set({ hideMic: !v })} />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {read.supported && (

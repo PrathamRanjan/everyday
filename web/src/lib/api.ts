@@ -77,7 +77,12 @@ export function useApi<T>(path: string | null): LoadState<T> {
   useEffect(() => {
     const on = () => void load();
     window.addEventListener("ev:lang", on);
-    return () => window.removeEventListener("ev:lang", on);
+    // A hands-free voice step changed something (a claim, a payment): the screen reads it again.
+    window.addEventListener("ev:reload", on);
+    return () => {
+      window.removeEventListener("ev:lang", on);
+      window.removeEventListener("ev:reload", on);
+    };
   }, [load]);
   return { data, error, loading, reload: load };
 }

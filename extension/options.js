@@ -47,3 +47,14 @@ document.getElementById("forget").addEventListener("click", async () => {
   keyInput.placeholder = "evd_…";
   await test();
 });
+
+// Hands-free in the extension: the popup can listen only after an extension page was allowed the microphone.
+document.getElementById("mic").addEventListener("click", async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+    say("Microphone allowed. Press Talk in the popup.");
+  } catch {
+    say("The microphone wasn't allowed. Allow it for this extension in Chrome's site settings, then try again.");
+  }
+});

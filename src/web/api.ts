@@ -43,6 +43,7 @@ import { DEMO_SCAM } from "./safety.js";
 import { newId } from "../lib/ids.js";
 import { demoWallet, walletView } from "../services/demowallet.js";
 import { fxRates } from "../services/fx.js";
+import { handsfreeCommand } from "../services/handsfree.js";
 import { normLang } from "../i18n/index.js";
 
 type Handler = (req: Request, res: Response) => Promise<unknown>;
@@ -118,6 +119,24 @@ export function apiRoutes() {
   const r = Router();
 
   // ---------- Session and public ----------
+  // C2: the live tool-call panel on /agents: this shopper's last calls from outside assistants (arguments and
+  // results shortened; keys are never stored here).
+  r.get("/api/ui/agents/calls", send(async (req) => {
+    const a = await shopperOf(req);
+    const rows = (await (await getDb()).query<any>("SELECT id, agent_id, tool, args, ok, result, created_at FROM agent_requests WHERE principal = $1 ORDER BY created_at DESC LIMIT 20", [`shopper:${a.id}`])).rows;
+    const short = (v: unknown) => {
+      const s = typeof v === "string" ? v : JSON.stringify(v ?? null);
+      return s.length > 220 ? `${s.slice(0, 220)}…` : s;
+    };
+    return {
+      calls: rows.map((x) => {
+        const res = typeof x.result === "string" ? JSON.parse(x.result) : x.result;
+        return { id: x.id, agent: String(x.agent_id).slice(0, 60), tool: x.tool, args: short(x.args), state: x.ok === null ? "running" : x.ok ? "ok" : "refused", detail: x.ok === false ? String(res?.message ?? "") : short(res), at: x.created_at };
+      }),
+    };
+  }));
+  // A4/A5: a spoken phrase the page couldn't handle itself; money steps wait for "confirm" said back.
+  r.post("/api/ui/handsfree/command", send(async (req) => handsfreeCommand(await shopperOf(req), req.body ?? {})));
   // B6: the shopper's language, saved on the account so messages sent later (Telegram, push) are worded in it.
   r.post("/api/ui/lang", send(async (req) => {
     const a = await shopperOf(req);

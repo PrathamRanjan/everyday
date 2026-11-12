@@ -231,3 +231,17 @@
 :root[data-lang="hi"] h1, :root[data-lang="hi"] h2, :root[data-lang="hi"] h3 { line-height: 1.4; letter-spacing: 0; }
 :root:not([data-lang="en"]) .whitespace-nowrap:is(button, a) { white-space: normal; text-align: center; }
 :root[data-lang="pt"] main, :root[data-lang="id"] main { overflow-wrap: anywhere; hyphens: auto; }
+
+/* A1.8: hands-free makes every target at least 44 px, so a look or a head turn can land on it. */
+html[data-handsfree] :is(a[href], button, [role="button"], [role="tab"], select, summary, input[type="checkbox"], input[type="radio"]):not([data-hf-ui] *) {
+  min-height: 44px;
+  min-width: 44px;
+}
+html[data-handsfree] :is(input[type="checkbox"], input[type="radio"]):not([data-hf-ui] *) {
+  transform: scale(1.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-hf-ui] .animate-pulse {
+    animation: none;
+  }
+}

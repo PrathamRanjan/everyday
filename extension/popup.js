@@ -90,6 +90,7 @@ function productCard(page, tab) {
   const sync = () => (plan.disabled = !text.value.trim());
   text.addEventListener("input", sync);
   sync();
+  const talk = voiceButton(text, status, { plan: () => plan.click(), save: () => save.click(), sync });
 
   plan.addEventListener("click", async () => {
     const done = busy(plan, "Planning…");
@@ -134,9 +135,62 @@ function productCard(page, tab) {
     h("label", { for: "ask" }, "What should Everyday find?"),
     text,
     h("p", { class: "note", id: "ask-help" }, "Everyday reads your words; code applies your budget, dates and rules. Nothing is bought until you approve on PayPal."),
-    h("div", { class: "actions" }, plan, save),
+    h("div", { class: "actions" }, plan, save, talk),
     status,
   );
+}
+
+/**
+ * Hands-free in the popup: press Talk (or Alt+T) and speak. "Plan it", "save" and "open Everyday" are commands; anything
+ * else becomes the sentence Everyday plans from. Nothing is bought by voice here either: a plan still ends on PayPal.
+ */
+function voiceButton(text, status, on) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const btn = h("button", { type: "button", class: "btn secondary", "aria-pressed": "false", title: "Talk (Alt+T)" }, "Talk");
+  let rec = null;
+  const stop = () => {
+    try {
+      rec?.stop();
+    } catch {}
+  };
+  const start = () => {
+    if (rec) return stop();
+    rec = new SR();
+    rec.lang = navigator.language || "en-US";
+    rec.interimResults = false;
+    rec.onresult = (e) => {
+      const said = String(e.results?.[0]?.[0]?.transcript ?? "").trim();
+      const s = said.toLowerCase().replace(/[.!?]/g, "").trim();
+      if (/^(plan( it)?|go|plan with everyday)$/.test(s)) return on.plan();
+      if (/^save( it)?( to find)?$/.test(s)) return on.save();
+      if (/^open( everyday)?$/.test(s)) return void openOnSite("/today");
+      if (/^(stop|cancel)$/.test(s)) return (status.textContent = "Stopped.");
+      text.value = said;
+      on.sync();
+      status.textContent = `Heard: “${said}”. Say “plan it”, or press Plan it.`;
+    };
+    rec.onerror = (e) => {
+      status.textContent = e.error === "not-allowed" ? "Allow the microphone once in Settings (Chrome can't ask inside the popup)." : `Didn't catch that (${e.error}).`;
+      if (e.error === "not-allowed") chrome.runtime.openOptionsPage();
+    };
+    rec.onend = () => {
+      rec = null;
+      btn.setAttribute("aria-pressed", "false");
+      btn.textContent = "Talk";
+    };
+    btn.setAttribute("aria-pressed", "true");
+    btn.textContent = "Listening…";
+    rec.start();
+  };
+  btn.addEventListener("click", start);
+  document.addEventListener("keydown", (e) => {
+    if (e.altKey && e.key.toLowerCase() === "t") {
+      e.preventDefault();
+      start();
+    }
+  });
+  return btn;
 }
 
 function monthCard(today) {

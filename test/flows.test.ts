@@ -381,6 +381,53 @@ describe("Everyday flows", () => {
     expect((await one("SELECT refunded_cents FROM orders WHERE id = $1", [orderId])).refunded_cents).toBe(1300);
   });
 
+  it("hands-free: a price drop is claimed by voice only after “confirm” said back, once, for the amount heard", async () => {
+    const maya = await login(`acc:${s.account}`);
+    const nl = await login(`mer:${s.merchant}`);
+    const intentId = await toPlan(maya);
+    ok(await maya.post(`/plans/${intentId}/quote`));
+    const q = await one("SELECT * FROM quotes WHERE status = 'open'");
+    const orderId = await pay(maya, q.id);
+    const lamp = await one("SELECT * FROM order_lines WHERE order_id = $1 AND slot = 'lamp'", [orderId]);
+    ok(await nl.post(`/merchant/lines/${lamp.id}/ship`));
+    ok(await nl.post(`/merchant/lines/${lamp.id}/deliver`, { note: "" }));
+    const say = (body: Record<string, unknown>) => maya.req("POST", "/api/ui/handsfree/command", { json: { run: "t1", ...body } });
+    expect((await say({ text: "claim my price drop" })).json.say).toMatch(/Nothing you bought is cheaper now/);
+    ok(await nl.post(`/merchant/products/${lamp.product_id}/price`, { price: ((lamp.unit_cents - 1000) / 100).toFixed(2) }));
+    // Deleting is never done by voice; reads answer in a sentence.
+    expect((await say({ text: "delete my orders" })).json.say).toMatch(/done by hand/);
+    expect((await say({ text: "what needs me" })).json.navigate).toBe("/today");
+    // The first phrase only names the amount and holds a confirmation; nothing is claimed yet.
+    const first = await say({ text: "Peek claim my price drop", context: { order_id: orderId } });
+    expect(first.json.confirm).toMatchObject({ action: "claim", amount_cents: 1000 });
+    expect(first.json.say).toMatch(/\$10\.00/);
+    expect((await one("SELECT COUNT(*)::int AS n FROM cases WHERE issue = 'price_drop'")).n).toBe(0);
+    // Anything but a confirm word is refused; a made-up token is refused; another shopper can't use this one.
+    expect((await say({ text: "sure why not", confirm_token: first.json.confirm.token })).status).toBe(400);
+    expect((await say({ text: "confirm", confirm_token: "made-up" })).status).toBe(403);
+    // Hindi "हाँ" confirms; the claim goes through the same code as the button, once.
+    const done = await say({ text: "हाँ", confirm_token: first.json.confirm.token });
+    expect(done.status).toBe(200);
+    expect(done.json).toMatchObject({ done: "claim" });
+    expect((await one("SELECT refund_cents, status FROM cases WHERE issue = 'price_drop'"))).toMatchObject({ refund_cents: 1000, status: "awaiting_merchant" });
+    expect((await say({ text: "confirm", confirm_token: first.json.confirm.token })).status).toBe(403);
+    // A changed amount between asking and confirming claims nothing.
+    ok(await nl.post(`/merchant/products/${lamp.product_id}/price`, { price: ((lamp.unit_cents - 1500) / 100).toFixed(2) }));
+    const again = await say({ text: "claim the price drop" });
+    if (again.json.confirm) {
+      ok(await nl.post(`/merchant/products/${lamp.product_id}/price`, { price: ((lamp.unit_cents - 1800) / 100).toFixed(2) }));
+      expect((await say({ text: "confirm", confirm_token: again.json.confirm.token })).status).toBe(409);
+    }
+    // Paying by voice needs the order on screen, and an unpaid one.
+    expect((await say({ text: "pay this", run: "t2" })).json.say).toMatch(/Open the order/);
+    expect((await say({ text: "pay this", run: "t2", context: { order_id: orderId } })).json.say).toMatch(/doesn't need paying/);
+    // Ten steps in one run, then a tap or "start over".
+    for (let i = 0; i < 10; i++) await say({ text: "what needs me", run: "cap" });
+    expect((await say({ text: "what needs me", run: "cap" })).status).toBe(429);
+    expect((await say({ text: "start over", run: "cap" })).json.steps).toBe(0);
+    expect((await say({ text: "what needs me", run: "cap" })).status).toBe(200);
+  });
+
   /** A paid order with the lamp delivered, for the aftercare reviews. */
   async function paidAndDelivered() {
     const maya = await login(`acc:${s.account}`);

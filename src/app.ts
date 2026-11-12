@@ -1,4 +1,5 @@
 import express from "express";
+import { downloadRoutes } from "./web/downloads.js";
 import cookieParser from "cookie-parser";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -94,6 +95,7 @@ export function createApp() {
     );
   });
   const shell = serveApp(app, root);
+  app.use(downloadRoutes());
   app.use(adminRoutes());
   app.use(demoRoutes());
   app.use(askRoutes());

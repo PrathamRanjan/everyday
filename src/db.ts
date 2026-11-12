@@ -472,6 +472,8 @@ ALTER TABLE accounts ADD COLUMN IF NOT EXISTS ws_id TEXT;
 -- B6: the language the shopper chose; outgoing messages are worded in it when they are sent (stored in English).
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS lang TEXT;
 ALTER TABLE channel_messages ADD COLUMN IF NOT EXISTS lang TEXT;
+-- A5: a money step said by voice waits for "confirm" said back: one use, one minute, one shopper, one amount.
+CREATE TABLE IF NOT EXISTS handsfree_confirms (token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL, action TEXT NOT NULL CHECK (action IN ('claim','pay')), args JSONB NOT NULL, amount_cents INTEGER NOT NULL, expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 ALTER TABLE merchants ADD COLUMN IF NOT EXISTS ws_id TEXT;
 CREATE INDEX IF NOT EXISTS accounts_ws ON accounts(ws_id);
 CREATE INDEX IF NOT EXISTS merchants_ws ON merchants(ws_id);

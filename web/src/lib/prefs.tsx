@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { langTag } from "@/i18n";
 
 /**
  * Display and help settings. Same storage key ("a11y") and the same data-* attributes on <html> as the earlier
@@ -10,13 +11,15 @@ export interface Prefs {
   font: "default" | "hyperlegible";
   readAloud: boolean;
   voiceInput: boolean;
+  /** C4: the push-to-talk microphone shows on text boxes unless this is set. */
+  hideMic: boolean;
   simpleWords: boolean;
   reducedMotion: "system" | true;
   extraTime: boolean;
   bigTargets: boolean;
   theme: "system" | "light" | "dark";
 }
-const DEF: Prefs = { textScale: 1, contrast: "default", font: "default", readAloud: false, voiceInput: false, simpleWords: false, reducedMotion: "system", extraTime: false, bigTargets: false, theme: "system" };
+const DEF: Prefs = { textScale: 1, contrast: "default", font: "default", readAloud: false, voiceInput: false, hideMic: false, simpleWords: false, reducedMotion: "system", extraTime: false, bigTargets: false, theme: "system" };
 
 function load(): Prefs {
   try {
@@ -101,16 +104,50 @@ export function useReadAloud() {
 export function useDictation(onText: (t: string) => void) {
   const SR = typeof window !== "undefined" ? ((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition) : null;
   const [on, setOn] = useState(false);
+  const rec = useRef<any>(null);
+  const downAt = useRef(0);
   const start = useCallback(() => {
-    if (!SR) return;
+    if (!SR || rec.current) return;
     const r = new SR();
-    r.lang = navigator.language || "en-US";
+    // C4/B: listens in the language the page is in (हिन्दी, Bahasa Indonesia, Português or English).
+    r.lang = langTag();
     r.interimResults = false;
-    r.onresult = (e: any) => onText(String(e.results?.[0]?.[0]?.transcript ?? ""));
-    r.onend = () => setOn(false);
-    r.onerror = () => setOn(false);
+    r.continuous = true;
+    r.onresult = (e: any) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) onText(String(e.results[i][0]?.transcript ?? "").trim());
+    };
+    r.onend = () => ((rec.current = null), setOn(false));
+    r.onerror = () => ((rec.current = null), setOn(false));
+    rec.current = r;
     setOn(true);
     r.start();
   }, [SR, onText]);
-  return { supported: Boolean(SR), on, start };
+  const stop = useCallback(() => {
+    try {
+      rec.current?.stop();
+    } catch {
+      /* not running */
+    }
+  }, []);
+  // Push-to-talk: hold the button to talk, let go to stop. A quick press starts it (and a second quick press stops it).
+  const wasOn = useRef(false);
+  const hold = {
+    onPointerDown: (e: React.PointerEvent) => {
+      e.preventDefault();
+      downAt.current = performance.now();
+      wasOn.current = Boolean(rec.current);
+      if (!wasOn.current) start();
+    },
+    onPointerUp: () => {
+      if (performance.now() - downAt.current > 350 || wasOn.current) stop();
+    },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (rec.current) stop();
+        else start();
+      }
+    },
+  };
+  return { supported: Boolean(SR), on, start, stop, hold };
 }

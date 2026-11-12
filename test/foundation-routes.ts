@@ -21,3 +21,5 @@ Object.assign(
     ["POST /demo/start", "GET /demo/join/:token", "GET /api/ui/workspace", "GET /admin/demo", "POST /admin/demo/showcase", "POST /admin/demo/reset-all", "POST /admin/robot-judge"].map((r) => [r, "walked in test/workspaces.test.ts"]),
   ),
 );
+/** A4/A5: the hands-free command router (voice claims with "confirm" said back, the step cap). */
+Object.assign(ELSEWHERE, { "POST /api/ui/handsfree/command": "walked in test/flows.test.ts (hands-free)" });

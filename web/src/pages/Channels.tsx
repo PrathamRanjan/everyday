@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InstallGuide } from "@/components/Install";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Bell, MessageSquare, Send, ShieldAlert } from "lucide-react";
@@ -149,6 +150,7 @@ export default function Channels() {
                   </div>
                 </Panel>
               )}
+              {d.who === "shopper" && <InstallGuide />}
               {d.who === "shopper" && <Devices />}
             </aside>
           </div>

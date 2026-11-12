@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { CircleCheck, CircleX, Copy, KeyRound } from "lucide-react";
@@ -8,6 +8,7 @@ import { useApi } from "@/lib/api";
 import { when } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { t, tn } from "@/i18n";
+import { SimulatedGaze, simulatedAccuracy } from "@/handsfree/Demo";
 
 /** A3.2: the pages that need no sign-in. Each reads a committed result file or the showcase demo; nothing is typed in. */
 
@@ -422,11 +423,105 @@ export function Accessibility() {
           )
         }
       </Loaded>
+      <HandsFreeAbout />
+    </div>
+  );
+}
+
+/** A9: hands-free on the accessibility page: what it does, how it is kept safe, and what is and isn't measured. */
+function HandsFreeAbout() {
+  const sim = useMemo(() => simulatedAccuracy(), []);
+  return (
+    <div className="mt-6 space-y-6" id="hands-free">
+      <Panel title={t("Hands-free: look and say")} sub={t("The hand button in the header, or Alt+Shift+H. Off until you turn it on.")}>
+        <ul className="list-disc space-y-1 pl-5 text-sm">
+          <li>{t("Eyes + voice: nine dots calibrate where you look; the point snaps to the button you mean. Hold your look until the ring fills, wink, or say “Peek, click”.")}</li>
+          <li>{t("Head + voice: no calibration; turn your head to move the point. For glasses, low light, or when eye tracking isn't accurate enough.")}</li>
+          <li>{t("Voice only: no camera. “Peek, scroll down”, “Peek, go to plans”, “Peek, click Plan it”, “Peek, what needs me?”. Works in English, हिन्दी, Bahasa Indonesia and Português.")}</li>
+          <li>{t("Stopping: Esc, the word “stop” (or रुको, berhenti, pare) at any time, the Stop button, or looking away for two seconds. A real mouse or touch takes over at once. Blinks never click.")}</li>
+          <li>{t("Money: “Peek, claim my price drop” or “Peek, pay this” only names the amount. Nothing moves until you say “confirm”; the server checks the amount again, and the confirmation works once, for one minute. Deleting and cancelling are done by hand. Ten voice steps in a row, then a tap.")}</li>
+          <li>{t("PayPal's own page: by voice, Everyday opens it for you, but you sign in and approve there yourself. Everyday never sees or types your PayPal password.")}</li>
+          <li>{t("Privacy: the camera is read on this device by an open-source face tracker (MediaPipe) served from this site; no video leaves the device and nothing is recorded. A red “Camera on” chip shows while it runs. Speech goes to your browser's speech service to become words.")}</li>
+        </ul>
+      </Panel>
+      <Panel title={t("See how the point picks a button")}>
+        <SimulatedGaze />
+      </Panel>
+      <Panel title={t("What is measured, and what isn't")}>
+        <ul className="list-disc space-y-1 pl-5 text-sm">
+          <li>{t("In a real browser (Chromium with its fake camera), an automated test turns hands-free on: the face tracker and its model load from this site, the camera chip shows, it stops by itself with no face in view, and Esc, Stop and the shortcut all stop it.")}</li>
+          <li>{sim ? t("On simulated eyes (made-up eye data with noise, computed just now in your browser), the calibration maths lands the four check dots about {0} px from where they are (cross-validated on the nine dots: {1} px). That checks the maths, not a person.", String(sim.check_px), String(sim.cv_px)) : t("The simulated check didn't run.")}</li>
+          <li>{t("The voice money steps (confirm said back, once, one minute, amount checked again, ten-step limit) are tested against the server.")}</li>
+          <li><b>{t("Not measured yet: accuracy on real people's eyes, and real speech in each language. That needs recorded sessions with people, which haven't been done.")}</b></li>
+        </ul>
+      </Panel>
     </div>
   );
 }
 
 // ---------------- /agents ----------------
+
+type Call = { id: string; agent: string; tool: string; args: string; state: "running" | "ok" | "refused"; detail: string; at: string };
+/** C2: what outside assistants did with this shopper's key, live (every few seconds), plus a real call to try. */
+function LiveCalls({ agentKey, signedIn }: { agentKey: string | null; signedIn: boolean }) {
+  const [calls, setCalls] = useState<Call[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    const r = await fetch("/api/ui/agents/calls", { headers: { accept: "application/json" }, credentials: "same-origin" }).catch(() => null);
+    if (r?.ok) setCalls((await r.json()).calls);
+  }, []);
+  useEffect(() => {
+    if (!signedIn) return;
+    void load();
+    const id = window.setInterval(() => document.visibilityState === "visible" && void load(), 3000);
+    return () => window.clearInterval(id);
+  }, [signedIn, load]);
+  // A real MCP call, from this page, with the key just made: exactly what an assistant would send.
+  const tryIt = async () => {
+    if (!agentKey) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/mcp", { method: "POST", headers: { authorization: `Bearer ${agentKey}`, "content-type": "application/json", accept: "application/json, text/event-stream", "x-agent-id": "everyday-agents-page" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "my_constraints", arguments: {} } }) });
+      if (!r.ok) throw new Error(t("The call was refused ({0}).", String(r.status)));
+      await load();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!signedIn) return null;
+  return (
+    <Panel title={t("Live: what assistants did with your key")} sub={t("Updates every few seconds. Every call is recorded with the assistant's id.")}>
+      {agentKey && (
+        <Button variant="outline" className="mb-3" disabled={busy} onClick={() => void tryIt()} data-testid="agents-try">
+          {t("Try a real call: my_constraints")}
+        </Button>
+      )}
+      {calls === null ? (
+        <p className="text-sm text-ink-2">{t("Loading…")}</p>
+      ) : calls.length === 0 ? (
+        <p className="text-sm text-ink-2">{t("No calls yet. Connect an assistant with your key, or make a key and try a call here.")}</p>
+      ) : (
+        <ol className="space-y-2" data-testid="agents-calls">
+          {calls.map((c) => (
+            <li key={c.id} className="rounded-md border border-rule p-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Ok ok={c.state === "ok"} />
+                <span className="font-mono text-xs font-semibold">{c.tool}</span>
+                <span className="text-xs text-ink-2" data-no-i18n>{c.agent}</span>
+                <span className="ml-auto text-xs text-ink-2">{when(c.at)}</span>
+              </div>
+              <div className="mt-1 font-mono text-[11px] break-all text-ink-2" data-no-i18n>
+                {c.args} → {c.detail}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Panel>
+  );
+}
 
 interface AgentsData { endpoint: string; merchant_endpoint: string; transport: string; key_where: string; connect: { client: string; command: string }[]; shopper_tools: string[]; merchant_tools: string[]; limits: string }
 
@@ -471,6 +566,7 @@ export function Agents() {
                 </Button>
               )}
             </Panel>
+            <LiveCalls agentKey={key} signedIn={Boolean(me.data?.workspace)} />
             <Panel title={t("Connect")} sub={d.transport}>
               <div className="space-y-4">
                 {d.connect.map((c) => (
