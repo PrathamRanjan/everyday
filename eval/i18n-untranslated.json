@@ -1,21 +1,8 @@
 {
-  "run_on": "2026-11-12T06:40:28.341Z",
-  "target": "http://localhost:4111",
-  "total": 251,
+  "run_on": "2026-11-12T11:54:02.731Z",
+  "target": "https://pph-everyday.onrender.com",
+  "total": 231,
   "pages": {
-    "/": [
-      "The shop now charges $42.00; you paid $49.00. NL-returns-2026-10 promises the difference.",
-      "You can still return it for up to $49.00, until 2026-12-16.",
-      "The price dropped: ask for $7.00 back.",
-      "Dell P2422H 24\" monitor",
-      "Under warranty until 2029-03-16; open a case from the order if it breaks.",
-      "Under warranty until 2027-03-16; open a case from the order if it breaks.",
-      "Plan ready: $181.00",
-      "1 items, arrives Nov 18",
-      "You paid $49.00; Northlight now charges $42.00. NL-returns-2026-10 price protection applies.",
-      "Warranty ends: Dell P2422H 24\" monitor",
-      "Your stated monthly limit, not a verified bank balance."
-    ],
     "/judge": [
       "Claimed a price drop",
       "PayPal confirmed the refund",
@@ -27,8 +14,8 @@
       "A scam message was held",
       "Added a receipt and got its return and warranty dates",
       "live",
-      "not connected",
       "WhatsApp",
+      "not connected",
       "sample"
     ],
     "/proof": [
@@ -170,13 +157,17 @@
       "✓ Made a plan from a sentence · ✓ Got the exact quote · ✓ Paid as the demo shopper (no PayPal login)",
       "✓ Checked a message with all the readers · ✓ A scam message was held",
       "✓ Added a receipt and got its return and warranty dates",
+      "random",
+      "popularity",
       "Real shoppers: every case was written by the people who built the app; no stranger has been timed on a judge path yet.",
       "Photo reading on real phone screenshots: the capture set is flat drawings with printed labels.",
       "The scam model on real business messages: its training and test messages are synthetic; the business figures above are its weak spot.",
       "The payment-risk model on real fraud: it is trained on synthetic data and is a ranking signal, not a fraud rate.",
       "The second reader (Decisions) beyond 48 hand-labelled messages; five of its eleven questions had too few examples to calibrate and are not u",
       "The assistant's answers: no graded set yet; each answer cites the tool calls it relies on so a reader can check it.",
-      "The phone app on a real device: tested as a web build only."
+      "The phone app on a real device: tested as a web build only.",
+      "Hands-free on real eyes and real speech: the gaze maths is tested on simulated eyes and the voice words in code; no person's accuracy has be",
+      "The taste model on Everyday shoppers: it was trained and tested on Amazon shoppers (Office, Electronics, Home and Kitchen), not on anyone us"
     ],
     "/ai": [
       "responses",
@@ -192,7 +183,7 @@
       "{\"answers\":{\"code_or_link\":{\"probability\":0},\"impersonation\":{\"probability\":0.03},\"fee_to_release\":{\"probability\":0},\"asks_for_payment\":{\"pr",
       "primary",
       "sweat-proof wireless earbuds for running, under $80, need them by next Friday",
-      "{\"owns\":[],\"wants\":[{\"quote\":\"earbuds\",\"category\":\"headphones\"}],\"comfort\":{\"quote\":\"\",\"value\":false},\"replace\":[],\"deadline\":{\"day\":\"friday",
+      "{\"owns\":[],\"wants\":[{\"quote\":\"sweat-proof wireless earbuds\",\"category\":\"headphones\"}],\"comfort\":{\"quote\":\"\",\"value\":false},\"replace\":[],\"dea",
       "an ergonomic chair under $400",
       "{\"owns\":[],\"wants\":[{\"quote\":\"an ergonomic chair\",\"category\":\"chair\"}],\"comfort\":{\"quote\":\"ergonomic\",\"value\":true},\"replace\":[],\"deadline\":",
       "a wireless mouse under $60",
@@ -208,6 +199,7 @@
       "GET /v2/payments/refunds/{id}",
       "POST /v3/vault/setup-tokens, /v3/vault/payment-tokens",
       "POST /v1/notifications/verify-webhook-signature",
+      "PAYMENT.CAPTURE.REFUNDED",
       "POST /v2/checkout/orders/{id}/track",
       "GET /v1/customer/disputes",
       "GET /v1/reporting/transactions",
@@ -238,21 +230,7 @@
       "my_constraints, plan_for, quote, approve_purchase, repeat_buy, passport, get_trace",
       "list_orders, get_order, list_cases, list_approvals, list_disputes, get_performance, get_trace"
     ],
-    "/today": [
-      "The shop now charges $42.00; you paid $49.00. NL-returns-2026-10 promises the difference.",
-      "You can still return it for up to $49.00, until 2026-12-16.",
-      "The price dropped: ask for $7.00 back.",
-      "Under warranty until 2029-03-16; open a case from the order if it breaks.",
-      "Under warranty until 2027-03-16; open a case from the order if it breaks.",
-      "Plan ready: $181.00",
-      "1 items, arrives Nov 18",
-      "You paid $49.00; Northlight now charges $42.00. NL-returns-2026-10 price protection applies.",
-      "Warranty ends: Dell P2422H 24\" monitor",
-      "Your stated monthly limit, not a verified bank balance."
-    ],
     "/guard": [
-      "38f9b3f3c0a6de992adc",
-      "e84f98a3358fce3c9d67",
       "pay EV-4002 $47.00 from the demo's saved wallet",
       "customer",
       "pay EV-4001 $61.00 from the demo's saved wallet"
@@ -264,12 +242,12 @@
       "Lumen & Oak",
       "Marketplace listing"
     ],
+    "/channels": [
+      "available"
+    ],
     "/traces": [
       "pay EV-4002 $47.00 from the demo's saved wallet",
       "pay EV-4001 $61.00 from the demo's saved wallet"
-    ],
-    "/plans/int_jevd2kjqyb4jz4zw": [
-      "Quest Basics · branchfurniture.com · 4.5★ (7182)"
     ],
     "/merchant": [
       "LinkDock USB-C 7-in-1 (HDMI 4K60, PD 100W)",
@@ -277,10 +255,6 @@
       "LinkDock Pro USB-C (HDMI + DisplayPort)",
       "Slim Keys",
       "Oak Keys Wireless"
-    ],
-    "/merchant/approvals": [
-      "38f9b3f3c0a6de992adc",
-      "e84f98a3358fce3c9d67"
     ]
   }
 }

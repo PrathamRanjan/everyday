@@ -1,5 +1,5 @@
 {
-  "run_on": "2026-11-11T16:08:34.573Z",
+  "run_on": "2026-11-12T11:52:34.798Z",
   "target": "https://pph-everyday.onrender.com",
   "checks": [
     {
@@ -38,7 +38,7 @@
       "title": "Keyboard only: plan, quote and pay",
       "how": "Only Tab and Enter, from a typed request to a paid order on the demo's saved sandbox wallet. The payment result must be announced in the page's one live region.",
       "ok": true,
-      "detail": "made a plan (shown after 0.3 s), got the quote, paid, and the live region said \"Paid from the demo's saved sandbox wallet. PayPal capture 20A395083P999284X confirmed.\"."
+      "detail": "made a plan (shown after 0.8 s), got the quote, paid, and the live region said \"Paid from the demo's saved sandbox wallet. PayPal capture 4R933019KB972864F confirmed.\"."
     }
   ],
   "not_tested": [

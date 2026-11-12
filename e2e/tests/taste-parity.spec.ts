@@ -35,3 +35,36 @@ test("taste: the browser's embeddings and scores match the lab's", async ({ page
   const order = (xs: number[]) => xs.map((x, i) => [x, i]).sort((a, b) => b[0] - a[0]).map((x) => x[1]).join();
   expect(order(got.scores)).toBe(order(parity.scores));
 });
+
+test("taste: Sort by my taste reorders web listings only inside their verdicts", async ({ page }) => {
+  test.setTimeout(600_000);
+  await resetDemo(page);
+  await signIn(page, "shopper");
+  // A plan whose web tier has at least two listings shown.
+  const plans = (await (await page.request.get("/api/ui/plans")).json()).plans as { id: string }[];
+  let target: string | null = null;
+  for (const p of plans) {
+    const w = await (await page.request.get(`/api/ui/plans/${p.id}/web`)).json();
+    if ((w.picks ?? []).filter((x: any) => x.verdict !== "off_topic").length >= 2) {
+      target = p.id;
+      break;
+    }
+  }
+  test.skip(!target, "no plan with two or more web listings in this demo");
+  await page.goto(`/plans/${target}`);
+  const verdicts = async () => page.locator("#web li[data-taste], #web li").evaluateAll((els) => els.filter((e) => e.closest("#web > * ul, #web ul")).map((e) => (e.querySelector("p.font-semibold")?.textContent ?? "").split(":")[0]).filter(Boolean));
+  await page.getByTestId("taste-toggle").click();
+  await expect(page.getByTestId("taste-sort").getByRole("status")).toContainText(/Sorted within each verdict/, { timeout: 480_000 });
+  const v = await verdicts();
+  // Groups stay in code's order: once a verdict has ended, it never comes back.
+  const seen: string[] = [];
+  for (const x of v) {
+    if (seen[seen.length - 1] !== x) {
+      expect(seen).not.toContain(x);
+      seen.push(x);
+    }
+  }
+  const scores = await page.locator("#web li[data-taste]").evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-taste"))));
+  expect(scores.length).toBeGreaterThanOrEqual(2);
+  console.log("taste sort:", v.join(" | "), scores.join(" "));
+});
