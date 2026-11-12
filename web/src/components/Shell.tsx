@@ -13,6 +13,7 @@ import { usePrefs } from "@/lib/prefs";
 import { postAction } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { RoleSwitch, switchRole } from "@/journey/RoleSwitch";
+import { startJourney } from "@/journey/Journey";
 import { t } from "@/i18n";
 
 type Item = { to: string; label: string; icon: ReactNode; tour?: string; badge?: number };
@@ -50,7 +51,7 @@ function navFor(kind: "shopper" | "merchant" | null, needs: number): { main: Ite
 }
 
 const DEMO_LINKS: Item[] = [
-  { to: "/?home=1#start", get label() { return t("Guided demo"); }, icon: <PlayCircle /> },
+  { to: "/#demo", get label() { return t("Guided demo"); }, icon: <PlayCircle /> },
   { to: "/demo", get label() { return t("Demo controls"); }, icon: <RotateCcw /> },
   { to: "/console", get label() { return t("Operator console"); }, icon: <FlaskConical /> },
 ];
@@ -66,13 +67,14 @@ function Badge({ n }: { n?: number }) {
 
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-2 font-display text-xl font-medium tracking-tight", className)}>
-      <svg viewBox="0 0 28 14" className="h-3.5 w-7" aria-hidden>
-        <line x1="2" y1="7" x2="26" y2="7" stroke="var(--rule-2)" strokeWidth="2" strokeLinecap="round" />
-        <line x1="2" y1="7" x2="15" y2="7" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="6" cy="7" r="3" fill="var(--done)" />
-        <circle cx="15" cy="7" r="3.5" fill="var(--now)" />
-        <circle cx="24" cy="7" r="2.5" fill="var(--card)" stroke="var(--ink-2)" strokeWidth="1.4" />
+    <span className={cn("inline-flex items-center gap-2 font-display text-xl font-semibold tracking-tight", className)}>
+      {/* The mark: a purchase's line through time, with today lit. */}
+      <svg viewBox="0 0 24 24" className="size-6 shrink-0" aria-hidden>
+        <rect width="24" height="24" rx="7" fill="#0b0f0d" stroke="var(--rule-2)" strokeWidth="0.75" />
+        <path d="M5 12h14" stroke="#eef2ec" strokeOpacity="0.35" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M5 12h6.5" stroke="#eef2ec" strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="11.5" cy="12" r="3" fill="#c6f16a" />
+        <circle cx="18" cy="12" r="1.7" fill="#0b0f0d" stroke="#eef2ec" strokeWidth="1.2" />
       </svg>
       <span className="max-[400px]:sr-only">{t("Everyday")}</span>
     </span>
@@ -186,7 +188,7 @@ function NavItem({ i, onClick, compact }: { i: Item; onClick?: () => void; compa
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { session, offline } = useSession();
+  const { session, offline, refresh } = useSession();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
   const who = session?.who ?? null;
@@ -197,8 +199,8 @@ export function Shell({ children }: { children: ReactNode }) {
     window.location.assign("/");
   };
   const nav = useNavigate();
-  // "Take the tour" opens the guided journeys on the home page: both sides, every step done by you.
-  const tour = () => nav("/?home=1#start");
+  // "Guided demo" starts the one walk-through right here: both sides, every step done by you.
+  const tour = () => void startJourney("story").then(refresh);
   const menuButton = (
     <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label={t("Menu")}>
       <Menu className="size-5" />
@@ -269,7 +271,7 @@ export function Shell({ children }: { children: ReactNode }) {
                     </>
                   )}
                   <button onClick={tour} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
-                    <PlayCircle className="size-[18px]" />{" "}{t("Take the tour")}
+                    <PlayCircle className="size-[18px]" />{" "}{t("Start the guided demo")}
                   </button>
                   <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
                     <LogOut className="size-[18px]" />{" "}{t("Sign out")}
@@ -305,7 +307,7 @@ export function Shell({ children }: { children: ReactNode }) {
             )}
             <div className="mt-auto flex flex-col gap-1 pt-4">
               <button data-tour="take-tour" onClick={tour} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
-                <PlayCircle className="size-[18px]" />{" "}{t("Take the tour")}
+                <PlayCircle className="size-[18px]" />{" "}{t("Start the guided demo")}
               </button>
               <button onClick={signOut} className="flex min-h-11 items-center gap-3 rounded-full px-3 text-sm font-medium text-ink-2 hover:bg-sunk">
                 <LogOut className="size-[18px]" />{" "}{t("Sign out")}

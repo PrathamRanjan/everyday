@@ -61,12 +61,22 @@ export function App() {
     endTourOnRouteChange(loc.pathname);
   }, [loc.pathname, loc.hash]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The landing page is a site of its own (its own header and footer); every other page lives in the app shell.
+  if (loc.pathname === "/")
+    return (
+      <>
+        <Suspense fallback={<PageSkeleton />}>
+          <Landing />
+        </Suspense>
+        <JourneyHost />
+        <Toaster containerAriaLabel={t("Notifications")} />
+      </>
+    );
   return (
     <>
       <Shell>
         <Suspense fallback={<PageSkeleton />}>
           <Routes>
-            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/today" element={<Today />} />
             <Route path="/discover" element={<Discover />} />
@@ -88,7 +98,7 @@ export function App() {
             <Route path="/merchant" element={<Merchant />} />
             <Route path="/merchant/money" element={<MerchantMoney />} />
             <Route path="/merchant/approvals" element={<MerchantApprovals />} />
-            <Route path="/judge" element={<Navigate to="/?home=1#start" replace />} />
+            <Route path="/judge" element={<Navigate to="/#demo" replace />} />
             <Route path="/ask" element={<Ask />} />
             <Route path="/proof" element={<Proof />} />
             <Route path="/ai" element={<AiCalls />} />

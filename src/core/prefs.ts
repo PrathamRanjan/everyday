@@ -100,9 +100,11 @@ export function fitPairs(pairs: { d: number[]; y: 0 | 1 }[], o: { epochs?: numbe
 }
 
 /** The two features that most raise this item's score relative to the slot average, in words. */
-export function explain(w: Weights, x: number[], avg: number[]): string[] {
+/** `personal` is false until the person has made a this-or-that choice: the weights are then still the population
+ * prior (trained on synthetic shoppers), so the reason says so instead of claiming to know them. */
+export function explain(w: Weights, x: number[], avg: number[], personal = true): string[] {
   const c = x.map((xi, i) => ({ i, v: w[i] * (xi - avg[i]) })).filter((z) => z.v > 0.05).sort((a, b) => b.v - a.v);
-  return c.slice(0, 2).map((z) => (z.i === PRICE ? "good value for its price" : `you tend to like ${label(z.i)}`));
+  return c.slice(0, 2).map((z) => (z.i === PRICE ? "good value for its price" : personal ? `you tend to like ${label(z.i)}` : `most shoppers like ${label(z.i)} (your own choices will tune this)`));
 }
 
 /** What changed between two weight vectors, in words (for the "your shortlist changed because" line). */

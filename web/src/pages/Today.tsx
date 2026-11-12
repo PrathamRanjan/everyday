@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { AlertTriangle, BadgeDollarSign, CalendarClock, ChevronRight, HelpCircle, PackageCheck, PlayCircle, Siren, X } from "lucide-react";
 import { Lifeline, type Band, type Mark } from "@/components/Lifeline";
 import { ApprovalCard, type ApprovalView } from "@/components/Approval";
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { useAction, useApi } from "@/lib/api";
 import { daysBetween, day, money, plural, when } from "@/lib/format";
 import { seenTour, tourActive } from "@/tours/tours";
-import { journeyActive } from "@/journey/Journey";
+import { journeyActive, startJourney } from "@/journey/Journey";
+import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { t, tn } from "@/i18n";
 
@@ -139,16 +140,16 @@ const ICON: Record<string, React.ReactNode> = { recall: <Siren />, approve: <Pac
 
 export function FirstRun({ kind }: { kind: "shopper" | "merchant" }) {
   const [hide, setHide] = useState(seenTour() || tourActive() || journeyActive());
-  const nav = useNavigate();
+  const { refresh } = useSession();
   if (hide || journeyActive()) return null;
   return (
     <div className="mb-6 flex items-center gap-3 rounded-lg border border-rule bg-card p-3 pl-4">
       <PlayCircle className="size-5 shrink-0 text-now" />
       <p className="min-w-0 flex-1 text-sm">
-        <b>{t("New here?")}</b>{" "}{kind === "merchant" ? t("A guided walk-through has you ship an order and approve a refund as the shop, step by step.") : t("A guided walk-through has you buy something with PayPal, then see it from the shop's side, step by step.")}
+        <b>{t("New here?")}</b>{" "}{t("The guided demo has you buy something with PayPal, then switch to the shop to ship it and approve a refund, step by step.")}
       </p>
-      <Button size="sm" onClick={() => nav("/?home=1#start")}>
-        {t("Take the tour")}
+      <Button size="sm" onClick={() => void startJourney("story").then(refresh)}>
+        {t("Start the guided demo")}
       </Button>
       <Button
         size="icon-sm"

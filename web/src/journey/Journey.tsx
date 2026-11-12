@@ -10,13 +10,21 @@ import { cn } from "@/lib/utils";
 import { t, tn } from "@/i18n";
 import { JOURNEYS, type Ctx, type JourneyId, type Role, type Step } from "./steps";
 
+const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+const WHY: Record<NonNullable<Step["why"]>["kind"], () => string> = { tech: () => t("Technology"), impact: () => t("Impact"), innovation: () => t("Innovation") };
+/** The bubble's extras: what the step is built on, and one line on why it scores. */
+const tagsHtml = (st: Step) => (st.tags?.length ? `<p class="ev-tags">${st.tags.map((g) => `<span class="ev-tag" data-kind="${g.kind}">${esc(g.label)}</span>`).join("")}</p>` : "");
+const whyHtml = (st: Step) => (st.why ? `<p class="ev-why" data-kind="${st.why.kind}"><b>${esc(WHY[st.why.kind]())}</b>${esc(st.why.text)}</p>` : "");
+
 /* ---------- state, kept in localStorage so a trip to PayPal's page and back keeps the place ---------- */
 
 type State = { id: JourneyId; i: number; ctx: Ctx; shown?: boolean };
 const KEY = "ev-journey";
 const read = (): State | null => {
   try {
-    return JSON.parse(localStorage.getItem(KEY) || "null");
+    const s = JSON.parse(localStorage.getItem(KEY) || "null") as State | null;
+    // A walk-through saved by an older version (three separate tours) is dropped rather than half-resumed.
+    return s && s.id in JOURNEYS ? s : null;
   } catch {
     return null;
   }
@@ -254,7 +262,7 @@ export function JourneyHost() {
         element: (el as HTMLElement) ?? undefined,
         popover: {
           title: step.title,
-          description: `${shown ? `<p class="ev-done">✓ ${t("Done")}</p>${step.after}` : step.body}${waitLine}${el || !step.el?.length ? "" : `<p class="ev-wait-miss">${t("This part isn't on the page yet. If it doesn't appear, press Skip in the box at the bottom.")}</p>`}`,
+          description: `${tagsHtml(step)}${shown ? `<p class="ev-done">✓ ${t("Done")}</p>${step.after}` : step.body}${waitLine}${el || !step.el?.length ? "" : `<p class="ev-wait-miss">${t("This part isn't on the page yet. If it doesn't appear, press Skip in the box at the bottom.")}</p>`}${whyHtml(step)}`,
           progressText: `${st.i + 1} / ${steps.length}`,
           showProgress: true,
           showButtons: waiting ? ["close"] : ["next", "close"],

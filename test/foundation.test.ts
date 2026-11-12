@@ -181,8 +181,12 @@ describe("Everyday foundation", () => {
     const tcode = String(tg.location).split("start=everyday-")[1];
     expect(tcode).toMatch(/^\d{6}$/);
     const post = (body: unknown) => fetch(`${base}/webhooks/telegram`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    expect((await post({ message: { chat: { id: 5150 }, text: "/start " + tcode } })).status).toBe(200);
+    // Exactly what Telegram sends when the deep link t.me/<bot>?start=everyday-<code> is opened.
+    expect((await post({ message: { chat: { id: 5150 }, text: "/start everyday-" + tcode } })).status).toBe(200);
     expect((await one("SELECT party FROM party_links WHERE channel = 'telegram' AND address = '5150'"))?.party).toBe("shopper");
+    // The bot's menu sends "/pending@bot"; it answers like "pending".
+    expect((await post({ message: { chat: { id: 5150 }, text: "/pending@everyday_paypal_demo_bot" } })).status).toBe(200);
+    expect((await one("SELECT body FROM channel_messages WHERE address = '5150' AND direction = 'out' ORDER BY created_at DESC LIMIT 1"))?.body).toMatch(/waiting|approve|decline/i);
     expect((await post({ message: { chat: { id: 5152 }, text: "link shopper:" + s.account } })).status).toBe(200);
     expect(await one("SELECT party FROM party_links WHERE channel = 'telegram' AND address = '5152'")).toBeUndefined();
     expect((await maya.get("/passport.json")).status).toBe(200);
@@ -202,7 +206,7 @@ describe("Everyday foundation", () => {
     expect((await nl.post("/merchant/approvals/none/decline", {})).status).toBe(404);
     const mt = await nl.post("/connect/telegram", {});
     const mcode = String(mt.location).split("start=everyday-")[1];
-    await fetch(`${base}/webhooks/telegram`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: { chat: { id: 5151 }, text: "/start " + mcode } }) });
+    await fetch(`${base}/webhooks/telegram`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: { chat: { id: 5151 }, text: "/start everyday-" + mcode } }) });
     expect((await one("SELECT party FROM party_links WHERE channel = 'telegram' AND address = '5151'"))?.party).toBe("merchant");
     expect((await nl.get("/merchant/approvals/audit.json")).status).toBe(200);
     expect((await nl.get("/merchant/money")).status).toBe(200);
@@ -263,7 +267,7 @@ describe("Everyday foundation", () => {
     // /judge now folds into the landing page's guided walk-throughs.
     const judge = await anon.get("/judge");
     expect(judge.status).toBe(302);
-    expect(judge.location).toBe("/?home=1#start");
+    expect(judge.location).toBe("/#demo");
     expect((await anon.get("/console/evidence")).status).toBe(200);
     ok(await anon.post("/console/eval", { suite: "adversarial" }));
     expect((await one("SELECT count(*)::int AS n FROM eval_runs WHERE suite = 'adversarial' AND NOT correct")).n).toBe(0);

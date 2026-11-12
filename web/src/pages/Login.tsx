@@ -40,7 +40,7 @@ export default function Login() {
       <PageHead eyebrow={t("Sign in")} title={t("Who are you today?")} lede={t("This is a demo on the PayPal sandbox. Nothing here uses real money. Be Maya, the shopper, or her shop; you can switch sides at any time with the switch at the top.")} />
       {d0(st) && (
         <p className="-mt-2 mb-6 text-sm">
-          <Link className="font-semibold underline" to="/?home=1#start">{t("New here? Take a guided walk-through instead →")}</Link>
+          <Link className="font-semibold underline" to="/#demo">{t("New here? Take a guided walk-through instead →")}</Link>
         </p>
       )}
       <Loaded state={st}>

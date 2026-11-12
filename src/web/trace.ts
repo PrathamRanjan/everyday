@@ -137,6 +137,13 @@ export function traceRoutes() {
     if (config.channels.telegramSecret && !safeEq(secret, config.channels.telegramSecret)) return res.status(401).end();
     try {
       const u = req.body ?? {};
+      // Everyday's connect links open the bot with "/start everyday-<code>" (a prefix the shared bot used to route by);
+      // the handlers read the bare code.
+      // The bot's menu sends commands as "/pending" (or "/pending@everyday_paypal_demo_bot"); the handlers read "pending".
+      if (typeof u.message?.text === "string")
+        u.message.text = u.message.text
+          .replace(/^\/start(@\w+)?\s+everyday-/i, "/start ")
+          .replace(/^\/(pending|approvals|waiting|orders|purchases|status|stop|kill|freeze|watch|watches|protection|cases|open|disputes)(@\w+)?\s*$/i, "$1");
       const t = String(u.message?.text ?? "").trim();
       const data = String(u.callback_query?.data ?? "");
       const foundation = /^\/start\s+m[0-9a-f]+$/i.test(t) || /^\/?link\s/i.test(t) || /^(approve|decline):/i.test(t) || /^(pending|approvals|waiting|orders|purchases|status|stop|kill|freeze|watch|watches|protection|cases|open|disputes)$/i.test(t) || (data !== "" && !data.startsWith("obj:"));

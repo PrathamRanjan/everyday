@@ -210,7 +210,8 @@ describe("Everyday acceptance journey", () => {
     }
     for (const f of ["/favicon.svg", "/robots.txt"]) expect((await anon.get(f)).status, f).toBe(200);
     expect((await anon.get("/")).status).toBe(200);
-    expect((await maya.get("/")).location).toBe("/today");
+    // Signed in, the home page is still the landing page (no jump to Today).
+    expect((await maya.get("/")).status).toBe(200);
     expect((await ui(anon, "/session")).who).toBeNull();
     expect((await ui(maya, "/session")).who).toMatchObject({ kind: "shopper", id: s.account });
     expect((await ui(nl, "/session")).who).toMatchObject({ kind: "merchant" });
@@ -232,7 +233,7 @@ describe("Everyday acceptance journey", () => {
     expect((await ui(nl, "/merchant/money")).totals.orders).toBeGreaterThan(0);
     expect((await ui(nl, "/merchant/approvals")).chain.ok).toBe(true);
     // The old judge page redirects to the home page's guided walk-throughs; the walk-through reads its progress here.
-    expect((await anon.get("/judge")).location).toBe("/?home=1#start");
+    expect((await anon.get("/judge")).location).toBe("/#demo");
     const jr = await ui(anon, "/journey");
     expect(Array.isArray(jr.done)).toBe(true);
     const judge = await ui(anon, "/judge");

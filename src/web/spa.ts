@@ -149,19 +149,14 @@ export function serveApp(app: Express, root: string) {
   };
   app.get("/", async (req, res, next) => {
     try {
-      const w = await whoami(req);
-      // Keep the query (?tour=judge and friends) so a signed-in visitor opening a tour link still gets the tour.
-      const qs = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
-      // ?home=1 opens the landing page (the two users and the guided journeys) even when signed in.
-      if (!req.query.home && w?.account) return res.redirect(`/today${qs}`);
-      if (!req.query.home && w?.merchant) return res.redirect(`/merchant${qs}`);
+      // The landing page is always the front door, signed in or not; it links into the app from there.
       await sendShell(req, res);
     } catch (e) {
       next(e);
     }
   });
-  // The judge page became the home page's guided walk-throughs.
-  app.get("/judge", (_req, res) => res.redirect(302, "/?home=1#start"));
+  // The judge page became the home page's guided demo.
+  app.get("/judge", (_req, res) => res.redirect(302, "/#demo"));
   app.get(PAGES, (req, res, next) => sendShell(req, res).catch(next));
   return sendShell;
 }

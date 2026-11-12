@@ -337,7 +337,7 @@ export async function buildPlan(q: Queryable, account: Account, intentId: string
           continue;
         }
         cands[s.key] = [...(cands[s.key] ?? []), { id: p.id, slot: s.key, title: p.title, price_cents: p.price_cents, utility, delay_days: p.stock > 0 ? 0 : p.backorder_days }];
-        (view as any)._why = { ...(view as any)._why, [p.id]: [...(exact ? ["exact match for the item in your clip"] : []), ...stated.map((w) => `${w}, as you asked`), ...explain(model.weights, x, avg)] };
+        (view as any)._why = { ...(view as any)._why, [p.id]: [...(exact ? ["exact match for the item in your clip"] : []), ...stated.map((w) => `${w}, as you asked`), ...explain(model.weights, x, avg, model.version > 0)] };
         (view as any)._exact = { ...(view as any)._exact, [p.id]: exact };
       }
     }

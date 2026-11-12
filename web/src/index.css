@@ -1,29 +1,34 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Everyday tokens (docs/DESIGN_BRIEF.md). Paper, ink and four money states; nothing else carries colour. */
+/* Everyday tokens: graphite and white, one lime signal colour, and four money states (now, done, wait, stop).
+   Shopper pages wear "now" (orange), shop pages wear "done" (green). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  --paper: #f7f4ee;
-  --card: #fffdf9;
-  --sunk: #efeae0;
-  --ink: #1c1a17;
-  --ink-2: #5a554c;
-  --ink-3: #8a8377;
-  --rule: #e3ddd1;
-  --rule-2: #d3ccbe;
-  --now: #b13a0d;
-  --now-bg: #fbe9df;
-  --done: #2c6a4d;
-  --done-bg: #e3f0e8;
-  --wait: #7d5800;
-  --wait-bg: #f8edd2;
-  --stop: #a11d2b;
-  --stop-bg: #f9e3e5;
-  --shadow: 0 10px 30px -14px rgb(28 26 23 / 0.28);
+  --paper: #f3f4f0;
+  --card: #ffffff;
+  --sunk: #e9ebe4;
+  --ink: #0f1311;
+  --ink-2: #4f5751;
+  --ink-3: #7c847d;
+  --rule: #dfe2da;
+  --rule-2: #c9cdc3;
+  --now: #b53b0a;
+  --now-bg: #fdeadc;
+  --done: #17704b;
+  --done-bg: #dcf1e5;
+  --wait: #765300;
+  --wait-bg: #f7ebcc;
+  --stop: #b0202d;
+  --stop-bg: #fbe3e5;
+  --signal: #c6f16a;
+  --signal-ink: #182404;
+  --night: #0b0f0d;
+  --night-2: #141a17;
+  --shadow: 0 1px 2px rgb(15 19 17 / 0.05), 0 14px 34px -18px rgb(15 19 17 / 0.28);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 
   /* shadcn/ui names, mapped to ours */
   --background: var(--paper);
@@ -48,50 +53,55 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #14120f;
-    --card: #1d1a16;
-    --sunk: #26221d;
-    --ink: #f1ebe0;
-    --ink-2: #b5ac9c;
-    --ink-3: #8c8476;
-    --rule: #36312a;
-    --rule-2: #4a443b;
-    --now: #f48a57;
-    --now-bg: #3a2016;
-    --done: #79c79d;
-    --done-bg: #16301f;
-    --wait: #e4b850;
-    --wait-bg: #33280f;
-    --stop: #f28b8b;
-    --stop-bg: #3a1a1d;
-    --shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+    --paper: #0b0e0c;
+    --card: #131815;
+    --sunk: #1b211d;
+    --ink: #eef2ec;
+    --ink-2: #a7b0a8;
+    --ink-3: #7b857d;
+    --rule: #242b26;
+    --rule-2: #343d37;
+    --now: #ff8a4c;
+    --now-bg: #3a1c0e;
+    --done: #62d79c;
+    --done-bg: #10301f;
+    --wait: #efc150;
+    --wait-bg: #33280d;
+    --stop: #ff8c94;
+    --stop-bg: #3b171b;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 34px -14px rgb(0 0 0 / 0.7);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #14120f;
-  --card: #1d1a16;
-  --sunk: #26221d;
-  --ink: #f1ebe0;
-  --ink-2: #b5ac9c;
-  --ink-3: #8c8476;
-  --rule: #36312a;
-  --rule-2: #4a443b;
-  --now: #f48a57;
-  --now-bg: #3a2016;
-  --done: #79c79d;
-  --done-bg: #16301f;
-  --wait: #e4b850;
-  --wait-bg: #33280f;
-  --stop: #f28b8b;
-  --stop-bg: #3a1a1d;
-  --shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  --paper: #0b0e0c;
+  --card: #131815;
+  --sunk: #1b211d;
+  --ink: #eef2ec;
+  --ink-2: #a7b0a8;
+  --ink-3: #7b857d;
+  --rule: #242b26;
+  --rule-2: #343d37;
+  --now: #ff8a4c;
+  --now-bg: #3a1c0e;
+  --done: #62d79c;
+  --done-bg: #10301f;
+  --wait: #efc150;
+  --wait-bg: #33280d;
+  --stop: #ff8c94;
+  --stop-bg: #3b171b;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 34px -14px rgb(0 0 0 / 0.7);
   color-scheme: dark;
 }
 
 @theme inline {
-  --font-display: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
-  --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --color-night: var(--night);
+  --color-night-2: var(--night-2);
   --color-paper: var(--paper);
   --color-card: var(--card);
   --color-sunk: var(--sunk);
@@ -125,10 +135,10 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 22px;
   --shadow-float: var(--shadow);
   --text-2xs: 0.75rem;
   --text-xs: 0.8125rem;
@@ -157,8 +167,9 @@
   h1, h2, h3 {
     font-family: var(--font-display);
     font-optical-sizing: auto;
-    letter-spacing: -0.01em;
-    line-height: 1.15;
+    font-variation-settings: "wdth" 92;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
     text-wrap: balance;
   }
   p { text-wrap: pretty; }
@@ -166,13 +177,13 @@
     outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
-  ::selection { background: var(--wait-bg); color: var(--ink); }
+  ::selection { background: var(--signal); color: var(--signal-ink); }
 }
 
 @layer utilities {
   /* Every amount, date, time and count uses tabular figures. */
   .num { font-variant-numeric: tabular-nums; }
-  .id { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; overflow-wrap: anywhere; }
+  .id { font-family: var(--font-mono); font-size: 0.92em; font-variant-numeric: tabular-nums; letter-spacing: 0; overflow-wrap: anywhere; }
   .eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
   .rail-scroll { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
   .prose-w { max-width: 68ch; }
@@ -265,8 +276,8 @@ html[data-handsfree] :is(input[type="checkbox"], input[type="radio"]):not([data-
 .driver-popover.ev-journey .ev-wait-miss { margin-top: 8px; font-size: 0.8rem; }
 .driver-popover.ev-journey .driver-popover-footer .driver-popover-next-btn { background: var(--role); border-color: var(--role); color: var(--paper); }
 .ev-wipe { background: var(--role); clip-path: circle(0% at 50% 50%); animation: ev-wipe 1.55s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
-.ev-wipe[data-role-wipe="shop"] { --role: var(--done); background: #2c6a4d; }
-.ev-wipe[data-role-wipe="shopper"] { background: #b13a0d; }
+.ev-wipe[data-role-wipe="shop"] { --role: var(--done); background: #17704b; }
+.ev-wipe[data-role-wipe="shopper"] { background: #c2410c; }
 .ev-wipe-text { animation: ev-wipe-text 1.55s ease forwards; }
 @keyframes ev-wipe { 0% { clip-path: circle(0% at 50% 50%); opacity: 1; } 35% { clip-path: circle(150% at 50% 50%); opacity: 1; } 75% { clip-path: circle(150% at 50% 50%); opacity: 1; } 100% { clip-path: circle(150% at 50% 50%); opacity: 0; } }
 @keyframes ev-wipe-text { 0%, 20% { opacity: 0; transform: translateY(16px); } 40%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
@@ -277,3 +288,27 @@ html[data-handsfree] :is(input[type="checkbox"], input[type="radio"]):not([data-
 /* The part of the page a journey step points at gets a ring in the colour of who you are. */
 .driver-active .driver-active-element { outline: 3px solid var(--role); outline-offset: 5px; border-radius: 12px; transition: outline-color 0.4s; }
 .driver-popover.ev-journey .ev-done { font-weight: 700; color: var(--done); margin-bottom: 4px; }
+/* Tour bubble extras: what a step is built on (tags) and why it scores (one line). */
+.ev-tag { --c: #3f3a33; display: inline-flex; align-items: center; margin: 0 4px 4px 0; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 650; letter-spacing: 0.01em; line-height: 1.6; color: var(--c); background: color-mix(in oklab, var(--c) 12%, transparent); border: 1px solid color-mix(in oklab, var(--c) 28%, transparent); }
+.ev-tag[data-kind="paypal"] { --c: #0a4499; }
+.ev-tag[data-kind="ai"] { --c: #5a32b8; }
+.ev-tag[data-kind="device"] { --c: #08604f; }
+.ev-tag[data-kind="partner"] { --c: #7c4700; }
+.ev-tag[data-kind="code"] { --c: var(--ink-2); }
+:root[data-theme="dark"] .ev-tag[data-kind="paypal"] { --c: #8db8ff; }
+:root[data-theme="dark"] .ev-tag[data-kind="ai"] { --c: #c4adff; }
+:root[data-theme="dark"] .ev-tag[data-kind="device"] { --c: #6fd8c3; }
+:root[data-theme="dark"] .ev-tag[data-kind="partner"] { --c: #f1bf6e; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ev-tag[data-kind="paypal"] { --c: #8db8ff; }
+  :root:not([data-theme="light"]) .ev-tag[data-kind="ai"] { --c: #c4adff; }
+  :root:not([data-theme="light"]) .ev-tag[data-kind="device"] { --c: #6fd8c3; }
+  :root:not([data-theme="light"]) .ev-tag[data-kind="partner"] { --c: #f1bf6e; }
+}
+.ev-tags { margin: 0 0 6px; }
+.ev-why { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--rule-2); font-size: 0.76rem; line-height: 1.4; color: var(--ink-2); }
+.ev-why b { display: block; font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); margin-bottom: 1px; }
+.ev-why b::before { content: "★ "; color: var(--role); }
+/* Landing: a faint grid and a lime glow on the dark sections. */
+.ev-hero-grid { background-image: linear-gradient(rgb(238 242 236 / 0.05) 1px, transparent 1px), linear-gradient(90deg, rgb(238 242 236 / 0.05) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(ellipse 80% 70% at 70% 30%, #000 30%, transparent 75%); }
+.ev-hero-glow { background: radial-gradient(closest-side, rgb(198 241 106 / 0.28), transparent 70%); filter: blur(24px); }

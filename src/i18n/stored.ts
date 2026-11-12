@@ -16,6 +16,7 @@ export const STORED_SENTENCES = [
   // Pick reasons (plans.ts, prefs.ts).
   N_("{0}, as you asked"),
   N_("you tend to like {0}"),
+  N_("most shoppers like {0} (your own choices will tune this)"),
   N_("good value for its price"),
   N_("exact match for the item in your clip"),
   N_("you leaned toward lower prices"),

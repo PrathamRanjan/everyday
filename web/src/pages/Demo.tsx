@@ -232,7 +232,7 @@ export default function Demo() {
                     </Button>
                   ))}
                   <Button variant="ghost" asChild>
-                    <Link to="/?home=1#start">
+                    <Link to="/#demo">
                       <PlayCircle className="size-4" />{" "}{t("Guided demo")}
                     </Link>
                   </Button>
