@@ -912,5 +912,6 @@
  "{0}; a refund counts once PayPal reports it COMPLETED": "{0}; रिफ़ंड तभी गिना जाता है जब PayPal उसकी स्थिति COMPLETED बताता है",
  "{0}; each capture read back from PayPal before Everyday says it happened": "{0}; Everyday हर भुगतान वसूली को पूरा बताने से पहले PayPal से उसकी पुष्टि पढ़ता है",
  "{0}Paid {1} on PayPal (capture {2}, fee {3}); {4} accepted by the merchant": "{0}PayPal पर {1} का भुगतान किया (भुगतान वसूली {2}, शुल्क {3}); विक्रेता ने {4} स्वीकार किया",
- "“{0}”, in {1}": "“{0}”, {1} में"
+ "“{0}”, in {1}": "“{0}”, {1} में",
+ "Sign in as the shopper first.": "पहले शॉपर के रूप में साइन इन करें।"
 }

@@ -19,6 +19,10 @@ import { STEPS, ticks, type Step } from "../services/checklist.js";
 import { currentWs } from "../ws.js";
 import { setWsCookie, signIn, whoami } from "./auth.js";
 import { json } from "./common.js";
+import { GtError } from "../lib/util.js";
+import { nowIso } from "../store.js";
+import { setPrice } from "../services/life.js";
+import { protectionsFor } from "../services/protect.js";
 
 interface PathStep {
   key: Step;
@@ -124,6 +128,37 @@ export function judgeRoutes() {
     const accounts = ws ? (await db.query<{ id: string; name: string }>("SELECT id, name FROM accounts WHERE ws_id = $1 ORDER BY created_at", [ws])).rows : [];
     const merchants = ws ? (await db.query<{ id: string; name: string }>("SELECT id, name FROM merchants WHERE kind = 'test_merchant' AND ws_id = $1 ORDER BY name", [ws])).rows : [];
     return { ws, done, shopper: accounts[0] ?? null, shop: merchants[0] ?? null };
+  }));
+
+  /**
+   * The guided demo's price-drop step needs one drop to claim. A demo that already used its seeded drop (the story
+   * run before, or "claim price drops for me" took it) would leave nothing to press. So on entering that step the
+   * shop records a lower price for something this shopper bought, in this visitor's own demo only, exactly as the
+   * shop's price page does. "open" means a claim is already with the shop, so the step is already done.
+   */
+  r.post("/api/ui/journey/claim-ready", json(async (req) => {
+    if (!currentWs() && config.privateDemos) throw new GtError("Start your own demo first.", "no_workspace", 409);
+    const a = (await whoami(req))?.account;
+    if (!a) throw new GtError("Sign in as the shopper first.", "not_signed_in", 401);
+    const db = await getDb();
+    if ((await protectionsFor(db, a)).some((p) => p.eligible)) return { state: "drop" };
+    const open = (await db.query("SELECT 1 FROM cases c JOIN orders o ON o.id = c.order_id WHERE o.account_id = $1 AND c.issue = 'price_drop' AND c.status = 'awaiting_merchant' LIMIT 1", [a.id])).rows.length;
+    if (open) return { state: "open" };
+    const lines = (
+      await db.query<{ id: string; product_id: string; price_cents: number }>(
+        `SELECT l.id, l.product_id, p.price_cents FROM order_lines l JOIN orders o ON o.id = l.order_id JOIN products p ON p.id = l.product_id
+          WHERE o.account_id = $1 AND o.capture_id IS NOT NULL AND l.status IN ('ordered','shipped','delivered') AND p.stock > 0
+          ORDER BY (l.status = 'delivered') DESC, o.created_at DESC LIMIT 6`,
+        [a.id],
+      )
+    ).rows;
+    for (const l of lines) {
+      if (l.price_cents < 1500) continue;
+      await setPrice(l.product_id, l.price_cents - 700, nowIso(a));
+      if ((await protectionsFor(db, a, l.id)).some((p) => p.eligible)) return { state: "drop" };
+      await setPrice(l.product_id, l.price_cents, nowIso(a)); // outside the promise: put the price back
+    }
+    return { state: "none" };
   }));
 
   r.get("/api/ui/judge", json(async (req) => {

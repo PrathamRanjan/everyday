@@ -437,6 +437,7 @@ export default function Landing() {
                 </h2>
                 <p className="mt-4 text-lg text-[#eef2ec]/75">{tn("One guided demo, about {0} minutes. Where you have to act there's no Next button: the page points at the real button, and moves on only when the server, or PayPal, says it really happened. A colour wipe takes you between Maya and the shop.", JOURNEYS.story.minutes)}</p>
                 <div className="mt-8">{startBtn()}</div>
+                <p className="mt-3 text-sm text-[#eef2ec]/65">{t("Each start gives you a fresh copy of your own demo, so every step has something to press.")}</p>
                 <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm">
                   <p className="flex items-center gap-2 font-semibold">
                     <CreditCard className="size-4 text-signal" />

@@ -1684,5 +1684,6 @@
  "“Pay on PayPal's own page” opens PayPal's sandbox checkout. Sign in there with this test buyer:": "“PayPal के अपने पेज पर भुगतान करें” से PayPal का टेस्टिंग मोड चेकआउट खुलता है। वहाँ इस टेस्ट खरीदार के खाते से साइन इन करें:",
  "“Pay our new PayPal” message: hold, don't pay. Checked on this device.": "“हमारे नए PayPal पर भुगतान करें” मैसेज: रोकें, भुगतान न करें। इसी डिवाइस पर जाँच हुई।",
  "“Your parcel is held, pay here” messages are checked on your device before you pay anyone.": "“आपका पार्सल रोक दिया गया है, यहाँ भुगतान करें” जैसे संदेशों की जाँच आपके डिवाइस पर होती है, किसी को भी भुगतान करने से पहले।",
- "≈ {0}, an estimate at the European Central Bank rate of {1}. You pay in US dollars.": "≈ {0}, यूरोपीय सेंट्रल बैंक की {1} दर पर अनुमानित रकम। आप अमेरिकी डॉलर में भुगतान करते हैं।"
+ "≈ {0}, an estimate at the European Central Bank rate of {1}. You pay in US dollars.": "≈ {0}, यूरोपीय सेंट्रल बैंक की {1} दर पर अनुमानित रकम। आप अमेरिकी डॉलर में भुगतान करते हैं।",
+ "Each start gives you a fresh copy of your own demo, so every step has something to press.": "हर बार शुरू करने पर आपको अपने डेमो की एक नई कॉपी मिलती है, ताकि हर कदम पर दबाने के लिए कुछ हो।"
 }

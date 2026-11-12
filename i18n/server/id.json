@@ -912,5 +912,6 @@
  "{0}; a refund counts once PayPal reports it COMPLETED": "{0}; pengembalian dana baru dihitung setelah PayPal melaporkan status COMPLETED",
  "{0}; each capture read back from PayPal before Everyday says it happened": "{0}; setiap penagihan dicek kembali dari PayPal sebelum Everyday menyatakan sudah terjadi",
  "{0}Paid {1} on PayPal (capture {2}, fee {3}); {4} accepted by the merchant": "{0}Membayar {1} di PayPal (penagihan {2}, biaya {3}); {4} diterima penjual",
- "“{0}”, in {1}": "“{0}”, di {1}"
+ "“{0}”, in {1}": "“{0}”, di {1}",
+ "Sign in as the shopper first.": "Masuk sebagai pembeli terlebih dahulu."
 }

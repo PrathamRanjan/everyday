@@ -912,5 +912,6 @@
  "{0}; a refund counts once PayPal reports it COMPLETED": "{0}; um reembolso conta quando o PayPal informa o status COMPLETED",
  "{0}; each capture read back from PayPal before Everyday says it happened": "{0}; cada captura é conferida no PayPal antes de o Everyday dizer que ela aconteceu",
  "{0}Paid {1} on PayPal (capture {2}, fee {3}); {4} accepted by the merchant": "{0}Pago {1} no PayPal (captura {2}, tarifa {3}); {4} aceito pelo lojista",
- "“{0}”, in {1}": "“{0}”, em {1}"
+ "“{0}”, in {1}": "“{0}”, em {1}",
+ "Sign in as the shopper first.": "Entre primeiro como a compradora."
 }

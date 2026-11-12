@@ -301,6 +301,21 @@ describe("Everyday acceptance journey", () => {
     expect(refused.status).toBe(200);
     expect(refused.json.err).toBeTruthy();
 
+    // The guided demo's price-drop step, in a demo whose drops were already claimed: on entering the step the shop
+    // records a lower price on something Maya bought, so there is always a drop to press; a claim already with the
+    // shop counts as the step done. (A judge got stuck here on 13 Nov after starting the story a second time.)
+    const ready = async () => (await maya.req("POST", "/api/ui/journey/claim-ready", { json: {} })).json as { state: string };
+    const firstReady = await ready();
+    expect(["drop", "open"]).toContain(firstReady.state);
+    if (firstReady.state === "drop") {
+      const drop = (await ui(maya, "/today")).money_back.lines.find((l: any) => l.kind === "price_drop");
+      expect(drop?.line_id).toBeTruthy();
+      expect((await ready()).state).toBe("drop");
+      ok(await maya.post(`/lines/${drop.line_id}/price-protection`));
+    }
+    expect((await ready()).state).toBe("open");
+    expect((await new Client(base).req("POST", "/api/ui/journey/claim-ready", { json: {} })).status).toBe(401);
+
     // Demo controls: the clock, the reconciler again, and a reset; then sign out.
     ok(await anon.post("/demo/clock", { step: "day" }));
     ok(await maya.post("/console/fault", { f: "refund_503" }));

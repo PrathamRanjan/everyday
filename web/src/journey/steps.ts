@@ -36,6 +36,8 @@ export interface Step {
   after?: string;
   /** Saves the page the judge reached (their new plan or order) for later steps. */
   save?: keyof Ctx;
+  /** Asked of the server on entering the step, to make sure there is something to press. "open" = already done. */
+  prepare?: string;
 }
 
 const pp = (label: string): Tag => ({ label, kind: "paypal" });
@@ -171,6 +173,7 @@ const S = {
       tags: [code("Price-promise check")],
       why: { kind: "impact", text: t("Price-match promises only pay out if someone notices and asks. Everyday notices, and files the claim with the evidence.") },
       wait: { label: t("Press Ask for … back"), action: /\/lines\/[^/]+\/price-protection$/ },
+      prepare: "/api/ui/journey/claim-ready",
     };
   },
   get approve(): Step {

@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 import type { Driver } from "driver.js";
 import { Check, Store, User, X } from "lucide-react";
 import { toast } from "sonner";
-import { getJson, postAction } from "@/lib/api";
+import { getJson, postAction, postJson } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { t, tn } from "@/i18n";
@@ -44,7 +44,10 @@ type Personas = { ws: string | null; done: string[]; shopper: { id: string; name
 /** Starts a journey: builds the visitor's own demo first when they don't have one. */
 export async function startJourney(id: JourneyId) {
   const s = await getJson<{ workspace: unknown; who: unknown }>("/api/ui/session").catch(() => null);
-  if (!s?.workspace) await postAction("/demo/start", {});
+  // The story needs a clean demo (its price drop unclaimed, its refund not yet made), so starting it again resets
+  // this visitor's own demo. Nobody else's changes.
+  if (s?.workspace) await postAction("/demo/reset", {}).catch(() => null);
+  else await postAction("/demo/start", {});
   write({ id, i: 0, ctx: {} });
 }
 export const journeyActive = () => Boolean(read());
@@ -213,6 +216,25 @@ export function JourneyHost() {
     if (myRole !== step.role) void switchTo(step.role, route);
     else if (!here || (route.includes("?") && loc.search !== `?${route.split("?")[1]}`)) nav(route);
   }, [st, step, session, myRole, route, here, nav, switchTo, loc.search]);
+
+  // Some steps ask the server to set the page up first (the price-drop step makes sure there is a drop to claim).
+  const prepared = useRef<string>("");
+  useEffect(() => {
+    if (!st || !step?.prepare || myRole !== step.role || switching || wipe) return;
+    const key = `${st.id}:${st.i}`;
+    if (prepared.current === key) return;
+    prepared.current = key;
+    void postJson(step.prepare, {}).then(({ j }) => {
+      if (j?.state === "open") complete();
+      // Read the page again now, and once more shortly after, in case the page's first load was still in flight.
+      const again = () => {
+        window.dispatchEvent(new Event("ev:reload"));
+        setNonce((n) => n + 1);
+      };
+      again();
+      setTimeout(again, 1500);
+    });
+  }, [st, step, myRole, switching, wipe, complete]);
 
   // Highlight the step's part of the page once it's there.
   useEffect(() => {

@@ -1684,5 +1684,6 @@
  "“Pay on PayPal's own page” opens PayPal's sandbox checkout. Sign in there with this test buyer:": "“Pagar na página do PayPal” abre a finalização da compra no ambiente de testes do PayPal. Entre lá com esta conta de comprador de teste:",
  "“Pay our new PayPal” message: hold, don't pay. Checked on this device.": "Mensagem “Pague no nosso novo PayPal”: segurar, não pagar. Verificada neste dispositivo.",
  "“Your parcel is held, pay here” messages are checked on your device before you pay anyone.": "Mensagens como “Sua encomenda está retida, pague aqui” são verificadas no seu dispositivo antes de você pagar alguém.",
- "≈ {0}, an estimate at the European Central Bank rate of {1}. You pay in US dollars.": "≈ {0}, uma estimativa pela taxa do Banco Central Europeu de {1}. Você paga em dólares americanos."
+ "≈ {0}, an estimate at the European Central Bank rate of {1}. You pay in US dollars.": "≈ {0}, uma estimativa pela taxa do Banco Central Europeu de {1}. Você paga em dólares americanos.",
+ "Each start gives you a fresh copy of your own demo, so every step has something to press.": "Cada início dá a você uma cópia nova da sua própria demo, para que cada passo tenha algo para apertar."
 }

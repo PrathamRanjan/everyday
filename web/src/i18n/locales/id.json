@@ -1684,5 +1684,6 @@
  "“Pay on PayPal's own page” opens PayPal's sandbox checkout. Sign in there with this test buyer:": "“Bayar di halaman PayPal” membuka halaman pembayaran ruang uji coba PayPal. Masuk di sana dengan akun pembeli uji coba ini:",
  "“Pay our new PayPal” message: hold, don't pay. Checked on this device.": "Pesan “Bayar ke PayPal baru kami”: tahan, jangan bayar. Diperiksa di perangkat ini.",
  "“Your parcel is held, pay here” messages are checked on your device before you pay anyone.": "Pesan “Paketmu ditahan, bayar di sini” diperiksa di perangkatmu sebelum kamu membayar siapa pun.",
- "≈ {0}, an estimate at the European Central Bank rate of {1}. You pay in US dollars.": "≈ {0}, perkiraan dengan kurs Bank Sentral Eropa sebesar {1}. Kamu membayar dalam dolar AS."
+ "≈ {0}, an estimate at the European Central Bank rate of {1}. You pay in US dollars.": "≈ {0}, perkiraan dengan kurs Bank Sentral Eropa sebesar {1}. Kamu membayar dalam dolar AS.",
+ "Each start gives you a fresh copy of your own demo, so every step has something to press.": "Setiap kali mulai, Anda mendapat salinan baru dari demo Anda sendiri, jadi setiap langkah punya sesuatu untuk ditekan."
 }
